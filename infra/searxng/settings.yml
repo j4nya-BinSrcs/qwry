@@ -1,0 +1,23 @@
+use_default_settings: true
+
+general:
+  debug: false
+  instance_name: "Qwry SearXNG"
+
+server:
+  # Overridden by SEARXNG_BASE_URL and SEARXNG_SECRET in the container environment.
+  base_url: "http://127.0.0.1:8080/"
+  secret_key: "replace-me-via-env"
+  limiter: false
+  image_proxy: true
+
+search:
+  formats:
+    - html
+    - json
+
+ui:
+  static_use_hash: true
+
+redis:
+  url: redis://valkey:6379/0

@@ -1,0 +1,36 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+server/.venv/
+server/data/*.db
+server/data/*.sqlite
+server/data/*.sqlite3
+
+# Node / frontend
+client/node_modules/
+client/dist/
+client/dist-ssr/
+*.tsbuildinfo
+
+# Rust
+crawler/target/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
