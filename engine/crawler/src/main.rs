@@ -63,9 +63,11 @@ async fn main() -> anyhow::Result<()> {
         batch_db_check_size: args.batch_db_check_size,
     };
 
-    let _crawler = Crawler::new(config, db_pool);
+    let crawler = Crawler::new(config, db_pool);
 
-    tracing::info!("Qwry crawler initialized. Use --help to see available options.");
+    tracing::info!("starting crawl of {} seed(s) ...", args.seeds.len());
+    crawler.run(&args.seeds).await;
+    tracing::info!("crawl finished");
 
     Ok(())
 }

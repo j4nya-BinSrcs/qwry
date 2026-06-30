@@ -1,15 +1,16 @@
 use std::{
     collections::HashSet,
     hash::{DefaultHasher, Hash, Hasher},
-    sync::Mutex,
+    sync::{Arc, Mutex},
 };
 
 // ---------------------------------------------------------------------------
 // ShardedSet – concurrent visited-url set sharded by hash
 // ---------------------------------------------------------------------------
 
+#[derive(Clone)]
 pub struct ShardedSet {
-    shards: Vec<Mutex<HashSet<String>>>,
+    shards: Arc<Vec<Mutex<HashSet<String>>>>,
     mask: usize,
 }
 
@@ -21,7 +22,7 @@ impl ShardedSet {
             shards.push(Mutex::new(HashSet::new()));
         }
         Self {
-            shards,
+            shards: Arc::new(shards),
             mask: num_shards - 1,
         }
     }

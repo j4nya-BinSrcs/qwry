@@ -1,7 +1,7 @@
 use crate::types::CrawlJob;
 use std::{
     collections::VecDeque,
-    sync::Mutex,
+    sync::{Arc, Mutex},
     time::Duration,
 };
 
@@ -9,16 +9,17 @@ use std::{
 // JobQueue – bounded deque with semaphore-based blocking pop
 // ---------------------------------------------------------------------------
 
+#[derive(Clone)]
 pub struct JobQueue {
-    inner: Mutex<VecDeque<CrawlJob>>,
-    sema: tokio::sync::Semaphore,
+    inner: Arc<Mutex<VecDeque<CrawlJob>>>,
+    sema: Arc<tokio::sync::Semaphore>,
 }
 
 impl JobQueue {
     pub fn new() -> Self {
         Self {
-            inner: Mutex::new(VecDeque::new()),
-            sema: tokio::sync::Semaphore::new(0),
+            inner: Arc::new(Mutex::new(VecDeque::new())),
+            sema: Arc::new(tokio::sync::Semaphore::new(0)),
         }
     }
 
