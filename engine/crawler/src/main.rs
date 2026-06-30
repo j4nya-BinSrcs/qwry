@@ -1,6 +1,6 @@
-mod crawler;
-
 use clap::Parser;
+use crawler::config::CrawlerConfig;
+use crawler::engine::Crawler;
 use shared::init_db;
 use std::time::Duration;
 
@@ -50,7 +50,7 @@ async fn main() -> anyhow::Result<()> {
 
     let db_pool = init_db().await?;
 
-    let config = crawler::CrawlerConfig {
+    let config = CrawlerConfig {
         max_depth: args.max_depth,
         max_pages: args.max_pages,
         concurrency: args.concurrency,
@@ -63,7 +63,7 @@ async fn main() -> anyhow::Result<()> {
         batch_db_check_size: args.batch_db_check_size,
     };
 
-    let _crawler = crawler::Crawler::new(config, db_pool);
+    let _crawler = Crawler::new(config, db_pool);
 
     tracing::info!("Qwry crawler initialized. Use --help to see available options.");
 
