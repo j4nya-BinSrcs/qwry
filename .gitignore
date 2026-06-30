@@ -25,7 +25,7 @@ client/dist-ssr/
 *.tsbuildinfo
 
 # Rust
-crawler/target/
+engine/target/
 
 # OS / editors
 .DS_Store
