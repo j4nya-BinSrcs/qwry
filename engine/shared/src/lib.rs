@@ -86,6 +86,45 @@ pub async fn save_page(pool: &DbPool, page: &CrawledPage) -> Result<()> {
     Ok(())
 }
 
+/// Bulk-insert a batch of pages in a single statement, using ON CONFLICT
+/// to upsert duplicates.  Returns the number of rows inserted/updated.
+pub async fn save_pages_batch(pool: &DbPool, pages: &[CrawledPage]) -> Result<u64> {
+    if pages.is_empty() {
+        return Ok(0);
+    }
+
+    // Deduplicate by URL – PostgreSQL's ON CONFLICT DO UPDATE cannot handle
+    // duplicate unique keys within a single INSERT statement ("cannot affect
+    // row a second time").
+    let mut seen = HashSet::new();
+    let deduped: Vec<&CrawledPage> = pages.iter().filter(|p| seen.insert(p.url.clone())).collect();
+
+    let mut qb = QueryBuilder::new(
+        "INSERT INTO crawled_pages (url, title, description, content, crawled_at, indexed) ",
+    );
+
+    qb.push_values(deduped, |mut b, page| {
+        b.push_bind(&page.url)
+            .push_bind(&page.title)
+            .push_bind(&page.description)
+            .push_bind(&page.content)
+            .push_bind(page.crawled_at)
+            .push_bind(page.indexed);
+    });
+
+    qb.push(
+        " ON CONFLICT (url) DO UPDATE SET \
+         title       = EXCLUDED.title, \
+         description = EXCLUDED.description, \
+         content     = EXCLUDED.content, \
+         crawled_at  = EXCLUDED.crawled_at, \
+         indexed     = EXCLUDED.indexed",
+    );
+
+    let result = qb.build().execute(pool).await?;
+    Ok(result.rows_affected())
+}
+
 pub async fn is_url_crawled(pool: &DbPool, url: &str) -> Result<bool> {
     let row: Option<(i64,)> =
         sqlx::query_as("SELECT id FROM crawled_pages WHERE url = $1")

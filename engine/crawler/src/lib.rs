@@ -1,3 +1,4 @@
+pub mod batch_writer;
 pub mod config;
 pub mod engine;
 pub mod html;

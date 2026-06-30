@@ -1,7 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     sync::{
-        atomic::{AtomicU64, AtomicUsize, Ordering},
+        atomic::{AtomicUsize, Ordering},
         Arc, Mutex,
     },
     time::{Duration, Instant},
@@ -11,6 +11,7 @@ use reqwest::Client;
 use shared::{CrawledPage, DbPool};
 
 use crate::{
+    batch_writer::BatchWriter,
     config::CrawlerConfig,
     html::fetch_page,
     job_queue::JobQueue,
@@ -202,39 +203,9 @@ impl Crawler {
             shutdown_ctrl.store(true, Ordering::SeqCst);
         });
 
-        // batch DB writer
-        let (batch_tx, mut batch_rx) = tokio::sync::mpsc::channel::<CrawledPage>(256);
-        let pool = self.db_pool.clone();
-        let stats_for_writer = Arc::clone(&stats);
-        let writer_handle = tokio::spawn(async move {
-            let mut buffer: Vec<CrawledPage> = Vec::with_capacity(100);
-            let mut flush_interval = tokio::time::interval(Duration::from_secs(5));
-
-            loop {
-                tokio::select! {
-                    _ = flush_interval.tick() => {
-                        if !buffer.is_empty() {
-                            Self::flush_batch(&pool, &mut buffer, &stats_for_writer).await;
-                        }
-                    }
-                    msg = batch_rx.recv() => {
-                        match msg {
-                            Some(page) => {
-                                buffer.push(page);
-                                if buffer.len() >= 100 {
-                                    Self::flush_batch(&pool, &mut buffer, &stats_for_writer).await;
-                                }
-                            }
-                            None => break,
-                        }
-                    }
-                }
-            }
-
-            if !buffer.is_empty() {
-                Self::flush_batch(&pool, &mut buffer, &stats_for_writer).await;
-            }
-        });
+        // batch DB writer – bulk-inserts pages via BatchWriter
+        let batch_writer = BatchWriter::new(self.db_pool.clone());
+        let batch_tx = batch_writer.sender();
 
         // spawn workers
         let mut handles = Vec::with_capacity(self.config.concurrency);
@@ -253,7 +224,8 @@ impl Crawler {
             handles.push(tokio::spawn(async move { worker.run().await }));
         }
 
-        // Drop our sender so the writer stops once all workers finish
+        // Drop the channel sender so the batch writer shuts down once
+        // all workers have finished (dropping their clones too).
         drop(batch_tx);
 
         // Wait for workers
@@ -261,8 +233,8 @@ impl Crawler {
             h.await.ok();
         }
 
-        // Wait for writer to flush remaining pages
-        writer_handle.await.ok();
+        // Flush remaining buffered pages
+        batch_writer.shutdown().await;
 
         let elapsed = start.elapsed();
 
@@ -278,20 +250,6 @@ impl Crawler {
         });
         println!("{}", serde_json::to_string(&summary).unwrap());
     }
-
-    async fn flush_batch(pool: &DbPool, buffer: &mut Vec<CrawledPage>, stats: &CrawlStats) {
-        let batch = std::mem::take(buffer);
-        let n = batch.len();
-        for page in &batch {
-            if let Err(e) = shared::save_page(pool, page).await {
-                tracing::warn!("failed to save page {}: {:#}", page.url, e);
-            }
-        }
-        stats
-            .pages_saved
-            .fetch_add(n as u64, Ordering::Relaxed);
-        tracing::debug!("flushed {} pages to db", n);
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -306,7 +264,6 @@ pub struct CrawlStats {
     pub fetch_errors: AtomicUsize,
     pub robots_blocked: AtomicUsize,
     pub retries: AtomicUsize,
-    pub pages_saved: AtomicU64,
 }
 
 impl CrawlStats {
@@ -318,7 +275,6 @@ impl CrawlStats {
             fetch_errors: AtomicUsize::new(0),
             robots_blocked: AtomicUsize::new(0),
             retries: AtomicUsize::new(0),
-            pages_saved: AtomicU64::new(0),
         }
     }
 }
@@ -715,7 +671,6 @@ mod tests {
         assert_eq!(stats.fetch_errors.load(Ordering::Relaxed), 0);
         assert_eq!(stats.robots_blocked.load(Ordering::Relaxed), 0);
         assert_eq!(stats.retries.load(Ordering::Relaxed), 0);
-        assert_eq!(stats.pages_saved.load(Ordering::Relaxed), 0);
     }
 
     #[test]
