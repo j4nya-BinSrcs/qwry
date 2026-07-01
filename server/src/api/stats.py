@@ -13,7 +13,8 @@ router = APIRouter(prefix="/api", tags=["stats"])
 @router.get("/stats", response_model=SystemStats)
 async def system_stats(request: Request) -> SystemStats:
     collector = StatsCollector(
-        http_client=request.app.state.orchestrator._http,
+        http_client=request.app.state.http,
+        registry=request.app.state.registry,
         request_count=request.app.state.request_count,
         server_start=request.app.state.server_start,
     )

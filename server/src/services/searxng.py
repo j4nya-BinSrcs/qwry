@@ -1,26 +1,20 @@
 import logging
-from dataclasses import dataclass
 
 import httpx
 
 from server.src.api.schemas import SearchResponse, SearchResultItem
+from server.src.core.registry import Backend
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class SearxngConfig:
-    base_url: str
-    timeout_seconds: float
-
-
 class SearxngClient:
-    def __init__(self, http_client: httpx.AsyncClient, config: SearxngConfig) -> None:
+    def __init__(self, http_client: httpx.AsyncClient, backend: Backend) -> None:
         self._client = http_client
-        self._config = config
+        self._backend = backend
 
     async def search(self, q: str, page: int = 1, page_size: int = 10) -> SearchResponse:
-        url = self._config.base_url.rstrip("/") + "/search"
+        url = f"{self._backend.base_url}/search"
         params: dict[str, str | int] = {
             "q": q,
             "format": "json",
@@ -33,7 +27,7 @@ class SearxngClient:
             resp = await self._client.get(
                 url,
                 params=params,
-                timeout=self._config.timeout_seconds,
+                timeout=self._backend.timeout,
             )
             resp.raise_for_status()
             data = resp.json()

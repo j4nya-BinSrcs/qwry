@@ -5,31 +5,18 @@ import httpx
 
 from server.src.api.schemas import SearchResponse, SearchResultItem
 from server.src.core.config import settings
-from server.src.services.engine_proxy import EngineClient, EngineConfig
-from server.src.services.searxng import SearxngClient, SearxngConfig
+from server.src.core.registry import EndpointRegistry
+from server.src.services.engine_proxy import EngineClient
+from server.src.services.searxng import SearxngClient
 
 logger = logging.getLogger(__name__)
 
 
 class SearchOrchestrator:
-    def __init__(self) -> None:
-        self._http = httpx.AsyncClient()
-
-        self._searxng = SearxngClient(
-            self._http,
-            SearxngConfig(
-                base_url=settings.searxng_base_url,
-                timeout_seconds=settings.searxng_timeout_seconds,
-            ),
-        )
-
-        self._engine = EngineClient(
-            self._http,
-            EngineConfig(
-                base_url=settings.engine_base_url,
-                timeout_seconds=settings.engine_timeout_seconds,
-            ),
-        )
+    def __init__(self, http_client: httpx.AsyncClient, registry: EndpointRegistry) -> None:
+        self._http = http_client
+        self._searxng = SearxngClient(http_client, registry.searxng)
+        self._engine = EngineClient(http_client, registry.engine)
 
     async def search(
         self,
@@ -83,4 +70,4 @@ class SearchOrchestrator:
         )
 
     async def aclose(self) -> None:
-        await self._http.aclose()
+        pass

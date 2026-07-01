@@ -26,6 +26,35 @@ class ErrorResponse(BaseModel):
     error_code: str | None = None
 
 
+# ── Crawl ─────────────────────────────────────────────────────────────
+
+class CrawlRequest(BaseModel):
+    seeds: list[str]
+    max_depth: int = 3
+    max_pages: int = 100
+    external_domains: bool = False
+
+
+class TaskResponse(BaseModel):
+    task_id: str
+    status: str
+    message: str
+
+
+# ── Reindex ───────────────────────────────────────────────────────────
+
+class ReindexRequest(BaseModel):
+    max_pages: int | None = None
+
+
+# ── Suggest ───────────────────────────────────────────────────────────
+
+class SuggestResponse(BaseModel):
+    query: str
+    suggestions: list[str]
+    source: str
+
+
 # ── Stats ─────────────────────────────────────────────────────────────
 
 class BackendProbe(BaseModel):

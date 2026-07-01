@@ -14,13 +14,15 @@ from server.src.api.schemas import (
     SystemStats,
 )
 from server.src.core.config import settings
+from server.src.core.registry import EndpointRegistry
 
 logger = logging.getLogger(__name__)
 
 
 class StatsCollector:
-    def __init__(self, http_client: httpx.AsyncClient, request_count: int, server_start: datetime) -> None:
+    def __init__(self, http_client: httpx.AsyncClient, registry: EndpointRegistry, request_count: int, server_start: datetime) -> None:
         self._http = http_client
+        self._registry = registry
         self._request_count = request_count
         self._server_start = server_start
 
@@ -52,8 +54,8 @@ class StatsCollector:
             request_count=self._request_count,
             default_search_provider=settings.default_search_provider,
             searxng_enabled=settings.searxng_enabled,
-            engine_base_url=settings.engine_base_url,
-            searxng_base_url=settings.searxng_base_url,
+            engine_base_url=self._registry.engine.base_url,
+            searxng_base_url=self._registry.searxng.base_url,
             crawler_enabled=settings.crawler_enabled,
             cors_origins=settings.cors_origins_list,
         )
@@ -61,22 +63,20 @@ class StatsCollector:
     # ── Engine ────────────────────────────────────────────────────────
 
     async def _probe_engine(self) -> EngineProbe:
-        base = settings.engine_base_url.rstrip("/")
+        base = self._registry.engine.base_url
 
         health, health_time = await self._check(f"{base}/health")
         if not health:
             return EngineProbe(health=BackendProbe(available=False, status="unreachable"))
 
         index_docs = None
-        index_segments = None
         try:
             t0 = time.monotonic()
             resp = await self._http.get(
                 f"{base}/search",
                 params={"q": "the", "limit": 1, "offset": 0},
-                timeout=settings.engine_timeout_seconds,
+                timeout=self._registry.engine.timeout,
             )
-            elapsed = (time.monotonic() - t0) * 1000
             if resp.is_success:
                 data = resp.json()
                 index_docs = data.get("total_hits")
@@ -100,7 +100,7 @@ class StatsCollector:
             resp = await self._http.get(
                 f"{base}/search",
                 params={"q": "a", "limit": 0, "offset": 0},
-                timeout=settings.engine_timeout_seconds,
+                timeout=self._registry.engine.timeout,
             )
             if resp.is_success:
                 data = resp.json()
@@ -115,7 +115,7 @@ class StatsCollector:
         if not settings.searxng_enabled:
             return SearxngProbe(health=BackendProbe(available=False, status="disabled"))
 
-        base = settings.searxng_base_url.rstrip("/")
+        base = self._registry.searxng.base_url
         health, health_time = await self._check(f"{base}/healthz")
 
         if health:

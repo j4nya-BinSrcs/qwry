@@ -4,12 +4,15 @@ from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
+import httpx
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from server.src.api import register_routes
 from server.src.core.config import settings
 from server.src.core.logging import setup_logging
+from server.src.core.registry import EndpointRegistry
+from server.src.services.runner import TaskManager
 from server.src.services.search_orch import SearchOrchestrator
 
 logger = logging.getLogger(__name__)
@@ -19,20 +22,25 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     setup_logging(settings.log_level)
     now = datetime.now(timezone.utc)
-    app.state.server_start = now
-    app.state.request_count = 0
-    app.state.orchestrator = SearchOrchestrator()
 
-    logger.info(
-        "Starting QWRY server",
-        extra={
-            "environment": settings.environment,
-            "host": settings.host,
-            "port": settings.port,
-        },
-    )
-    yield
-    await app.state.orchestrator.aclose()
+    async with httpx.AsyncClient() as http_client:
+        app.state.server_start = now
+        app.state.request_count = 0
+        app.state.http = http_client
+        app.state.registry = EndpointRegistry()
+        app.state.orchestrator = SearchOrchestrator(http_client, app.state.registry)
+        app.state.task_runner = TaskManager()
+
+        logger.info(
+            "Starting QWRY server",
+            extra={
+                "environment": settings.environment,
+                "host": settings.host,
+                "port": settings.port,
+            },
+        )
+        yield
+
     elapsed = (datetime.now(timezone.utc) - now).total_seconds()
     logger.info(
         "Shutting down QWRY server",
