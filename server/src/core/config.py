@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     port: int = 8000
     log_level: str = "INFO"
 
-    database_url: str = "sqlite:///./data/qwry.db"
+    database_url: str = "postgresql://localhost:5432/qwry"
 
     default_search_provider: str = "hybrid"
     searxng_enabled: bool = True
