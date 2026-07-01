@@ -5,6 +5,7 @@ use clap::{Parser, Subcommand};
 use tracing_subscriber::EnvFilter;
 
 mod index;
+mod search;
 
 #[derive(Parser)]
 #[command(name = "indexer", about = "Qwry search indexer")]
@@ -22,6 +23,14 @@ enum Command {
     Index,
     /// Delete and rebuild the entire index from all crawled pages
     Reindex,
+    /// Search the index with a BM25 query
+    Search {
+        query: String,
+        #[arg(long, default_value = "10")]
+        limit: usize,
+        #[arg(long, default_value = "0")]
+        offset: usize,
+    },
     /// Start the search API server
     Serve {
         #[arg(long, default_value = "8001")]
@@ -56,6 +65,11 @@ async fn main() -> Result<()> {
             tracing::info!("Rebuilding index from scratch...");
             let count = index.reindex_all_pages(&db_pool).await?;
             tracing::info!(%count, "Reindex complete");
+        }
+        Command::Search { query, limit, offset } => {
+            let response = index.search(query, *limit, *offset)?;
+            let json = serde_json::to_string_pretty(&response)?;
+            println!("{json}");
         }
         Command::Serve { port } => {
             tracing::info!(%port, "Starting search server...");
