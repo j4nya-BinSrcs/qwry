@@ -2,7 +2,6 @@ import asyncio
 import logging
 
 import httpx
-
 from server.src.api.schemas import SearchResponse, SearchResultItem
 from server.src.core.config import settings
 from server.src.core.registry import EndpointRegistry
@@ -47,7 +46,9 @@ class SearchOrchestrator:
         engine_task = self._engine.search(q, page, page_size)
 
         searxng_resp, engine_resp = await asyncio.gather(
-            searxng_task, engine_task, return_exceptions=True,
+            searxng_task,
+            engine_task,
+            return_exceptions=True,
         )
 
         seen = set()

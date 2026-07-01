@@ -1,7 +1,6 @@
 import logging
 
 from fastapi import APIRouter, Request
-
 from server.src.api.schemas import SystemStats
 from server.src.services.stats_service import StatsCollector
 

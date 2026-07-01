@@ -3,7 +3,7 @@ import logging
 import os
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +47,10 @@ class TaskManager:
             binary,
             "--seeds",
             *seeds,
-            "--max-depth", str(max_depth),
-            "--max-pages", str(max_pages),
+            "--max-depth",
+            str(max_depth),
+            "--max-pages",
+            str(max_pages),
             "--skip-politeness",
         ]
         if external_domains:
@@ -59,7 +61,7 @@ class TaskManager:
             id=task_id,
             command=" ".join(cmd),
             status="running",
-            started_at=datetime.now(timezone.utc),
+            started_at=datetime.now(UTC),
         )
         self._tasks[task_id] = task
 
@@ -80,7 +82,7 @@ class TaskManager:
             id=task_id,
             command=" ".join(cmd),
             status="running",
-            started_at=datetime.now(timezone.utc),
+            started_at=datetime.now(UTC),
         )
         self._tasks[task_id] = task
 
@@ -108,7 +110,7 @@ class TaskManager:
             task.error = str(e)
             logger.error("Task failed", extra={"task_id": task.id, "error": str(e)})
         finally:
-            task.finished_at = datetime.now(timezone.utc)
+            task.finished_at = datetime.now(UTC)
             logger.info(
                 "Task finished",
                 extra={"task_id": task.id, "status": task.status, "return_code": task.return_code},
@@ -132,7 +134,7 @@ class TaskManager:
             id="error",
             command="",
             status="failed",
-            started_at=datetime.now(timezone.utc),
+            started_at=datetime.now(UTC),
             error=message,
         )
         return task

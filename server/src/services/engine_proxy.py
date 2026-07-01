@@ -1,7 +1,6 @@
 import logging
 
 import httpx
-
 from server.src.api.schemas import SearchResponse, SearchResultItem
 from server.src.core.registry import Backend
 

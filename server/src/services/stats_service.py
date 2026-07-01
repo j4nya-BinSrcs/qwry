@@ -1,10 +1,9 @@
 import logging
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
-
 from server.src.api.schemas import (
     BackendProbe,
     CrawlerProbe,
@@ -20,7 +19,13 @@ logger = logging.getLogger(__name__)
 
 
 class StatsCollector:
-    def __init__(self, http_client: httpx.AsyncClient, registry: EndpointRegistry, request_count: int, server_start: datetime) -> None:
+    def __init__(
+        self,
+        http_client: httpx.AsyncClient,
+        registry: EndpointRegistry,
+        request_count: int,
+        server_start: datetime,
+    ) -> None:
         self._http = http_client
         self._registry = registry
         self._request_count = request_count
@@ -36,13 +41,13 @@ class StatsCollector:
             engine=engine_probe,
             searxng=searxng_probe,
             crawler=crawler_probe,
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
         )
 
     # ── Server ────────────────────────────────────────────────────────
 
     def _server_info(self) -> ServerInfo:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         uptime = (now - self._server_start).total_seconds()
 
         return ServerInfo(
@@ -71,7 +76,6 @@ class StatsCollector:
 
         index_docs = None
         try:
-            t0 = time.monotonic()
             resp = await self._http.get(
                 f"{base}/search",
                 params={"q": "the", "limit": 1, "offset": 0},

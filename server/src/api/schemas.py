@@ -1,9 +1,7 @@
-from datetime import datetime
-
 from pydantic import BaseModel
 
-
 # ── Search ────────────────────────────────────────────────────────────
+
 
 class SearchResultItem(BaseModel):
     title: str
@@ -28,6 +26,7 @@ class ErrorResponse(BaseModel):
 
 # ── Crawl ─────────────────────────────────────────────────────────────
 
+
 class CrawlRequest(BaseModel):
     seeds: list[str]
     max_depth: int = 3
@@ -43,11 +42,13 @@ class TaskResponse(BaseModel):
 
 # ── Reindex ───────────────────────────────────────────────────────────
 
+
 class ReindexRequest(BaseModel):
     max_pages: int | None = None
 
 
 # ── Suggest ───────────────────────────────────────────────────────────
+
 
 class SuggestResponse(BaseModel):
     query: str
@@ -56,6 +57,7 @@ class SuggestResponse(BaseModel):
 
 
 # ── Stats ─────────────────────────────────────────────────────────────
+
 
 class BackendProbe(BaseModel):
     available: bool

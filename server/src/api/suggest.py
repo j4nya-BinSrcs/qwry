@@ -2,7 +2,6 @@ import logging
 
 import httpx
 from fastapi import APIRouter, Query, Request
-
 from server.src.api.schemas import SuggestResponse
 from server.src.core.registry import EndpointRegistry
 
@@ -26,13 +25,20 @@ async def suggest(
     if not suggestions:
         suggestions, source = await _try_searxng_search_suggestions(http, registry.searxng.base_url, q)
     if not suggestions:
-        suggestions, source = await _try_engine_search_suggestions(http, registry.engine.base_url, q, registry.engine.timeout)
+        suggestions, source = await _try_engine_search_suggestions(
+            http,
+            registry.engine.base_url,
+            q,
+            registry.engine.timeout,
+        )
 
     return SuggestResponse(query=q, suggestions=suggestions[:10], source=source)
 
 
 async def _try_searxng_autocompleter(
-    http: httpx.AsyncClient, base_url: str, q: str,
+    http: httpx.AsyncClient,
+    base_url: str,
+    q: str,
 ) -> tuple[list[str], str]:
     try:
         resp = await http.get(
@@ -50,7 +56,9 @@ async def _try_searxng_autocompleter(
 
 
 async def _try_searxng_search_suggestions(
-    http: httpx.AsyncClient, base_url: str, q: str,
+    http: httpx.AsyncClient,
+    base_url: str,
+    q: str,
 ) -> tuple[list[str], str]:
     try:
         resp = await http.get(
@@ -68,7 +76,10 @@ async def _try_searxng_search_suggestions(
 
 
 async def _try_engine_search_suggestions(
-    http: httpx.AsyncClient, base_url: str, q: str, timeout: float,
+    http: httpx.AsyncClient,
+    base_url: str,
+    q: str,
+    timeout: float,
 ) -> tuple[list[str], str]:
     try:
         resp = await http.get(

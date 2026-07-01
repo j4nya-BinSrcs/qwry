@@ -2,12 +2,11 @@ import logging
 import time
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-
 from server.src.api import register_routes
 from server.src.core.config import settings
 from server.src.core.logging import setup_logging
@@ -21,7 +20,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     setup_logging(settings.log_level)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     async with httpx.AsyncClient() as http_client:
         app.state.server_start = now
@@ -41,7 +40,7 @@ async def lifespan(app: FastAPI):
         )
         yield
 
-    elapsed = (datetime.now(timezone.utc) - now).total_seconds()
+    elapsed = (datetime.now(UTC) - now).total_seconds()
     logger.info(
         "Shutting down QWRY server",
         extra={"uptime_seconds": round(elapsed, 2), "requests": app.state.request_count},

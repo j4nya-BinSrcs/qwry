@@ -1,7 +1,6 @@
 import logging
 
 from fastapi import APIRouter, Request
-
 from server.src.api.schemas import CrawlRequest, TaskResponse
 
 logger = logging.getLogger(__name__)

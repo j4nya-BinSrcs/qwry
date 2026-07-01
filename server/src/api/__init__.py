@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-
 from server.src.api.crawl import router as crawl_router
 from server.src.api.health import router as health_router
 from server.src.api.reindex import router as reindex_router

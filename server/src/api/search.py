@@ -1,7 +1,6 @@
 import logging
 
 from fastapi import APIRouter, Query, Request
-
 from server.src.api.schemas import SearchResponse
 
 logger = logging.getLogger(__name__)
