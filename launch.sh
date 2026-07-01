@@ -107,7 +107,7 @@ start_searxng() {
     fi
 
     info "Starting SearXNG via Docker Compose ..."
-    docker compose -f infra/docker-compose.yml --profile searxng up -d
+    sudo docker compose -f infra/docker-compose.yml --profile searxng up -d
     warn "SearXNG may take a moment to become ready on http://127.0.0.1:${SEARXNG_PORT:-8080}"
 }
 
