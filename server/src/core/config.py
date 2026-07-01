@@ -15,10 +15,13 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql://localhost:5432/qwry"
 
-    default_search_provider: str = "hybrid"
+    default_search_provider: str = "searxng"
     searxng_enabled: bool = True
     searxng_base_url: str = "http://127.0.0.1:8080/"
     searxng_timeout_seconds: float = 5.0
+
+    engine_base_url: str = "http://127.0.0.1:8001/"
+    engine_timeout_seconds: float = 5.0
 
     crawler_enabled: bool = True
 

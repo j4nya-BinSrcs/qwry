@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from server.src.api import register_routes
 from server.src.core.config import settings
 from server.src.core.logging import setup_logging
+from server.src.services.search_orch import SearchOrchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,9 @@ async def lifespan(app: FastAPI):
             "port": settings.port,
         },
     )
+    app.state.orchestrator = SearchOrchestrator()
     yield
+    await app.state.orchestrator.aclose()
     logger.info("Shutting down QWRY server")
 
 
