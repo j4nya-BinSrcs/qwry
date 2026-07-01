@@ -48,12 +48,13 @@ impl JobQueue {
     }
 
     pub async fn pop_or_wait(&self) -> Option<CrawlJob> {
-        loop {
+        for _ in 0..60 {
             if let Some(job) = self.pop() {
                 return Some(job);
             }
             tokio::time::sleep(Duration::from_millis(50)).await;
         }
+        None
     }
 
     pub fn drain(&self) -> Vec<CrawlJob> {

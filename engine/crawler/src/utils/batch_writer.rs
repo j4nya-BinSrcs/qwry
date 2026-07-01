@@ -15,7 +15,7 @@ impl Default for BatchWriterConfig {
         Self {
             max_batch_size: 100,
             flush_interval: Duration::from_secs(5),
-            channel_capacity: 256,
+            channel_capacity: 4096,
         }
     }
 }

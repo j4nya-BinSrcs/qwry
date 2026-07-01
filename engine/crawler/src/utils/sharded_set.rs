@@ -1,12 +1,12 @@
 use std::{
     collections::HashSet,
     hash::{DefaultHasher, Hash, Hasher},
-    sync::{Arc, Mutex},
+    sync::{Arc, RwLock},
 };
 
 #[derive(Clone, Debug)]
 pub struct ShardedSet {
-    shards: Arc<Vec<Mutex<HashSet<String>>>>,
+    shards: Arc<Vec<RwLock<HashSet<String>>>>,
     mask: usize,
 }
 
@@ -15,7 +15,7 @@ impl ShardedSet {
         let n = num_shards.next_power_of_two();
         let mut shards = Vec::with_capacity(n);
         for _ in 0..n {
-            shards.push(Mutex::new(HashSet::new()));
+            shards.push(RwLock::new(HashSet::new()));
         }
         Self {
             shards: Arc::new(shards),
@@ -23,7 +23,7 @@ impl ShardedSet {
         }
     }
 
-    fn shard(&self, s: &str) -> &Mutex<HashSet<String>> {
+    fn shard(&self, s: &str) -> &RwLock<HashSet<String>> {
         let mut hasher = DefaultHasher::new();
         s.hash(&mut hasher);
         let idx = hasher.finish() as usize & self.mask;
@@ -31,17 +31,32 @@ impl ShardedSet {
     }
 
     pub fn insert(&self, s: String) -> bool {
-        self.shard(&s).lock().unwrap().insert(s)
+        self.shard(&s).write().unwrap().insert(s)
     }
 
     pub fn contains(&self, s: &str) -> bool {
-        self.shard(s).lock().unwrap().contains(s)
+        self.shard(s).read().unwrap().contains(s)
+    }
+
+    /// Check membership with a read lock first; only acquires a write lock if absent.
+    /// Returns `true` if the item was newly inserted.
+    pub fn contains_or_insert(&self, s: &str) -> bool {
+        let mut hasher = DefaultHasher::new();
+        s.hash(&mut hasher);
+        let idx = hasher.finish() as usize & self.mask;
+        let shard = &self.shards[idx];
+
+        if shard.read().unwrap().contains(s) {
+            return false;
+        }
+
+        shard.write().unwrap().insert(s.to_string())
     }
 
     pub fn len(&self) -> usize {
         self.shards
             .iter()
-            .map(|s| s.lock().unwrap().len())
+            .map(|s| s.read().unwrap().len())
             .sum()
     }
 
@@ -138,7 +153,7 @@ mod tests {
             set.insert(format!("key-{i}"));
         }
         for shard in set.shards.iter() {
-            let len = shard.lock().unwrap().len();
+            let len = shard.read().unwrap().len();
             assert!(len > 0, "every shard should have at least one item");
         }
     }

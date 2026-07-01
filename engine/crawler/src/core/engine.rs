@@ -372,15 +372,19 @@ impl CrawlerWorker {
                         break;
                     }
 
+                    let mut new_jobs = Vec::new();
                     for link in &result.outgoing_links {
-                        if self.visited.insert(link.clone()) {
+                        if self.visited.contains_or_insert(link) {
                             self.stats.urls_discovered.fetch_add(1, Ordering::Relaxed);
-                            self.queue.push(CrawlJob {
+                            new_jobs.push(CrawlJob {
                                 url: link.clone(),
                                 depth: job.depth + 1,
                                 retry_count: 0,
                             });
                         }
+                    }
+                    if !new_jobs.is_empty() {
+                        self.queue.push_batch(new_jobs);
                     }
                 }
                 Err(err) => {
