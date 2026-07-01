@@ -1,7 +1,10 @@
 import logging
+import time
+from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from server.src.api import register_routes
@@ -15,6 +18,11 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     setup_logging(settings.log_level)
+    now = datetime.now(timezone.utc)
+    app.state.server_start = now
+    app.state.request_count = 0
+    app.state.orchestrator = SearchOrchestrator()
+
     logger.info(
         "Starting QWRY server",
         extra={
@@ -23,10 +31,13 @@ async def lifespan(app: FastAPI):
             "port": settings.port,
         },
     )
-    app.state.orchestrator = SearchOrchestrator()
     yield
     await app.state.orchestrator.aclose()
-    logger.info("Shutting down QWRY server")
+    elapsed = (datetime.now(timezone.utc) - now).total_seconds()
+    logger.info(
+        "Shutting down QWRY server",
+        extra={"uptime_seconds": round(elapsed, 2), "requests": app.state.request_count},
+    )
 
 
 app = FastAPI(
@@ -42,5 +53,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def count_requests(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    t0 = time.monotonic()
+    response = await call_next(request)
+    elapsed = (time.monotonic() - t0) * 1000
+    app = request.app
+    app.state.request_count += 1
+    if request.url.path not in ("/api/health", "/favicon.ico"):
+        extra = {
+            "method": request.method,
+            "path": request.url.path,
+            "status": response.status_code,
+            "ms": round(elapsed, 1),
+            "total_requests": app.state.request_count,
+        }
+        if request.query_params:
+            extra["query"] = str(request.query_params)
+        logger.debug("Request handled", extra=extra)
+    return response
+
 
 register_routes(app)
