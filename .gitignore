@@ -34,3 +34,4 @@ engine/target/
 !.vscode/extensions.json
 *.swp
 *.swo
+tmp/
