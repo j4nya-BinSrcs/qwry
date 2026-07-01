@@ -1,6 +1,6 @@
 use clap::Parser;
-use crawler::config::CrawlerConfig;
-use crawler::engine::Crawler;
+use crawler::core::config::CrawlerConfig;
+use crawler::core::engine::Crawler;
 use shared::init_db;
 use std::time::Duration;
 

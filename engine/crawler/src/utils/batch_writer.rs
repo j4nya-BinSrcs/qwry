@@ -3,10 +3,6 @@ use std::time::Duration;
 use shared::{CrawledPage, DbPool};
 use tokio::sync::mpsc;
 
-// ---------------------------------------------------------------------------
-// BatchWriterConfig
-// ---------------------------------------------------------------------------
-
 #[derive(Debug, Clone)]
 pub struct BatchWriterConfig {
     pub max_batch_size: usize,
@@ -24,20 +20,6 @@ impl Default for BatchWriterConfig {
     }
 }
 
-// ---------------------------------------------------------------------------
-// BatchWriter
-// ---------------------------------------------------------------------------
-
-/// Background batch-writer that collects [`CrawledPage`] items sent by
-/// workers and flushes them to PostgreSQL in bulk INSERTs.
-///
-/// # Lifecycle
-///
-/// 1. Create with [`BatchWriter::new`] or [`BatchWriter::with_config`].
-/// 2. Obtain a sender via [`BatchWriter::sender`] and clone it for each worker.
-/// 3. After all workers have finished, call [`BatchWriter::shutdown`] (or
-///    simply drop the writer) to flush any remaining buffered pages and wait
-///    for the background task to exit.
 pub struct BatchWriter {
     sender: mpsc::Sender<CrawledPage>,
     handle: Option<tokio::task::JoinHandle<()>>,
@@ -61,10 +43,6 @@ impl BatchWriter {
         self.sender.clone()
     }
 
-    /// Gracefully shut down, flushing all buffered pages.
-    ///
-    /// Drop the original sender so the channel closes once all worker-held
-    /// clones are also dropped, then wait for the background loop to exit.
     pub async fn shutdown(mut self) {
         drop(self.sender);
         if let Some(h) = self.handle.take() {
@@ -73,10 +51,6 @@ impl BatchWriter {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Background loop
-// ---------------------------------------------------------------------------
-
 async fn batch_loop(
     pool: DbPool,
     mut rx: mpsc::Receiver<CrawledPage>,
@@ -84,7 +58,7 @@ async fn batch_loop(
 ) {
     let mut buffer: Vec<CrawledPage> = Vec::with_capacity(config.max_batch_size);
     let mut flush_interval = tokio::time::interval(config.flush_interval);
-    flush_interval.reset(); // don't fire immediately
+    flush_interval.reset();
 
     loop {
         tokio::select! {
@@ -196,7 +170,6 @@ mod tests {
                 .unwrap();
         }
 
-        // Give the background task a moment to flush
         tokio::time::sleep(Duration::from_millis(100)).await;
 
         for i in 0..3 {
@@ -228,7 +201,6 @@ mod tests {
         );
         let sender = writer.sender();
 
-        // Send the same URL twice
         sender
             .send(make_page("https://dedup-test.com"))
             .await
@@ -241,7 +213,6 @@ mod tests {
         drop(sender);
         writer.shutdown().await;
 
-        // The URL should exist (ON CONFLICT upsert handled the duplicate)
         let found = shared::is_url_crawled(&pool, "https://dedup-test.com")
             .await
             .unwrap();

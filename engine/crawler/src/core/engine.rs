@@ -11,18 +11,15 @@ use reqwest::Client;
 use shared::{CrawledPage, DbPool};
 
 use crate::{
-    batch_writer::BatchWriter,
-    config::CrawlerConfig,
-    html::fetch_page,
-    job_queue::JobQueue,
-    robots::{fetch_robots_txt, RobotsRules},
-    sharded_set::ShardedSet,
-    types::CrawlJob,
+    core::config::CrawlerConfig,
+    utils::retry::{classify_error, max_retries_for, retry_delay},
+    core::types::CrawlJob,
+    parser::html::fetch_page,
+    parser::robots::{fetch_robots_txt, RobotsRules},
+    utils::batch_writer::BatchWriter,
+    utils::job_queue::JobQueue,
+    utils::sharded_set::ShardedSet,
 };
-
-// ---------------------------------------------------------------------------
-// Crawler – top-level struct
-// ---------------------------------------------------------------------------
 
 pub struct Crawler {
     config: CrawlerConfig,
@@ -76,7 +73,6 @@ impl Crawler {
         &self.client
     }
 
-    /// Pre-fetch and cache robots.txt for all given domains in parallel.
     pub async fn prefetch_robots(&self, domains: &HashSet<String>) {
         use futures::stream::FuturesUnordered;
         use futures::StreamExt;
@@ -98,7 +94,6 @@ impl Crawler {
         while tasks.next().await.is_some() {}
     }
 
-    /// Look up (or fetch + cache) robots rules for a host.
     pub async fn robots_allows(&self, host: &str, path: &str) -> Option<bool> {
         let cached = {
             let cache = self.robots_cache.lock().unwrap();
@@ -121,8 +116,6 @@ impl Crawler {
         Some(rules.is_allowed_by_robots(path))
     }
 
-    /// Return the minimum duration to wait before the next request to `host`,
-    /// based on the politeness delay and the last request time.
     pub fn politeness_wait(&self, host: &str) -> Duration {
         let delay = {
             let cache = self.robots_cache.lock().unwrap();
@@ -145,7 +138,6 @@ impl Crawler {
         }
     }
 
-    /// Mark that a request to `host` was just performed.
     pub fn record_request(&self, host: &str) {
         self.domain_last_request
             .lock()
@@ -153,19 +145,6 @@ impl Crawler {
             .insert(host.to_string(), Instant::now());
     }
 
-    // -----------------------------------------------------------------------
-    // Task 1.4  –  Crawl Orchestration
-    // -----------------------------------------------------------------------
-
-    /// Run a crawl starting from the given seed URLs.
-    ///
-    /// This is the top-level entry point for the crawler.  It:
-    /// 1. Pushes seed URLs onto the job queue.
-    /// 2. Pre-fetches robots.txt for all seed domains.
-    /// 3. Spawns `concurrency` worker tasks.
-    /// 4. Sets up a SIGINT / Ctrl-C handler for graceful shutdown.
-    /// 5. Waits for all workers to finish.
-    /// 6. Prints a JSON summary of crawl stats.
     pub async fn run(&self, seeds: &[String]) {
         let queue = JobQueue::new();
         let visited = ShardedSet::new(4096);
@@ -174,7 +153,6 @@ impl Crawler {
 
         let start = Instant::now();
 
-        // push seeds
         for url in seeds {
             visited.insert(url.clone());
             queue.push(CrawlJob {
@@ -185,7 +163,6 @@ impl Crawler {
         }
         stats.urls_discovered.fetch_add(seeds.len(), Ordering::Relaxed);
 
-        // pre-fetch robots for seed domains
         let domains: HashSet<String> = seeds
             .iter()
             .filter_map(|s| url::Url::parse(s).ok())
@@ -195,7 +172,6 @@ impl Crawler {
             self.prefetch_robots(&domains).await;
         }
 
-        // set up graceful shutdown
         let shutdown_ctrl = Arc::clone(&shutdown);
         tokio::spawn(async move {
             tokio::signal::ctrl_c().await.ok();
@@ -203,11 +179,9 @@ impl Crawler {
             shutdown_ctrl.store(true, Ordering::SeqCst);
         });
 
-        // batch DB writer – bulk-inserts pages via BatchWriter
         let batch_writer = BatchWriter::new(self.db_pool.clone());
         let batch_tx = batch_writer.sender();
 
-        // spawn workers
         let mut handles = Vec::with_capacity(self.config.concurrency);
         for _ in 0..self.config.concurrency {
             let worker = CrawlerWorker {
@@ -224,21 +198,16 @@ impl Crawler {
             handles.push(tokio::spawn(async move { worker.run().await }));
         }
 
-        // Drop the channel sender so the batch writer shuts down once
-        // all workers have finished (dropping their clones too).
         drop(batch_tx);
 
-        // Wait for workers
         for h in handles {
             h.await.ok();
         }
 
-        // Flush remaining buffered pages
         batch_writer.shutdown().await;
 
         let elapsed = start.elapsed();
 
-        // Print JSON summary to stdout
         let summary = serde_json::json!({
             "elapsed_secs": elapsed.as_secs_f64(),
             "pages_crawled": stats.pages_crawled.load(Ordering::Relaxed),
@@ -286,63 +255,6 @@ impl Default for CrawlStats {
 }
 
 // ---------------------------------------------------------------------------
-// RetryClass – classify fetch errors for retry decisions
-// ---------------------------------------------------------------------------
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RetryClass {
-    Timeout,
-    Connect,
-    RateLimited,
-    ServerError,
-    Permanent,
-}
-
-pub fn classify_error(err: &anyhow::Error) -> RetryClass {
-    let kind = error_source_kind(err);
-    match kind {
-        Some("timeout") | Some("timed out") => RetryClass::Timeout,
-        Some("connect") | Some("connection refused") | Some("dns") => RetryClass::Connect,
-        Some("status 429") | Some("status 503") | Some("retry after") => RetryClass::RateLimited,
-        Some("status 5") => RetryClass::ServerError,
-        _ => RetryClass::Permanent,
-    }
-}
-
-fn error_source_kind(err: &anyhow::Error) -> Option<&'static str> {
-    let msg = format!("{:#}", err).to_lowercase();
-    if msg.contains("timeout") || msg.contains("timed out") {
-        return Some("timeout");
-    }
-    if msg.contains("connect") || msg.contains("connection refused") || msg.contains("dns") {
-        return Some("connect");
-    }
-    if msg.contains("429") || msg.contains("503") || msg.contains("retry after") {
-        return Some("status 429");
-    }
-    if msg.contains("5") && msg.contains("status") {
-        // Keep this check last among 5xx checks since "5" is short
-    }
-    None
-}
-
-pub fn max_retries_for(class: RetryClass, config: &CrawlerConfig) -> u32 {
-    match class {
-        RetryClass::Timeout => config.max_retries,
-        RetryClass::Connect => 1.min(config.max_retries),
-        RetryClass::RateLimited => config.max_retries,
-        RetryClass::ServerError => config.max_retries.saturating_sub(1),
-        RetryClass::Permanent => 0,
-    }
-}
-
-/// Return the delay before retrying, using exponential backoff.
-pub fn retry_delay(retry_count: u32, base: Duration) -> Duration {
-    let ms = base.as_millis() as u64 * 2u64.pow(retry_count);
-    Duration::from_millis(ms.min(30_000))
-}
-
-// ---------------------------------------------------------------------------
 // CrawlerWorker – per-worker state and run loop
 // ---------------------------------------------------------------------------
 
@@ -369,7 +281,7 @@ impl CrawlerWorker {
             let Some(job) = self.queue.pop_or_wait().await else {
                 idle_count += 1;
                 if idle_count >= 3 {
-                    break; // no new jobs for 3+ seconds → crawl complete
+                    break;
                 }
                 continue;
             };
@@ -383,7 +295,6 @@ impl CrawlerWorker {
                 continue;
             }
 
-            // Parse URL
             let Ok(parsed) = url::Url::parse(&job.url) else {
                 continue;
             };
@@ -392,7 +303,6 @@ impl CrawlerWorker {
             };
             let path = parsed.path();
 
-            // Robots check
             if !self.config.skip_politeness {
                 let allowed = self.robots_allows_worker(&host, path).await;
                 if allowed == Some(false) {
@@ -430,7 +340,6 @@ impl CrawlerWorker {
                 Ok(result) => {
                     self.stats.pages_crawled.fetch_add(1, Ordering::Relaxed);
 
-                    // Save to DB via batch channel
                     let page = CrawledPage {
                         id: None,
                         url: result.url,
@@ -444,7 +353,6 @@ impl CrawlerWorker {
                         break;
                     }
 
-                    // Enqueue outgoing links
                     for link in &result.outgoing_links {
                         if self.visited.insert(link.clone()) {
                             self.stats.urls_discovered.fetch_add(1, Ordering::Relaxed);
@@ -534,16 +442,11 @@ fn url_path(url_str: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    // These tests need a real DbPool for Crawler::new().  We connect to
-    // PostgreSQL via init_db().  The pool is never actually queried in
-    // these tests — politeness state is entirely in-memory.
 
     async fn test_pool() -> DbPool {
         dotenvy::dotenv().ok();
         shared::init_db().await.unwrap()
     }
-
-    // --- politeness tests ---------------------------------------------------
 
     #[tokio::test]
     async fn test_robots_allows_with_precached_rules() {
@@ -660,8 +563,6 @@ mod tests {
         assert!(wait > Duration::from_secs(50));
     }
 
-    // --- CrawlStats tests ---------------------------------------------------
-
     #[test]
     fn test_crawl_stats_new_counts_are_zero() {
         let stats = CrawlStats::new();
@@ -684,90 +585,6 @@ mod tests {
         assert_eq!(stats.fetch_errors.load(Ordering::Relaxed), 2);
     }
 
-    // --- RetryClass / classify_error tests ----------------------------------
-
-    #[test]
-    fn test_classify_error_timeout() {
-        let err = anyhow::anyhow!("request timed out");
-        assert_eq!(classify_error(&err), RetryClass::Timeout);
-    }
-
-    #[test]
-    fn test_classify_error_connect() {
-        let err = anyhow::anyhow!("dns lookup failed for example.com");
-        assert_eq!(classify_error(&err), RetryClass::Connect);
-    }
-
-    #[test]
-    fn test_classify_error_connection_refused() {
-        let err = anyhow::anyhow!("connection refused: 127.0.0.1:8080");
-        assert_eq!(classify_error(&err), RetryClass::Connect);
-    }
-
-    #[test]
-    fn test_classify_error_rate_limited() {
-        let err = anyhow::anyhow!("HTTP 429 Too Many Requests");
-        assert_eq!(classify_error(&err), RetryClass::RateLimited);
-    }
-
-    #[test]
-    fn test_classify_error_server_error() {
-        let err = anyhow::anyhow!("HTTP 500 Internal Server Error");
-        assert_eq!(classify_error(&err), RetryClass::Permanent);
-    }
-
-    #[test]
-    fn test_classify_error_permanent() {
-        let err = anyhow::anyhow!("malformed url: http://");
-        assert_eq!(classify_error(&err), RetryClass::Permanent);
-    }
-
-    #[test]
-    fn test_max_retries_for_timeout() {
-        let config = CrawlerConfig {
-            max_retries: 3,
-            ..default_test_config()
-        };
-        assert_eq!(max_retries_for(RetryClass::Timeout, &config), 3);
-    }
-
-    #[test]
-    fn test_max_retries_for_connect() {
-        let config = CrawlerConfig {
-            max_retries: 3,
-            ..default_test_config()
-        };
-        assert_eq!(max_retries_for(RetryClass::Connect, &config), 1);
-    }
-
-    #[test]
-    fn test_max_retries_for_permanent() {
-        let config = CrawlerConfig {
-            max_retries: 3,
-            ..default_test_config()
-        };
-        assert_eq!(max_retries_for(RetryClass::Permanent, &config), 0);
-    }
-
-    #[test]
-    fn test_retry_delay_exponential_backoff() {
-        let base = Duration::from_millis(250);
-        assert_eq!(retry_delay(0, base), Duration::from_millis(250));
-        assert_eq!(retry_delay(1, base), Duration::from_millis(500));
-        assert_eq!(retry_delay(2, base), Duration::from_millis(1000));
-        assert_eq!(retry_delay(3, base), Duration::from_millis(2000));
-    }
-
-    #[test]
-    fn test_retry_delay_capped_at_30s() {
-        let base = Duration::from_secs(10);
-        assert_eq!(retry_delay(5, base), Duration::from_secs(30));
-    }
-
-    // --- run / orchestration (smoke tests with local HTTP server) -----------
-
-    /// Start a minimal HTTP server that returns a static HTML page for every
-    /// incoming connection.  Returns the URL of the server.
     async fn spawn_test_server(body: &str) -> String {
         let body = body.to_string();
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -841,7 +658,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_respects_max_depth() {
-        // Serve a page with a single link to verify depth=0 stops it.
         let url = spawn_test_server(
             r#"<html><body><a href="/other">other</a></body></html>"#,
         )
@@ -849,7 +665,7 @@ mod tests {
         let other_url = format!("{}/other", url);
 
         let config = CrawlerConfig {
-            max_depth: 0, // only the seed, no outgoing links
+            max_depth: 0,
             max_pages: 100,
             concurrency: 2,
             politeness_delay: Duration::from_millis(500),
@@ -866,20 +682,5 @@ mod tests {
 
         let other_fetched = shared::is_url_crawled(&pool, &other_url).await.unwrap();
         assert!(!other_fetched, "depth=0 should not follow outgoing links");
-    }
-
-    fn default_test_config() -> CrawlerConfig {
-        CrawlerConfig {
-            max_depth: 3,
-            max_pages: 100,
-            concurrency: 10,
-            politeness_delay: Duration::from_millis(500),
-            user_agent: "TestBot".into(),
-            external_domains: false,
-            max_retries: 3,
-            retry_base_delay: Duration::from_secs(5),
-            skip_politeness: true,
-            batch_db_check_size: 100,
-        }
     }
 }

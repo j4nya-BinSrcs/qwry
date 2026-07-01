@@ -1,9 +1,5 @@
 use std::time::Duration;
 
-// ---------------------------------------------------------------------------
-// CrawlerConfig
-// ---------------------------------------------------------------------------
-
 #[derive(Debug, Clone)]
 pub struct CrawlerConfig {
     pub max_depth: usize,
