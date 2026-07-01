@@ -6,6 +6,7 @@ use tracing_subscriber::EnvFilter;
 
 mod index;
 mod search;
+mod serve;
 
 #[derive(Parser)]
 #[command(name = "indexer", about = "Qwry search indexer")]
@@ -72,10 +73,7 @@ async fn main() -> Result<()> {
             println!("{json}");
         }
         Command::Serve { port } => {
-            tracing::info!(%port, "Starting search server...");
-            loop {
-                tokio::time::sleep(tokio::time::Duration::from_secs(3600)).await;
-            }
+            serve::run_server(index, db_pool, *port).await?;
         }
     }
 

@@ -343,14 +343,21 @@ impl CrawlerWorker {
                         Ordering::SeqCst,
                         |v| (v < self.config.max_pages).then_some(v + 1),
                     );
-                    match claimed {
-                        Ok(_) => {}
+                    let count = match claimed {
+                        Ok(prev) => prev + 1,
                         Err(_) => {
                             self.queue.push(job);
                             self.shutdown.store(true, Ordering::SeqCst);
                             break;
                         }
-                    }
+                    };
+                    tracing::info!(
+                        count,
+                        max = self.config.max_pages,
+                        url = %result.url,
+                        depth = job.depth,
+                        "Processed"
+                    );
 
                     let page = CrawledPage {
                         id: None,

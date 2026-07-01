@@ -52,11 +52,7 @@ impl JobQueue {
             if let Some(job) = self.pop() {
                 return Some(job);
             }
-            tokio::time::sleep(Duration::from_secs(1)).await;
-            if let Some(job) = self.pop() {
-                return Some(job);
-            }
-            return None;
+            tokio::time::sleep(Duration::from_millis(50)).await;
         }
     }
 
