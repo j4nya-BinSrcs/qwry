@@ -34,4 +34,9 @@ engine/target/
 !.vscode/extensions.json
 *.swp
 *.swo
+
+# data
+engine/data/test-index/
+engine/data/index/
+
 tmp/
