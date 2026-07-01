@@ -2,7 +2,7 @@ use std::{
     collections::{HashMap, HashSet},
     sync::{
         atomic::{AtomicUsize, Ordering},
-        Arc, Mutex,
+        Arc, RwLock,
     },
     time::{Duration, Instant},
 };
@@ -25,8 +25,8 @@ pub struct Crawler {
     config: CrawlerConfig,
     db_pool: DbPool,
     client: Client,
-    pub(crate) robots_cache: Arc<Mutex<HashMap<String, RobotsRules>>>,
-    pub(crate) domain_last_request: Arc<Mutex<HashMap<String, Instant>>>,
+    pub(crate) robots_cache: Arc<RwLock<HashMap<String, RobotsRules>>>,
+    pub(crate) domain_last_request: Arc<RwLock<HashMap<String, Instant>>>,
 }
 
 impl Crawler {
@@ -56,8 +56,8 @@ impl Crawler {
             config,
             db_pool,
             client,
-            robots_cache: Arc::new(Mutex::new(HashMap::new())),
-            domain_last_request: Arc::new(Mutex::new(HashMap::new())),
+            robots_cache: Arc::new(RwLock::new(HashMap::new())),
+            domain_last_request: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -87,7 +87,7 @@ impl Crawler {
 
             tasks.push(async move {
                 let rules = fetch_robots_txt(&client, &domain, &ua).await;
-                cache.lock().unwrap().insert(domain, rules);
+                cache.write().unwrap().insert(domain, rules);
             });
         }
 
@@ -96,7 +96,7 @@ impl Crawler {
 
     pub async fn robots_allows(&self, host: &str, path: &str) -> Option<bool> {
         let cached = {
-            let cache = self.robots_cache.lock().unwrap();
+            let cache = self.robots_cache.read().unwrap();
             cache.get(host).cloned()
         };
 
@@ -106,7 +106,7 @@ impl Crawler {
                 let rules =
                     fetch_robots_txt(&self.client, host, &self.config.user_agent).await;
                 self.robots_cache
-                    .lock()
+                    .write()
                     .unwrap()
                     .insert(host.to_string(), rules.clone());
                 rules
@@ -118,14 +118,14 @@ impl Crawler {
 
     pub fn politeness_wait(&self, host: &str) -> Duration {
         let delay = {
-            let cache = self.robots_cache.lock().unwrap();
+            let cache = self.robots_cache.read().unwrap();
             cache
                 .get(host)
                 .and_then(|r| r.crawl_delay)
                 .unwrap_or(self.config.politeness_delay)
         };
 
-        let mut last_req = self.domain_last_request.lock().unwrap();
+        let mut last_req = self.domain_last_request.write().unwrap();
         let now = Instant::now();
         let elapsed = last_req.get(host).map(|t| now.duration_since(*t));
 
@@ -140,7 +140,7 @@ impl Crawler {
 
     pub fn record_request(&self, host: &str) {
         self.domain_last_request
-            .lock()
+            .write()
             .unwrap()
             .insert(host.to_string(), Instant::now());
     }
@@ -261,8 +261,8 @@ impl Default for CrawlStats {
 struct CrawlerWorker {
     config: CrawlerConfig,
     client: Client,
-    robots_cache: Arc<Mutex<HashMap<String, RobotsRules>>>,
-    domain_last_request: Arc<Mutex<HashMap<String, Instant>>>,
+    robots_cache: Arc<RwLock<HashMap<String, RobotsRules>>>,
+    domain_last_request: Arc<RwLock<HashMap<String, Instant>>>,
     queue: JobQueue,
     visited: ShardedSet,
     stats: Arc<CrawlStats>,
@@ -311,12 +311,12 @@ impl CrawlerWorker {
                 }
 
                 let wait = {
-                    let cache = self.robots_cache.lock().unwrap();
+                    let cache = self.robots_cache.read().unwrap();
                     let delay = cache
                         .get(&host)
                         .and_then(|r| r.crawl_delay)
                         .unwrap_or(self.config.politeness_delay);
-                    let mut last_req = self.domain_last_request.lock().unwrap();
+                    let mut last_req = self.domain_last_request.write().unwrap();
                     let now = Instant::now();
                     let elapsed = last_req.get(&host).map(|t| now.duration_since(*t));
                     match elapsed {
@@ -330,7 +330,7 @@ impl CrawlerWorker {
 
                 if let Some(wait_dur) = wait {
                     tokio::time::sleep(wait_dur).await;
-                    let _ = self.domain_last_request.lock().unwrap().insert(host.clone(), Instant::now());
+                    let _ = self.domain_last_request.write().unwrap().insert(host.clone(), Instant::now());
                 }
             }
 
@@ -429,7 +429,7 @@ impl CrawlerWorker {
 
     async fn robots_allows_worker(&self, host: &str, path: &str) -> Option<bool> {
         let cached = {
-            let cache = self.robots_cache.lock().unwrap();
+            let cache = self.robots_cache.read().unwrap();
             cache.get(host).cloned()
         };
 
@@ -438,7 +438,7 @@ impl CrawlerWorker {
             None => {
                 let rules = fetch_robots_txt(&self.client, host, &self.config.user_agent).await;
                 self.robots_cache
-                    .lock()
+                    .write()
                     .unwrap()
                     .insert(host.to_string(), rules.clone());
                 rules
@@ -494,7 +494,7 @@ mod tests {
         };
         crawler
             .robots_cache
-            .lock()
+            .write()
             .unwrap()
             .insert("example.com".into(), rules);
 
@@ -528,7 +528,7 @@ mod tests {
         };
         crawler
             .robots_cache
-            .lock()
+            .write()
             .unwrap()
             .insert("slowhost.com".into(), rules);
 
