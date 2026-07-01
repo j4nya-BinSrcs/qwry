@@ -6,7 +6,7 @@ use tantivy::schema::Value;
 use tantivy::snippet::SnippetGenerator;
 use tantivy::TantivyDocument;
 
-use crate::index::SearchIndex;
+use crate::services::index::SearchIndex;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchHit {
@@ -93,7 +93,7 @@ impl SearchIndex {
 
 #[cfg(test)]
 mod tests {
-    use crate::index::SearchIndex;
+    use crate::services::index::SearchIndex;
     use shared::{init_db, CrawledPage, DbPool};
     use std::path::PathBuf;
     use std::sync::atomic::{AtomicU32, Ordering};

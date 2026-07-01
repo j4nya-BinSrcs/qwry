@@ -2,10 +2,9 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use indexer::index;
+use indexer::services::index;
+use indexer::services::serve;
 use tracing_subscriber::EnvFilter;
-
-mod serve;
 
 #[derive(Parser)]
 #[command(name = "indexer", about = "Qwry search indexer")]

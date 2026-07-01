@@ -138,7 +138,7 @@ async fn test_full_crawl_index_search_pipeline() -> Result<()> {
     assert!(page2_crawled, "page2 should be in the database");
 
     // 6. Open a Tantivy index and index the crawled pages
-    let search_index = indexer::index::SearchIndex::open_or_create(&index_dir)?;
+    let search_index = indexer::services::index::SearchIndex::open_or_create(&index_dir)?;
     let count = search_index.index_new_pages(&pool).await?;
     assert!(count >= 4, "should have indexed at least 4 pages, got {count}");
 
