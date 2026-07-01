@@ -338,7 +338,19 @@ impl CrawlerWorker {
 
             match fetch_page(&self.client, &job.url, self.config.external_domains).await {
                 Ok(result) => {
-                    self.stats.pages_crawled.fetch_add(1, Ordering::Relaxed);
+                    let claimed = self.stats.pages_crawled.fetch_update(
+                        Ordering::SeqCst,
+                        Ordering::SeqCst,
+                        |v| (v < self.config.max_pages).then_some(v + 1),
+                    );
+                    match claimed {
+                        Ok(_) => {}
+                        Err(_) => {
+                            self.queue.push(job);
+                            self.shutdown.store(true, Ordering::SeqCst);
+                            break;
+                        }
+                    }
 
                     let page = CrawledPage {
                         id: None,
