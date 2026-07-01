@@ -18,6 +18,11 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Index unindexed pages from the database into Tantivy
+    Index,
+    /// Delete and rebuild the entire index from all crawled pages
+    Reindex,
+    /// Start the search API server
     Serve {
         #[arg(long, default_value = "8001")]
         port: u16,
@@ -33,10 +38,25 @@ async fn main() -> Result<()> {
 
     let cli = Cli::parse();
 
-    let _index = index::SearchIndex::open_or_create(&cli.index_dir)?;
+    let index = index::SearchIndex::open_or_create(&cli.index_dir)?;
     tracing::info!(path = %cli.index_dir.display(), "Index opened/created");
 
+    let db_pool = shared::init_db().await?;
+
     match &cli.command {
+        Command::Index => {
+            let count = index.index_new_pages(&db_pool).await?;
+            if count == 0 {
+                tracing::info!("No new pages to index");
+            } else {
+                tracing::info!(%count, "Indexed pages");
+            }
+        }
+        Command::Reindex => {
+            tracing::info!("Rebuilding index from scratch...");
+            let count = index.reindex_all_pages(&db_pool).await?;
+            tracing::info!(%count, "Reindex complete");
+        }
         Command::Serve { port } => {
             tracing::info!(%port, "Starting search server...");
             loop {
@@ -44,4 +64,6 @@ async fn main() -> Result<()> {
             }
         }
     }
+
+    Ok(())
 }

@@ -7,7 +7,7 @@ use std::collections::HashSet;
 
 pub type DbPool = PgPool;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct CrawledPage {
     pub id: Option<i64>,
     pub url: String,
@@ -167,4 +167,39 @@ pub async fn get_indexed_page_count(pool: &DbPool) -> Result<i64> {
         .await?;
 
     Ok(row.0)
+}
+
+pub async fn get_unindexed_pages(pool: &DbPool) -> Result<Vec<CrawledPage>> {
+    let rows = sqlx::query_as::<_, CrawledPage>(
+        "SELECT id, url, title, description, content, crawled_at, indexed \
+         FROM crawled_pages WHERE indexed = FALSE ORDER BY id",
+    )
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows)
+}
+
+pub async fn mark_pages_as_indexed(pool: &DbPool, ids: &[i64]) -> Result<u64> {
+    if ids.is_empty() {
+        return Ok(0);
+    }
+
+    let mut qb: QueryBuilder<'_, sqlx::Postgres> =
+        QueryBuilder::new("UPDATE crawled_pages SET indexed = TRUE WHERE id IN (");
+    let mut separated = qb.separated(", ");
+    for id in ids {
+        separated.push_bind(id);
+    }
+    separated.push_unseparated(")");
+
+    let result = qb.build().execute(pool).await?;
+    Ok(result.rows_affected())
+}
+
+pub async fn reset_indexed_flag(pool: &DbPool) -> Result<u64> {
+    let result = sqlx::query("UPDATE crawled_pages SET indexed = FALSE")
+        .execute(pool)
+        .await?;
+    Ok(result.rows_affected())
 }
