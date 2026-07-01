@@ -1,0 +1,17 @@
+[crawler]
+max_depth = 3
+max_pages = 100
+concurrency = 10
+politeness_delay_secs = 1.0
+user_agent = "QwryBot/0.1"
+external_domains = false
+max_retries = 3
+retry_base_delay_secs = 5.0
+skip_politeness = false
+batch_db_check_size = 100
+
+[indexer]
+port = 8001
+
+[index_dir]
+path = "./data/index"

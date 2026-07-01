@@ -11,7 +11,7 @@ use shared::DbPool;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
-use crate::index::SearchIndex;
+use indexer::index::SearchIndex;
 
 #[derive(Deserialize)]
 pub struct SearchParams {

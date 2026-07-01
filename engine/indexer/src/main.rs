@@ -2,10 +2,9 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use indexer::index;
 use tracing_subscriber::EnvFilter;
 
-mod index;
-mod search;
 mod serve;
 
 #[derive(Parser)]
@@ -48,14 +47,14 @@ async fn main() -> Result<()> {
 
     let cli = Cli::parse();
 
-    let index = index::SearchIndex::open_or_create(&cli.index_dir)?;
+    let search_index = index::SearchIndex::open_or_create(&cli.index_dir)?;
     tracing::info!(path = %cli.index_dir.display(), "Index opened/created");
 
     let db_pool = shared::init_db().await?;
 
     match &cli.command {
         Command::Index => {
-            let count = index.index_new_pages(&db_pool).await?;
+            let count = search_index.index_new_pages(&db_pool).await?;
             if count == 0 {
                 tracing::info!("No new pages to index");
             } else {
@@ -64,16 +63,16 @@ async fn main() -> Result<()> {
         }
         Command::Reindex => {
             tracing::info!("Rebuilding index from scratch...");
-            let count = index.reindex_all_pages(&db_pool).await?;
+            let count = search_index.reindex_all_pages(&db_pool).await?;
             tracing::info!(%count, "Reindex complete");
         }
         Command::Search { query, limit, offset } => {
-            let response = index.search(query, *limit, *offset)?;
+            let response = search_index.search(query, *limit, *offset)?;
             let json = serde_json::to_string_pretty(&response)?;
             println!("{json}");
         }
         Command::Serve { port } => {
-            serve::run_server(index, db_pool, *port).await?;
+            serve::run_server(search_index, db_pool, *port).await?;
         }
     }
 

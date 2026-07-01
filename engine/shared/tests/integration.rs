@@ -1,7 +1,14 @@
 use shared::*;
 use chrono::Utc;
+use std::sync::{Mutex, OnceLock};
+
+fn serial() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(())).lock().unwrap_or_else(|e| e.into_inner())
+}
 
 async fn setup() -> DbPool {
+    dotenvy::dotenv().ok();
     let pool = init_db().await.expect("init_db should succeed");
     // Clear any leftover data from previous test runs
     sqlx::query("DELETE FROM crawled_pages")
@@ -13,6 +20,7 @@ async fn setup() -> DbPool {
 
 #[tokio::test]
 async fn test_init_db_creates_tables() {
+    let _lock = serial();
     let pool = setup().await;
 
     // Verify the table exists by describing it
@@ -29,6 +37,7 @@ async fn test_init_db_creates_tables() {
 
 #[tokio::test]
 async fn test_save_and_check_url_crawled() {
+    let _lock = serial();
     let pool = setup().await;
 
     let page = CrawledPage {
@@ -56,6 +65,7 @@ async fn test_save_and_check_url_crawled() {
 
 #[tokio::test]
 async fn test_upsert_updates_existing_page() {
+    let _lock = serial();
     let pool = setup().await;
 
     let page = CrawledPage {
@@ -96,6 +106,7 @@ async fn test_upsert_updates_existing_page() {
 
 #[tokio::test]
 async fn test_are_urls_crawled_batch() {
+    let _lock = serial();
     let pool = setup().await;
 
     let urls = vec![
@@ -130,6 +141,7 @@ async fn test_are_urls_crawled_batch() {
 
 #[tokio::test]
 async fn test_are_urls_crawled_empty() {
+    let _lock = serial();
     let pool = setup().await;
     let crawled = are_urls_crawled(&pool, &[])
         .await
@@ -139,9 +151,9 @@ async fn test_are_urls_crawled_empty() {
 
 #[tokio::test]
 async fn test_page_counts() {
+    let _lock = serial();
     let pool = setup().await;
 
-    // Insert pages with mixed indexed status
     for i in 0..5 {
         let page = CrawledPage {
             id: None,
@@ -156,16 +168,16 @@ async fn test_page_counts() {
     }
 
     let total = get_page_count(&pool).await.expect("get_page_count should succeed");
+    assert_eq!(total, 5, "total should be 5");
     let indexed = get_indexed_page_count(&pool)
         .await
         .expect("get_indexed_page_count should succeed");
-
-    assert_eq!(total, 5, "total should be 5");
     assert_eq!(indexed, 3, "indexed should be 3");
 }
 
 #[tokio::test]
 async fn test_save_page_with_null_title_and_description() {
+    let _lock = serial();
     let pool = setup().await;
 
     let page = CrawledPage {
@@ -194,6 +206,7 @@ async fn test_save_page_with_null_title_and_description() {
 
 #[tokio::test]
 async fn test_indexed_default_is_false() {
+    let _lock = serial();
     let pool = setup().await;
 
     let page = CrawledPage {
@@ -220,6 +233,7 @@ async fn test_indexed_default_is_false() {
 
 #[tokio::test]
 async fn test_concurrent_saves_same_url() {
+    let _lock = serial();
     let pool = setup().await;
 
     let page = CrawledPage {
@@ -267,6 +281,7 @@ async fn test_concurrent_saves_same_url() {
 
 #[tokio::test]
 async fn test_multiple_unique_urls() {
+    let _lock = serial();
     let pool = setup().await;
 
     for i in 0..100 {
