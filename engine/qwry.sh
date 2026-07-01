@@ -158,10 +158,10 @@ run_crawl() {
     bin=$(find_bin crawler)
     if [[ -n "$bin" ]]; then
         # shellcheck disable=SC2046
-        exec "$bin" $(build_crawl_args) "${user_args[@]}" --seeds "${seeds[@]}"
+        "$bin" $(build_crawl_args) "${user_args[@]}" --seeds "${seeds[@]}"
     else
         # shellcheck disable=SC2046
-        exec cargo run --release --manifest-path "$QWRY_DIR/Cargo.toml" --bin crawler -- \
+        cargo run --release --manifest-path "$QWRY_DIR/Cargo.toml" --bin crawler -- \
             $(build_crawl_args) "${user_args[@]}" --seeds "${seeds[@]}"
     fi
 }
@@ -173,9 +173,9 @@ run_index() {
     local bin
     bin=$(find_bin indexer)
     if [[ -n "$bin" ]]; then
-        exec "$bin" --index-dir "$index_dir" index "$@"
+        "$bin" --index-dir "$index_dir" index "$@"
     else
-        exec cargo run --release --manifest-path "$QWRY_DIR/Cargo.toml" --bin indexer -- \
+        cargo run --release --manifest-path "$QWRY_DIR/Cargo.toml" --bin indexer -- \
             --index-dir "$index_dir" index "$@"
     fi
 }
@@ -187,9 +187,9 @@ run_reindex() {
     local bin
     bin=$(find_bin indexer)
     if [[ -n "$bin" ]]; then
-        exec "$bin" --index-dir "$index_dir" reindex "$@"
+        "$bin" --index-dir "$index_dir" reindex "$@"
     else
-        exec cargo run --release --manifest-path "$QWRY_DIR/Cargo.toml" --bin indexer -- \
+        cargo run --release --manifest-path "$QWRY_DIR/Cargo.toml" --bin indexer -- \
             --index-dir "$index_dir" reindex "$@"
     fi
 }
@@ -205,9 +205,9 @@ run_search() {
     local bin
     bin=$(find_bin indexer)
     if [[ -n "$bin" ]]; then
-        exec "$bin" --index-dir "$index_dir" search "$@"
+        "$bin" --index-dir "$index_dir" search "$@"
     else
-        exec cargo run --release --manifest-path "$QWRY_DIR/Cargo.toml" --bin indexer -- \
+        cargo run --release --manifest-path "$QWRY_DIR/Cargo.toml" --bin indexer -- \
             --index-dir "$index_dir" search "$@"
     fi
 }
@@ -221,9 +221,9 @@ run_serve() {
     local bin
     bin=$(find_bin indexer)
     if [[ -n "$bin" ]]; then
-        exec "$bin" --index-dir "$index_dir" serve --port "$port" "$@"
+        "$bin" --index-dir "$index_dir" serve --port "$port" "$@"
     else
-        exec cargo run --release --manifest-path "$QWRY_DIR/Cargo.toml" --bin indexer -- \
+        cargo run --release --manifest-path "$QWRY_DIR/Cargo.toml" --bin indexer -- \
             --index-dir "$index_dir" serve --port "$port" "$@"
     fi
 }
