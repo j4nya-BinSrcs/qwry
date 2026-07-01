@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from server.src.api import register_routes
 from server.src.core.config import settings
 from server.src.core.logging import setup_logging
 
@@ -39,7 +40,4 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-@app.get("/api/health")
-async def health():
-    return {"status": "ok"}
+register_routes(app)
