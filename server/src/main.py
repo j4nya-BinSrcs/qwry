@@ -11,6 +11,7 @@ from server.src.api import register_routes
 from server.src.core.config import settings
 from server.src.core.logging import setup_logging
 from server.src.core.registry import EndpointRegistry
+from server.src.db import close_db, init_db
 from server.src.services.llm import OllamaBackend
 from server.src.services.search_orch import SearchOrchestrator
 from server.src.services.summarizer import Summarizer
@@ -41,6 +42,11 @@ async def lifespan(app: FastAPI):
             raise ValueError(f"Unknown summary_provider: {settings.summary_provider}")
         app.state.summarizer = Summarizer(llm, http_client, settings.summary_max_content_length)
 
+        await init_db(settings.database_url)
+        from server.src.db import async_session_maker
+
+        app.state.db = async_session_maker
+
         logger.info(
             "Starting QWRY server",
             extra={
@@ -52,6 +58,7 @@ async def lifespan(app: FastAPI):
         yield
 
     elapsed = (datetime.now(UTC) - now).total_seconds()
+    await close_db()
     logger.info(
         "Shutting down QWRY server",
         extra={"uptime_seconds": round(elapsed, 2), "requests": app.state.request_count},
