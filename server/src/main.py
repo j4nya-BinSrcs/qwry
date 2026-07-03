@@ -11,8 +11,9 @@ from server.src.api import register_routes
 from server.src.core.config import settings
 from server.src.core.logging import setup_logging
 from server.src.core.registry import EndpointRegistry
-from server.src.services.runner import TaskManager
+from server.src.services.llm import OllamaBackend
 from server.src.services.search_orch import SearchOrchestrator
+from server.src.services.summarizer import Summarizer
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,17 @@ async def lifespan(app: FastAPI):
         app.state.http = http_client
         app.state.registry = EndpointRegistry()
         app.state.orchestrator = SearchOrchestrator(http_client, app.state.registry)
-        app.state.task_runner = TaskManager()
+
+        if settings.summary_provider == "ollama":
+            llm = OllamaBackend(
+                http_client,
+                settings.ollama_base_url,
+                settings.summary_model,
+                settings.summary_timeout_seconds,
+            )
+        else:
+            raise ValueError(f"Unknown summary_provider: {settings.summary_provider}")
+        app.state.summarizer = Summarizer(llm, http_client, settings.summary_max_content_length)
 
         logger.info(
             "Starting QWRY server",

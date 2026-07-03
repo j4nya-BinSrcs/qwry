@@ -25,6 +25,12 @@ class Settings(BaseSettings):
 
     crawler_enabled: bool = True
 
+    summary_provider: str = "ollama"
+    ollama_base_url: str = "http://localhost:11434"
+    summary_model: str = "gemma3:4b"
+    summary_max_content_length: int = 8000
+    summary_timeout_seconds: float = 30.0
+
     cors_allowed_origins: str = "http://127.0.0.1:5173,http://localhost:5173"
 
     @property
