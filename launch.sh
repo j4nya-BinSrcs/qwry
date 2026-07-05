@@ -57,9 +57,13 @@ ensure_python_env() {
     if [ ! -d server/.venv ]; then
         info "Creating Python virtual environment ..."
         python3 -m venv server/.venv
-        server/.venv/bin/pip install --quiet --upgrade pip
-        server/.venv/bin/pip install --quiet -e server/
     fi
+    if [ ! -f server/.venv/bin/pip3 ]; then
+        info "Installing pip in virtual environment ..."
+        server/.venv/bin/python3 -m ensurepip --upgrade
+    fi
+    info "Installing / updating Python dependencies ..."
+    server/.venv/bin/pip3 install --quiet -e server/
 }
 
 start_server() {
