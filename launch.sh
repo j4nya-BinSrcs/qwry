@@ -143,8 +143,16 @@ start_searxng() {
 
     kill_port "${SEARXNG_PORT:-8080}"
     info "Starting SearXNG via Docker Compose ..."
-    sudo docker compose -f infra/docker-compose.yml --profile searxng up -d
-    warn "SearXNG may take a moment to become ready on http://127.0.0.1:${SEARXNG_PORT:-8080}"
+    docker compose -f infra/docker-compose.yml --profile searxng up -d 2>&1 || {
+        error "Docker compose failed. Trying with sudo ..."
+        sudo docker compose -f infra/docker-compose.yml --profile searxng up -d
+    }
+    sleep 3
+    if curl -s -o /dev/null -w "" "http://127.0.0.1:${SEARXNG_PORT:-8080}/" 2>/dev/null; then
+        info "SearXNG is running on http://127.0.0.1:${SEARXNG_PORT:-8080}"
+    else
+        warn "SearXNG may still be starting — check logs with: docker logs \$(docker ps -q --filter name=searxng)"
+    fi
 }
 
 # ---------------------------------------------------------------------------
@@ -186,5 +194,12 @@ $START_FRONTEND && start_frontend
 
 if $START_SERVER || $START_FRONTEND; then
     info "Services running — press Ctrl+C to stop"
+    if $START_SEARXNG; then
+        searxng_container=$(docker ps -q --filter name=searxng 2>/dev/null || true)
+        if [[ -n "$searxng_container" ]]; then
+            warn "Check SearXNG errors:  docker logs $searxng_container"
+        fi
+    fi
+    info "Stop everything:   ./shutdown.sh"
     wait
 fi
