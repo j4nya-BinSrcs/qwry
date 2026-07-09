@@ -1,6 +1,6 @@
-import { Search, Sparkles } from "lucide-react";
+import { Search, Sparkles, ChevronDown } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSearchStore } from "../stores/searchStore";
+import { useSearchStore, providers } from "../stores/searchStore";
 import { useSessionStore } from "../stores/sessionStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import { fetchSuggestions } from "../api/search";
@@ -10,11 +10,14 @@ export default function TopBar() {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showWsMenu, setShowWsMenu] = useState(false);
+  const [showProviderMenu, setShowProviderMenu] = useState(false);
   const debounceRef = useRef(null);
   const inputRef = useRef(null);
 
   const search = useSearchStore((s) => s.search);
   const query = useSearchStore((s) => s.query);
+  const provider = useSearchStore((s) => s.provider);
+  const setProvider = useSearchStore((s) => s.setProvider);
   const sessionId = useSessionStore((s) => s.sessionId);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeId = useWorkspaceStore((s) => s.activeWorkspaceId);
@@ -104,6 +107,38 @@ export default function TopBar() {
                 className="w-full px-4 py-2 text-left text-sm text-text hover:bg-hover transition-colors"
               >
                 {s}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Provider switch */}
+      <div className="relative shrink-0">
+        <button
+          onClick={() => setShowProviderMenu(!showProviderMenu)}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-hover border border-border text-xs text-text hover:bg-hover/80 transition-colors"
+        >
+          <span>{providers.find((p) => p.value === provider)?.label || "Meta"}</span>
+          <ChevronDown size={12} className="text-dim" />
+        </button>
+        {showProviderMenu && (
+          <div className="absolute top-full right-0 mt-1 w-32 rounded-lg bg-elevated border border-border shadow-xl overflow-hidden z-50">
+            {providers.map((p) => (
+              <button
+                key={p.label}
+                onClick={() => {
+                  setProvider(p.value);
+                  setShowProviderMenu(false);
+                  if (query) search(query.trim(), 1, p.value);
+                }}
+                className={`w-full px-3 py-1.5 text-left text-xs transition-colors ${
+                  provider === p.value
+                    ? "bg-accent/10 text-accent"
+                    : "text-text hover:bg-hover"
+                }`}
+              >
+                {p.label}
               </button>
             ))}
           </div>
