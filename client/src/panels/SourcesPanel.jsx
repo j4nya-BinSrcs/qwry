@@ -73,6 +73,17 @@ function DraggableResultCard({ result }) {
           <span className="text-xs text-muted truncate">
             {new URL(result.url).hostname}
           </span>
+          {result.source && (
+            <span
+              className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                result.source === "engine"
+                  ? "bg-amber-500/10 text-amber-400"
+                  : "bg-sky-500/10 text-sky-400"
+              }`}
+            >
+              {result.source}
+            </span>
+          )}
           {result.relevance_score && (
             <span className="text-xs text-dim font-mono">
               {Math.round(result.relevance_score * 100)}%
