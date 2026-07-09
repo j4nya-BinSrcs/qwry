@@ -1,3 +1,6 @@
+from datetime import datetime
+from uuid import UUID
+
 from pydantic import BaseModel
 
 
@@ -81,6 +84,58 @@ class SummarizeRequest(BaseModel):
 class SummarizeResponse(BaseModel):
     url: str
     title: str | None = None
+    summary: str
+    provider: str
+    model: str
+
+
+class WorkspaceCreateRequest(BaseModel):
+    name: str
+    description: str | None = None
+
+
+class WorkspaceUpdateRequest(BaseModel):
+    name: str | None = None
+    description: str | None = None
+
+
+class WorkspaceResponse(BaseModel):
+    id: UUID
+    name: str
+    description: str | None = None
+    item_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+
+class WorkspaceItemCreateRequest(BaseModel):
+    url: str
+    title: str | None = None
+    snippet: str | None = None
+    source: str | None = None
+
+
+class WorkspaceItemUpdateRequest(BaseModel):
+    title: str | None = None
+    snippet: str | None = None
+    notes: str | None = None
+
+
+class WorkspaceItemResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    url: str
+    title: str | None = None
+    snippet: str | None = None
+    source: str | None = None
+    summary: str | None = None
+    notes: str | None = None
+    order_index: int = 0
+    created_at: datetime
+
+
+class ItemSummaryResponse(BaseModel):
+    item_id: UUID
     summary: str
     provider: str
     model: str
