@@ -135,6 +135,16 @@ start_frontend() {
 # ---------------------------------------------------------------------------
 # SearXNG via Docker Compose
 # ---------------------------------------------------------------------------
+_docker() {
+    if docker "$@" 2>/dev/null; then
+        return 0
+    fi
+    if sg docker -c "docker $*" 2>/dev/null; then
+        return 0
+    fi
+    sudo docker "$@"
+}
+
 start_searxng() {
     if ! command -v docker &>/dev/null; then
         error "Docker not found. Cannot start SearXNG."
@@ -142,16 +152,39 @@ start_searxng() {
     fi
 
     kill_port "${SEARXNG_PORT:-8080}"
+    kill_port "6379"
     info "Starting SearXNG via Docker Compose ..."
-    docker compose -f infra/docker-compose.yml --profile searxng up -d 2>&1 || {
-        error "Docker compose failed. Trying with sudo ..."
-        sudo docker compose -f infra/docker-compose.yml --profile searxng up -d
-    }
-    sleep 3
+    _docker compose -f infra/docker-compose.yml --profile searxng up -d
+    sleep 4
     if curl -s -o /dev/null -w "" "http://127.0.0.1:${SEARXNG_PORT:-8080}/" 2>/dev/null; then
         info "SearXNG is running on http://127.0.0.1:${SEARXNG_PORT:-8080}"
     else
-        warn "SearXNG may still be starting — check logs with: docker logs \$(docker ps -q --filter name=searxng)"
+        warn "SearXNG may still be starting — check logs: _docker logs \$(_docker ps -q --filter name=searxng)"
+    fi
+    _health_searxng
+}
+
+_health_searxng() {
+    local searxng_cid
+    searxng_cid=$(_docker ps -q --filter name=searxng 2>/dev/null || true)
+    if [[ -n "$searxng_cid" ]]; then
+        local engines
+        engines=$(curl -s --max-time 5 "http://127.0.0.1:${SEARXNG_PORT:-8080}/search?q=test&format=json" 2>/dev/null | python3 -c "
+import sys,json
+try:
+    d=json.load(sys.stdin)
+    for e in d.get('unresponsive_engines', []):
+        print(f'  {e[0]}: {e[1]}')
+except: pass
+" 2>/dev/null)
+        if [[ -n "$engines" ]]; then
+            warn "SearXNG upstream engines unreachable:"
+            echo "$engines"
+            warn "This is often a DNS/networking issue in the Docker container."
+            warn "See logs: _docker logs $searxng_cid"
+        else
+            info "SearXNG upstream engines are responding"
+        fi
     fi
 }
 

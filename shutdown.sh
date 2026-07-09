@@ -12,8 +12,18 @@ info()  { echo -e "${GREEN}[INFO]${NC}  $*"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 error() { echo -e "${RED}[ERROR]${NC} $*"; }
 
+_docker() {
+    if docker "$@" 2>/dev/null; then
+        return 0
+    fi
+    if sg docker -c "docker $*" 2>/dev/null; then
+        return 0
+    fi
+    sudo docker "$@" 2>/dev/null || true
+}
+
 # Kill processes by port
-for port in 8000 8001 5173 8080; do
+for port in 8000 8001 5173 6379 8080; do
     pid=$(lsof -ti ":$port" 2>/dev/null) || true
     if [[ -n "$pid" ]]; then
         warn "Killing PID $pid on port $port"
@@ -32,9 +42,9 @@ done
 
 # Stop SearXNG Docker containers
 if command -v docker &>/dev/null; then
-    if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q searxng; then
+    if _docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q searxng || _docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q valkey;then
         info "Stopping SearXNG Docker containers ..."
-        docker compose -f infra/docker-compose.yml --profile searxng down 2>/dev/null || true
+        _docker compose -f infra/docker-compose.yml --profile searxng down 2>/dev/null || true
     fi
 fi
 
