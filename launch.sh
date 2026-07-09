@@ -17,6 +17,17 @@ warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 error() { echo -e "${RED}[ERROR]${NC} $*"; }
 cmd()   { echo -e "${CYAN}[CMD]${NC}   $*"; }
 
+kill_port() {
+    local port="$1"
+    local pid
+    pid=$(lsof -ti ":$port" 2>/dev/null) || true
+    if [[ -n "$pid" ]]; then
+        warn "Port $port in use by PID $pid — killing ..."
+        kill "$pid" 2>/dev/null || true
+        sleep 1
+    fi
+}
+
 SERVER_PID=""
 ENGINE_PID=""
 SEARXNG_PID=""
@@ -77,6 +88,7 @@ start_server() {
     local port="${PORT:-8000}"
     local env="${ENVIRONMENT:-development}"
 
+    kill_port "$port"
     info "Starting FastAPI server on $host:$port ($env)"
     uvicorn server.src.main:app --host "$host" --port "$port" --reload &
     SERVER_PID=$!
@@ -95,6 +107,7 @@ ensure_engine_bin() {
 start_engine() {
     ensure_engine_bin
     local port="${ENGINE_PORT:-8001}"
+    kill_port "$port"
     local index_dir="${INDEX_DIR:-./data/index}"
 
     info "Starting Rust engine indexer on port $port"
@@ -111,6 +124,7 @@ start_frontend() {
     local host="${FRONTEND_HOST:-127.0.0.1}"
     local port="${FRONTEND_PORT:-5173}"
 
+    kill_port "$port"
     info "Starting Vite dev server on $host:$port"
     cd client
     npx vite --host "$host" --port "$port" &
@@ -127,6 +141,7 @@ start_searxng() {
         exit 1
     fi
 
+    kill_port "${SEARXNG_PORT:-8080}"
     info "Starting SearXNG via Docker Compose ..."
     sudo docker compose -f infra/docker-compose.yml --profile searxng up -d
     warn "SearXNG may take a moment to become ready on http://127.0.0.1:${SEARXNG_PORT:-8080}"
