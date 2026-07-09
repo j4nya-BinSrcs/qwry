@@ -20,9 +20,11 @@ cmd()   { echo -e "${CYAN}[CMD]${NC}   $*"; }
 SERVER_PID=""
 ENGINE_PID=""
 SEARXNG_PID=""
+FRONTEND_PID=""
 
 cleanup() {
     info "Shutting down services ..."
+    [[ -n "$FRONTEND_PID" ]] && kill "$FRONTEND_PID" 2>/dev/null && wait "$FRONTEND_PID" 2>/dev/null
     [[ -n "$SERVER_PID" ]] && kill "$SERVER_PID" 2>/dev/null && wait "$SERVER_PID" 2>/dev/null
     [[ -n "$ENGINE_PID" ]] && kill "$ENGINE_PID" 2>/dev/null && wait "$ENGINE_PID" 2>/dev/null
     if [[ -n "$SEARXNG_PID" ]]; then
@@ -39,10 +41,11 @@ usage() {
 Usage:  $(basename "$0") [options]
 
 Options:
-  --all         Start all services (SearXNG + Rust engine + FastAPI)
+  --all         Start all services (SearXNG + Rust engine + FastAPI + frontend)
   --searxng     Start SearXNG via Docker Compose
   --engine      Start the Rust indexer server on port 8001
   --server      Start the FastAPI server (default)
+  --frontend    Start the Vite dev server for the frontend
   --help        Show this help
 
 If no option is given, only the FastAPI server starts.
@@ -102,6 +105,20 @@ start_engine() {
 }
 
 # ---------------------------------------------------------------------------
+# Frontend Vite dev server
+# ---------------------------------------------------------------------------
+start_frontend() {
+    local host="${FRONTEND_HOST:-127.0.0.1}"
+    local port="${FRONTEND_PORT:-5173}"
+
+    info "Starting Vite dev server on $host:$port"
+    cd client
+    npx vite --host "$host" --port "$port" &
+    FRONTEND_PID=$!
+    cd "$OLDPWD"
+}
+
+# ---------------------------------------------------------------------------
 # SearXNG via Docker Compose
 # ---------------------------------------------------------------------------
 start_searxng() {
@@ -122,18 +139,20 @@ START_ALL=false
 START_SEARXNG=false
 START_ENGINE=false
 START_SERVER=false
+START_FRONTEND=false
 
 if [[ $# -eq 0 ]]; then
     START_SERVER=true
 else
     for arg in "$@"; do
         case "$arg" in
-            --all)     START_ALL=true ;;
-            --searxng) START_SEARXNG=true ;;
-            --engine)  START_ENGINE=true ;;
-            --server)  START_SERVER=true ;;
-            --help|-h) usage ;;
-            *)         error "Unknown option: $arg"; usage ;;
+            --all)      START_ALL=true ;;
+            --searxng)  START_SEARXNG=true ;;
+            --engine)   START_ENGINE=true ;;
+            --server)   START_SERVER=true ;;
+            --frontend) START_FRONTEND=true ;;
+            --help|-h)  usage ;;
+            *)          error "Unknown option: $arg"; usage ;;
         esac
     done
 fi
@@ -142,16 +161,15 @@ if $START_ALL; then
     START_SEARXNG=true
     START_ENGINE=true
     START_SERVER=true
+    START_FRONTEND=true
 fi
 
 $START_SEARXNG && start_searxng
 $START_ENGINE && start_engine
 $START_SERVER && start_server
+$START_FRONTEND && start_frontend
 
-if $START_SERVER; then
-    info "FastAPI server running — press Ctrl+C to stop"
-    wait $SERVER_PID
-else
-    info "All requested services started — press Ctrl+C to stop"
+if $START_SERVER || $START_FRONTEND; then
+    info "Services running — press Ctrl+C to stop"
     wait
 fi
