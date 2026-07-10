@@ -1,16 +1,36 @@
 import logging
+from uuid import UUID
 
 import httpx
-from fastapi import Query, Request
+from fastapi import Header, HTTPException, Query, Request, Response
 from server.src.api.schemas import (
+    ItemSummaryResponse,
     SuggestResponse,
     SummarizeRequest,
     SummarizeResponse,
     SystemStats,
+    WorkspaceCreateRequest,
+    WorkspaceItemCreateRequest,
+    WorkspaceItemResponse,
+    WorkspaceItemUpdateRequest,
+    WorkspaceResponse,
+    WorkspaceUpdateRequest,
 )
 from server.src.core.registry import EndpointRegistry
+from server.src.core.session import get_session_id
 from server.src.services.stats_service import StatsCollector
 from server.src.services.summarizer import Summarizer
+from server.src.services.workspace_service import (
+    add_item,
+    create_workspace,
+    delete_item,
+    delete_workspace,
+    get_workspace,
+    list_items,
+    list_workspaces,
+    update_item,
+    update_workspace,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,13 +51,14 @@ async def search(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(10, ge=1, le=100, description="Results per page"),
     provider: str | None = Query(None, description="Search provider override"),
+    categories: str | None = Query(None, description="SearXNG categories (comma-separated)"),
 ):
     orchestrator = request.app.state.orchestrator
     logger.info(
         "Search request",
-        extra={"query": q, "page": page, "page_size": page_size, "provider": provider},
+        extra={"query": q, "page": page, "page_size": page_size, "provider": provider, "categories": categories},
     )
-    return await orchestrator.search(q, page, page_size, provider)
+    return await orchestrator.search(q, page, page_size, provider, categories)
 
 
 # ── Suggest ────────────────────────────────────────────────────────────
@@ -131,6 +152,22 @@ async def system_stats(request: Request) -> SystemStats:
     return await collector.collect()
 
 
+# ── Image Proxy ────────────────────────────────────────────────────────
+
+
+async def image_proxy(request: Request, url: str = Query(..., description="Image URL to proxy")):
+    http: httpx.AsyncClient = request.app.state.http
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; QWRY/1.0; +https://github.com/j4nya-BinSrcs/qwry)"}
+        resp = await http.get(url, headers=headers, timeout=10.0)
+        resp.raise_for_status()
+        content_type = resp.headers.get("content-type", "image/jpeg")
+        return Response(content=resp.content, media_type=content_type)
+    except Exception as e:
+        logger.warning("Image proxy failed", extra={"url": url, "error": str(e)})
+        raise HTTPException(status_code=502, detail="Failed to fetch image") from e
+
+
 # ── Summarize ──────────────────────────────────────────────────────────
 
 
@@ -143,6 +180,186 @@ async def summarize(
     return SummarizeResponse(
         url=result.url,
         title=result.title,
+        summary=result.summary,
+        provider=result.provider,
+        model=result.model,
+    )
+
+
+# ── Workspaces ─────────────────────────────────────────────────────────
+
+
+async def _get_db_session(request: Request):
+    maker = request.app.state.db
+    async with maker() as session:
+        yield session
+
+
+async def workspace_list(
+    request: Request,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+) -> list[WorkspaceResponse]:
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        return await list_workspaces(db, session_id)
+
+
+async def workspace_create(
+    request: Request,
+    body: WorkspaceCreateRequest,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+) -> WorkspaceResponse:
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        return await create_workspace(db, session_id, body.name, body.description)
+
+
+async def workspace_get(
+    request: Request,
+    ws_id: UUID,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+) -> WorkspaceResponse:
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        result = await get_workspace(db, session_id, ws_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    return result
+
+
+async def workspace_update(
+    request: Request,
+    ws_id: UUID,
+    body: WorkspaceUpdateRequest,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+) -> WorkspaceResponse:
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        result = await update_workspace(db, session_id, ws_id, body.name, body.description)
+    if not result:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    return result
+
+
+async def workspace_delete(
+    request: Request,
+    ws_id: UUID,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        ok = await delete_workspace(db, session_id, ws_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    return {"status": "deleted"}
+
+
+async def item_list(
+    request: Request,
+    ws_id: UUID,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+) -> list[WorkspaceItemResponse]:
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        return await list_items(db, session_id, ws_id)
+
+
+async def item_create(
+    request: Request,
+    ws_id: UUID,
+    body: WorkspaceItemCreateRequest,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+) -> WorkspaceItemResponse:
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        try:
+            result = await add_item(db, session_id, ws_id, body.url, body.title, body.snippet, body.source)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from None
+    if not result:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    return result
+
+
+async def item_update(
+    request: Request,
+    item_id: UUID,
+    body: WorkspaceItemUpdateRequest,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+) -> WorkspaceItemResponse:
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        result = await update_item(
+            db,
+            session_id,
+            item_id,
+            None,
+            title=body.title,
+            snippet=body.snippet,
+            notes=body.notes,
+        )
+    if not result:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return result
+
+
+async def item_delete(
+    request: Request,
+    item_id: UUID,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        ok = await delete_item(db, session_id, item_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"status": "deleted"}
+
+
+async def item_summarize(
+    request: Request,
+    item_id: UUID,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+) -> ItemSummaryResponse:
+    maker = request.app.state.db
+    async with maker() as db:
+        from server.src.db.repository import WorkspaceItemRepo
+
+        item_repo = WorkspaceItemRepo(db)
+        item = await item_repo.get_by_id(item_id)
+
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    if item.summary and not item.summary.startswith(
+        ("Summary generation failed", "Failed to fetch page", "No readable content")
+    ):
+        return ItemSummaryResponse(
+            item_id=item.id,
+            summary=item.summary,
+            provider="cached",
+            model="cached",
+        )
+
+    summarizer: Summarizer = request.app.state.summarizer
+    result = await summarizer.summarize_url(item.url)
+
+    if not result.success:
+        raise HTTPException(status_code=502, detail=result.summary)
+
+    async with maker() as db:
+        await item_repo.update(item_id, summary=result.summary)
+    return ItemSummaryResponse(
+        item_id=item.id,
         summary=result.summary,
         provider=result.provider,
         model=result.model,

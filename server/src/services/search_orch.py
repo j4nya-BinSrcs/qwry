@@ -23,26 +23,28 @@ class SearchOrchestrator:
         page: int = 1,
         page_size: int = 10,
         provider: str | None = None,
+        categories: str | None = None,
     ) -> SearchResponse:
         resolved = provider or settings.default_search_provider
 
         if resolved == "searxng":
-            return await self._searxng.search(q, page, page_size)
+            return await self._searxng.search(q, page, page_size, categories=categories)
         elif resolved == "engine":
             return await self._engine.search(q, page, page_size)
         elif resolved in ("hybrid", "all"):
-            return await self._search_hybrid(q, page, page_size)
+            return await self._search_hybrid(q, page, page_size, categories=categories)
         else:
             logger.warning("Unknown provider, falling back to searxng", extra={"provider": resolved})
-            return await self._searxng.search(q, page, page_size)
+            return await self._searxng.search(q, page, page_size, categories=categories)
 
     async def _search_hybrid(
         self,
         q: str,
         page: int,
         page_size: int,
+        categories: str | None = None,
     ) -> SearchResponse:
-        searxng_task = self._searxng.search(q, page, page_size)
+        searxng_task = self._searxng.search(q, page, page_size, categories=categories)
         engine_task = self._engine.search(q, page, page_size)
 
         searxng_resp, engine_resp = await asyncio.gather(

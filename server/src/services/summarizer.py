@@ -17,6 +17,7 @@ class SummarizeResult:
     summary: str
     provider: str
     model: str
+    success: bool = True
 
 
 class _TextExtractor(HTMLParser):
@@ -129,6 +130,7 @@ class Summarizer:
                 summary=f"Failed to fetch page: {e}",
                 provider=self._llm.__class__.__name__.replace("Backend", "").lower(),
                 model=getattr(self._llm, "_model", "unknown"),
+                success=False,
             )
 
         t_fetch = time.monotonic()
@@ -145,6 +147,7 @@ class Summarizer:
                 summary="No readable content found on the page.",
                 provider=self._llm.__class__.__name__.replace("Backend", "").lower(),
                 model=getattr(self._llm, "_model", "unknown"),
+                success=False,
             )
 
         if len(text) > self._max_content_length:
@@ -154,24 +157,30 @@ class Summarizer:
 
         try:
             summary = await self._llm.generate(prompt, SUMMARIZE_SYSTEM_PROMPT)
+            t_llm = time.monotonic()
+            logger.info(
+                "Summary generated",
+                extra={"url": url, "elapsed_ms": round((t_llm - t_fetch) * 1000, 1)},
+            )
+            return SummarizeResult(
+                url=url,
+                title=title,
+                summary=summary.strip() or "No summary generated.",
+                provider=self._llm.__class__.__name__.replace("Backend", "").lower(),
+                model=getattr(self._llm, "_model", "unknown"),
+            )
         except Exception as e:
             t_llm = time.monotonic()
             logger.error(
                 "LLM generation failed",
-                extra={"url": url, "error": str(e), "elapsed_ms": round((t_llm - t_fetch) * 1000, 1)},
+                extra={"url": url, "error": repr(e), "elapsed_ms": round((t_llm - t_fetch) * 1000, 1)},
+                exc_info=True,
             )
-            summary = f"Summary generation failed: {e}" if str(e) else "Summary generation failed."
-
-        t_llm = time.monotonic()
-        logger.info(
-            "Summary generated",
-            extra={"url": url, "elapsed_ms": round((t_llm - t_fetch) * 1000, 1)},
-        )
-
-        return SummarizeResult(
-            url=url,
-            title=title,
-            summary=summary.strip() or "No summary generated.",
-            provider=self._llm.__class__.__name__.replace("Backend", "").lower(),
-            model=getattr(self._llm, "_model", "unknown"),
-        )
+            return SummarizeResult(
+                url=url,
+                title=title,
+                summary=f"Summary generation failed: {e!r}",
+                provider=self._llm.__class__.__name__.replace("Backend", "").lower(),
+                model=getattr(self._llm, "_model", "unknown"),
+                success=False,
+            )

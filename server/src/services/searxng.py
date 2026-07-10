@@ -12,13 +12,15 @@ class SearxngClient:
         self._client = http_client
         self._backend = backend
 
-    async def search(self, q: str, page: int = 1, page_size: int = 10) -> SearchResponse:
+    async def search(self, q: str, page: int = 1, page_size: int = 10, categories: str | None = None) -> SearchResponse:
         url = f"{self._backend.base_url}/search"
         params: dict[str, str | int] = {
             "q": q,
             "format": "json",
             "pageno": page,
         }
+        if categories:
+            params["categories"] = categories
 
         logger.debug("SearXNG request", extra={"url": url, "params": params})
 
@@ -49,6 +51,11 @@ class SearxngClient:
                 url=r.get("url", ""),
                 snippet=r.get("content", ""),
                 source=r.get("engine", "searxng"),
+                img_src=r.get("img_src"),
+                thumbnail=r.get("thumbnail"),
+                published_date=r.get("publishedDate"),
+                category=r.get("category"),
+                engine=r.get("engine"),
             )
             for r in raw_results
             if r.get("url")
@@ -61,6 +68,8 @@ class SearxngClient:
             total_results=total or len(results),
             results=results,
             provider="searxng",
+            suggestions=data.get("suggestions", []),
+            infoboxes=data.get("infoboxes", []),
         )
 
     def _empty_response(self, q: str, page: int, page_size: int, provider: str) -> SearchResponse:

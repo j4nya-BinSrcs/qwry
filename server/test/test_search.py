@@ -2,7 +2,6 @@ from unittest.mock import AsyncMock
 
 from server.src.api.schemas import SearchResponse, SearchResultItem
 from server.src.services.search_orch import SearchOrchestrator
-from server.test.conftest import get_client
 
 
 def make_search_response(query: str, provider: str = "searxng") -> SearchResponse:
@@ -19,11 +18,10 @@ def make_search_response(query: str, provider: str = "searxng") -> SearchRespons
     )
 
 
-def test_search_default_provider(monkeypatch):
+def test_search_default_provider(monkeypatch, client):
     mock = AsyncMock(return_value=make_search_response("hello"))
     monkeypatch.setattr(SearchOrchestrator, "search", mock)
 
-    client = next(get_client())
     resp = client.get("/api/search", params={"q": "hello"})
     assert resp.status_code == 200
     data = resp.json()
@@ -32,33 +30,29 @@ def test_search_default_provider(monkeypatch):
     assert data["total_results"] == 2
 
 
-def test_search_engine_provider(monkeypatch):
+def test_search_engine_provider(monkeypatch, client):
     mock = AsyncMock(return_value=make_search_response("hello", provider="engine"))
     monkeypatch.setattr(SearchOrchestrator, "search", mock)
 
-    client = next(get_client())
     resp = client.get("/api/search", params={"q": "hello", "provider": "engine"})
     assert resp.status_code == 200
     assert resp.json()["provider"] == "engine"
 
 
-def test_search_empty_query():
-    client = next(get_client())
+def test_search_empty_query(client):
     resp = client.get("/api/search")
     assert resp.status_code == 422
 
 
-def test_search_invalid_page_size():
-    client = next(get_client())
+def test_search_invalid_page_size(client):
     resp = client.get("/api/search", params={"q": "hello", "page_size": 999})
     assert resp.status_code == 422
 
 
-def test_search_pagination(monkeypatch):
+def test_search_pagination(monkeypatch, client):
     mock = AsyncMock(return_value=make_search_response("hello"))
     monkeypatch.setattr(SearchOrchestrator, "search", mock)
 
-    client = next(get_client())
     resp = client.get("/api/search", params={"q": "hello", "page": 2, "page_size": 5, "provider": "engine"})
     assert resp.status_code == 200
     mock.assert_called_once()

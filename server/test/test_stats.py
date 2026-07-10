@@ -10,7 +10,6 @@ from server.src.api.schemas import (
     SystemStats,
 )
 from server.src.services.stats_service import StatsCollector
-from server.test.conftest import get_client
 
 
 def make_stats():
@@ -42,11 +41,10 @@ def make_stats():
     )
 
 
-def test_stats_structure(monkeypatch):
+def test_stats_structure(monkeypatch, client):
     mock = AsyncMock(return_value=make_stats())
     monkeypatch.setattr(StatsCollector, "collect", mock)
 
-    client = next(get_client())
     resp = client.get("/api/stats")
     assert resp.status_code == 200
     data = resp.json()
@@ -59,11 +57,10 @@ def test_stats_structure(monkeypatch):
     assert data["crawler"]["available"] is True
 
 
-def test_stats_fields_present(monkeypatch):
+def test_stats_fields_present(monkeypatch, client):
     mock = AsyncMock(return_value=make_stats())
     monkeypatch.setattr(StatsCollector, "collect", mock)
 
-    client = next(get_client())
     data = client.get("/api/stats").json()
 
     expected_top = {"server", "engine", "searxng", "crawler", "timestamp"}
