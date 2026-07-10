@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import httpx
@@ -5,6 +6,9 @@ from server.src.api.schemas import SearchResponse, SearchResultItem
 from server.src.core.registry import Backend
 
 logger = logging.getLogger(__name__)
+
+_RETRY_ATTEMPTS = 3
+_RETRY_BACKOFF = 1.0
 
 
 class SearxngClient:
@@ -22,24 +26,27 @@ class SearxngClient:
         if categories:
             params["categories"] = categories
 
-        logger.debug("SearXNG request", extra={"url": url, "params": params})
-
-        try:
-            resp = await self._client.get(
-                url,
-                params=params,
-                timeout=self._backend.timeout,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-        except httpx.TimeoutException:
-            logger.warning("SearXNG timeout", extra={"query": q})
-            return self._empty_response(q, page, page_size, "searxng")
-        except httpx.HTTPStatusError as e:
-            logger.error("SearXNG HTTP error", extra={"status": e.response.status_code, "query": q})
-            return self._empty_response(q, page, page_size, "searxng")
-        except Exception as e:
-            logger.error("SearXNG request failed", extra={"error": str(e), "query": q})
+        for attempt in range(1, _RETRY_ATTEMPTS + 1):
+            logger.debug("SearXNG request", extra={"url": url, "params": params, "attempt": attempt})
+            try:
+                resp = await self._client.get(
+                    url,
+                    params=params,
+                    timeout=self._backend.timeout,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                break
+            except httpx.TimeoutException:
+                logger.warning("SearXNG timeout", extra={"query": q, "attempt": attempt})
+            except httpx.HTTPStatusError as e:
+                status = e.response.status_code
+                logger.error("SearXNG HTTP error", extra={"status": status, "query": q, "attempt": attempt})
+            except Exception as e:
+                logger.error("SearXNG request failed", extra={"error": str(e), "query": q, "attempt": attempt})
+            if attempt < _RETRY_ATTEMPTS:
+                await asyncio.sleep(_RETRY_BACKOFF * attempt)
+        else:
             return self._empty_response(q, page, page_size, "searxng")
 
         raw_results = data.get("results", [])
