@@ -5,6 +5,7 @@ import httpx
 from server.src.api.schemas import SearchResponse, SearchResultItem
 from server.src.core.config import settings
 from server.src.core.registry import EndpointRegistry
+from server.src.services.cache import CacheService
 from server.src.services.engine_proxy import EngineClient
 from server.src.services.searxng import SearxngClient
 
@@ -12,10 +13,13 @@ logger = logging.getLogger(__name__)
 
 
 class SearchOrchestrator:
-    def __init__(self, http_client: httpx.AsyncClient, registry: EndpointRegistry) -> None:
+    def __init__(
+        self, http_client: httpx.AsyncClient, registry: EndpointRegistry, cache: CacheService | None = None
+    ) -> None:
         self._http = http_client
         self._searxng = SearxngClient(http_client, registry.searxng)
         self._engine = EngineClient(http_client, registry.engine)
+        self._cache = cache
 
     async def search(
         self,
@@ -26,16 +30,33 @@ class SearchOrchestrator:
         categories: str | None = None,
     ) -> SearchResponse:
         resolved = provider or settings.default_search_provider
+        cache_key_parts = (q, str(page), str(page_size), resolved, categories or "")
+
+        if self._cache and self._cache.available:
+            cached = await self._cache.get(CacheService.NAMESPACE_SEARCH, *cache_key_parts)
+            if cached:
+                logger.debug("Search cache hit", extra={"query": q})
+                return SearchResponse(**cached)
 
         if resolved == "searxng":
-            return await self._searxng.search(q, page, page_size, categories=categories)
+            result = await self._searxng.search(q, page, page_size, categories=categories)
         elif resolved == "engine":
-            return await self._engine.search(q, page, page_size)
+            result = await self._engine.search(q, page, page_size)
         elif resolved in ("hybrid", "all"):
-            return await self._search_hybrid(q, page, page_size, categories=categories)
+            result = await self._search_hybrid(q, page, page_size, categories=categories)
         else:
             logger.warning("Unknown provider, falling back to searxng", extra={"provider": resolved})
-            return await self._searxng.search(q, page, page_size, categories=categories)
+            result = await self._searxng.search(q, page, page_size, categories=categories)
+
+        if self._cache and self._cache.available:
+            await self._cache.set(
+                CacheService.NAMESPACE_SEARCH,
+                result.model_dump(),
+                settings.cache_search_ttl_seconds,
+                *cache_key_parts,
+            )
+
+        return result
 
     async def _search_hybrid(
         self,

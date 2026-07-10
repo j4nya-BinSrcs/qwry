@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from html.parser import HTMLParser
 
 import httpx
+from server.src.core.config import settings
+from server.src.services.cache import CacheService
 from server.src.services.llm import LLMBackend
 
 logger = logging.getLogger(__name__)
@@ -105,13 +107,23 @@ class Summarizer:
         llm: LLMBackend,
         http_client: httpx.AsyncClient,
         max_content_length: int = 8000,
+        cache: CacheService | None = None,
     ) -> None:
         self._llm = llm
         self._http = http_client
         self._max_content_length = max_content_length
+        self._cache = cache
 
     async def summarize_url(self, url: str) -> SummarizeResult:
         logger.info("Summarizing URL", extra={"url": url})
+
+        if self._cache and self._cache.available:
+            cached = await self._cache.get(CacheService.NAMESPACE_SUMMARY, url)
+            if cached:
+                logger.debug("Summary cache hit", extra={"url": url})
+                return SummarizeResult(**cached)
+
+        t_start = time.monotonic()
         t_start = time.monotonic()
 
         headers = {
@@ -162,13 +174,21 @@ class Summarizer:
                 "Summary generated",
                 extra={"url": url, "elapsed_ms": round((t_llm - t_fetch) * 1000, 1)},
             )
-            return SummarizeResult(
+            result = SummarizeResult(
                 url=url,
                 title=title,
                 summary=summary.strip() or "No summary generated.",
                 provider=self._llm.__class__.__name__.replace("Backend", "").lower(),
                 model=getattr(self._llm, "_model", "unknown"),
             )
+            if self._cache and self._cache.available:
+                await self._cache.set(
+                    CacheService.NAMESPACE_SUMMARY,
+                    result,
+                    settings.cache_summary_ttl_seconds,
+                    url,
+                )
+            return result
         except Exception as e:
             t_llm = time.monotonic()
             logger.error(

@@ -12,6 +12,7 @@ from server.src.core.config import settings
 from server.src.core.logging import setup_logging
 from server.src.core.registry import EndpointRegistry
 from server.src.db import close_db, init_db
+from server.src.services.cache import CacheService
 from server.src.services.llm import OllamaBackend
 from server.src.services.search_orch import SearchOrchestrator
 from server.src.services.summarizer import Summarizer
@@ -29,7 +30,9 @@ async def lifespan(app: FastAPI):
         app.state.request_count = 0
         app.state.http = http_client
         app.state.registry = EndpointRegistry()
-        app.state.orchestrator = SearchOrchestrator(http_client, app.state.registry)
+        app.state.cache = CacheService()
+        await app.state.cache.connect()
+        app.state.orchestrator = SearchOrchestrator(http_client, app.state.registry, app.state.cache)
 
         if settings.summary_provider == "ollama":
             llm = OllamaBackend(
@@ -40,7 +43,7 @@ async def lifespan(app: FastAPI):
             )
         else:
             raise ValueError(f"Unknown summary_provider: {settings.summary_provider}")
-        app.state.summarizer = Summarizer(llm, http_client, settings.summary_max_content_length)
+        app.state.summarizer = Summarizer(llm, http_client, settings.summary_max_content_length, app.state.cache)
 
         await init_db(settings.database_url)
         from server.src.db import async_session_maker
@@ -58,6 +61,7 @@ async def lifespan(app: FastAPI):
         yield
 
     elapsed = (datetime.now(UTC) - now).total_seconds()
+    await app.state.cache.close()
     await close_db()
     logger.info(
         "Shutting down QWRY server",

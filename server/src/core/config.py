@@ -33,6 +33,12 @@ class Settings(BaseSettings):
 
     cors_allowed_origins: str = "http://127.0.0.1:5173,http://localhost:5173"
 
+    cache_enabled: bool = True
+    valkey_host: str = "127.0.0.1"
+    valkey_port: int = 6379
+    cache_search_ttl_seconds: int = 300
+    cache_summary_ttl_seconds: int = 3600
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_allowed_origins.split(",") if o.strip()]

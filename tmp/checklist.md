@@ -268,9 +268,9 @@
 
 # Phase 13 — Performance
 
-* [ ] Valkey cache
-* [ ] Search caching
-* [ ] AI caching
+* [x] Valkey cache (CacheService + search cache + AI/summary cache)
+* [x] Search caching
+* [x] AI caching
 * [ ] Database optimization
 * [ ] Async optimization
 * [ ] Lazy loading
