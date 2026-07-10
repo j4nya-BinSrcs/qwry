@@ -5,6 +5,7 @@ import httpx
 from fastapi import Header, HTTPException, Query, Request, Response
 from server.src.api.schemas import (
     ItemSummaryResponse,
+    ReaderResponse,
     SuggestResponse,
     SummarizeRequest,
     SummarizeResponse,
@@ -18,6 +19,7 @@ from server.src.api.schemas import (
 )
 from server.src.core.registry import EndpointRegistry
 from server.src.core.session import get_session_id
+from server.src.services.reader import ReaderService
 from server.src.services.stats_service import StatsCollector
 from server.src.services.summarizer import Summarizer
 from server.src.services.workspace_service import (
@@ -183,6 +185,26 @@ async def summarize(
         summary=result.summary,
         provider=result.provider,
         model=result.model,
+    )
+
+
+# ── Reader ─────────────────────────────────────────────────────────────
+
+
+async def read_url(
+    request: Request,
+    url: str = Query(..., description="URL to extract readable content from"),
+) -> ReaderResponse:
+    reader: ReaderService = request.app.state.reader
+    result = await reader.read_url(url)
+    return ReaderResponse(
+        url=result.url,
+        title=result.title,
+        content=result.content,
+        content_length_chars=result.content_length_chars,
+        reading_time_seconds=result.reading_time_seconds,
+        success=result.success,
+        error=result.error,
     )
 
 

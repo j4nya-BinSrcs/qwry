@@ -7,6 +7,7 @@ from server.src.api.endpoints import (
     item_list,
     item_summarize,
     item_update,
+    read_url,
     search,
     suggest,
     summarize,
@@ -19,6 +20,7 @@ from server.src.api.endpoints import (
 )
 from server.src.api.schemas import (
     ItemSummaryResponse,
+    ReaderResponse,
     SearchResponse,
     SuggestResponse,
     SummarizeResponse,
@@ -41,6 +43,9 @@ image_router.add_api_route("/image-proxy", image_proxy, methods=["GET"])
 
 suggest_router = APIRouter(prefix="/api", tags=["suggest"])
 suggest_router.add_api_route("/suggest", suggest, methods=["GET"], response_model=SuggestResponse)
+
+reader_router = APIRouter(prefix="/api", tags=["reader"])
+reader_router.add_api_route("/read", read_url, methods=["GET"], response_model=ReaderResponse)
 
 summarize_router = APIRouter(prefix="/api", tags=["summarize"])
 summarize_router.add_api_route(
@@ -83,6 +88,7 @@ def register_routes(app: FastAPI) -> None:
     app.include_router(stats_router)
     app.include_router(suggest_router)
     app.include_router(image_router)
+    app.include_router(reader_router)
     app.include_router(summarize_router)
     app.include_router(workspace_router)
     app.include_router(item_router)

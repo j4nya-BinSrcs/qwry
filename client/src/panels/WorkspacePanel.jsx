@@ -1,4 +1,4 @@
-import { ExternalLink, GripVertical, Loader2, Pencil, Sparkles, Trash2, X, Check } from "lucide-react";
+import { Book, ExternalLink, GripVertical, Loader2, Pencil, Sparkles, Trash2, X, Check } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
@@ -7,6 +7,7 @@ import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
 import { useSessionStore } from "../stores/sessionStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import { useSearchStore } from "../stores/searchStore";
+import ReaderModal from "../components/ReaderModal";
 
 function WorkspaceItemCard({ item }) {
   const sessionId = useSessionStore((s) => s.sessionId);
@@ -14,6 +15,7 @@ function WorkspaceItemCard({ item }) {
   const summarizeItem = useWorkspaceStore((s) => s.summarizeItem);
   const summarizingId = useWorkspaceStore((s) => s.summarizingId);
   const [expanded, setExpanded] = useState(false);
+  const [readerUrl, setReaderUrl] = useState(null);
 
   const {
     attributes,
@@ -35,6 +37,14 @@ function WorkspaceItemCard({ item }) {
 
   const isSummarizing = summarizingId === item.id;
   const hasSummary = !!item.summary;
+
+  const handleRead = useCallback(
+    (e) => {
+      e.stopPropagation();
+      setReaderUrl(item.url);
+    },
+    [item.url]
+  );
 
   const handleDelete = useCallback(
     (e) => {
@@ -91,6 +101,13 @@ function WorkspaceItemCard({ item }) {
             {isSummarizing ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
           </button>
           <button
+            onClick={handleRead}
+            className="p-1.5 rounded-md text-dim hover:text-text hover:bg-hover transition-all"
+            title="Reader view"
+          >
+            <Book size={13} />
+          </button>
+          <button
             onClick={(e) => {
               e.stopPropagation();
               window.open(item.url, "_blank");
@@ -140,6 +157,13 @@ function WorkspaceItemCard({ item }) {
             </div>
           )}
         </div>
+      )}
+      {readerUrl && (
+        <ReaderModal
+          url={readerUrl}
+          title={item.title}
+          onClose={() => setReaderUrl(null)}
+        />
       )}
     </div>
   );

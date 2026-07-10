@@ -14,6 +14,7 @@ from server.src.core.registry import EndpointRegistry
 from server.src.db import close_db, init_db
 from server.src.services.cache import CacheService
 from server.src.services.llm import OllamaBackend
+from server.src.services.reader import ReaderService
 from server.src.services.search_orch import SearchOrchestrator
 from server.src.services.summarizer import Summarizer
 
@@ -44,6 +45,7 @@ async def lifespan(app: FastAPI):
         else:
             raise ValueError(f"Unknown summary_provider: {settings.summary_provider}")
         app.state.summarizer = Summarizer(llm, http_client, settings.summary_max_content_length, app.state.cache)
+        app.state.reader = ReaderService(http_client, app.state.cache)
 
         await init_db(settings.database_url)
         from server.src.db import async_session_maker

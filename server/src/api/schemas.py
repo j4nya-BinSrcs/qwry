@@ -147,3 +147,13 @@ class ItemSummaryResponse(BaseModel):
     summary: str
     provider: str
     model: str
+
+
+class ReaderResponse(BaseModel):
+    url: str
+    title: str | None = None
+    content: str
+    content_length_chars: int = 0
+    reading_time_seconds: int = 0
+    success: bool = True
+    error: str | None = None

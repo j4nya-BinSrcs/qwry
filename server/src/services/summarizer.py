@@ -1,13 +1,12 @@
 import logging
-import re
 import time
 from dataclasses import dataclass
-from html.parser import HTMLParser
 
 import httpx
 from server.src.core.config import settings
 from server.src.services.cache import CacheService
 from server.src.services.llm import LLMBackend
+from server.src.services.reader import FETCH_HEADERS, extract_text, extract_title
 
 logger = logging.getLogger(__name__)
 
@@ -20,69 +19,6 @@ class SummarizeResult:
     provider: str
     model: str
     success: bool = True
-
-
-class _TextExtractor(HTMLParser):
-    def __init__(self) -> None:
-        super().__init__()
-        self._parts: list[str] = []
-        self._skip = False
-        self._skip_tags = {"script", "style", "nav", "footer", "noscript"}
-        self._block_tags = {
-            "p",
-            "h1",
-            "h2",
-            "h3",
-            "h4",
-            "h5",
-            "h6",
-            "li",
-            "div",
-            "br",
-            "tr",
-            "blockquote",
-            "section",
-        }
-        self._current = ""
-
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        if tag in self._skip_tags:
-            self._skip = True
-        if self._current and tag in self._block_tags:
-            self._flush()
-
-    def handle_endtag(self, tag: str) -> None:
-        if tag in self._skip_tags:
-            self._skip = False
-        if self._current and tag in self._block_tags:
-            self._flush()
-
-    def handle_data(self, data: str) -> None:
-        if not self._skip:
-            text = data.strip()
-            if text:
-                self._current += text + " "
-
-    def _flush(self) -> None:
-        t = self._current.strip()
-        if t:
-            self._parts.append(t)
-        self._current = ""
-
-    def get_text(self) -> str:
-        self._flush()
-        return "\n\n".join(self._parts)
-
-
-def _extract_text(html: str) -> str:
-    parser = _TextExtractor()
-    parser.feed(html)
-    return parser.get_text()
-
-
-def _extract_title(html: str) -> str | None:
-    m = re.search(r"<title[^>]*>([^<]+)</title>", html, re.IGNORECASE)
-    return m.group(1).strip() if m else None
 
 
 SUMMARIZE_SYSTEM_PROMPT = (
@@ -124,15 +60,9 @@ class Summarizer:
                 return SummarizeResult(**cached)
 
         t_start = time.monotonic()
-        t_start = time.monotonic()
 
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            ),
-        }
         try:
-            resp = await self._http.get(url, timeout=10.0, follow_redirects=True, headers=headers)
+            resp = await self._http.get(url, timeout=10.0, follow_redirects=True, headers=FETCH_HEADERS)
             resp.raise_for_status()
         except Exception as e:
             logger.warning("Failed to fetch URL for summary", extra={"url": url, "error": str(e)})
@@ -149,8 +79,8 @@ class Summarizer:
         logger.info("Page fetched", extra={"url": url, "elapsed_ms": round((t_fetch - t_start) * 1000, 1)})
 
         html = resp.text
-        title = _extract_title(html)
-        text = _extract_text(html)
+        title = extract_title(html)
+        text = extract_text(html)
 
         if not text:
             return SummarizeResult(

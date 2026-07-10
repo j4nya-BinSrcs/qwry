@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     valkey_port: int = 6379
     cache_search_ttl_seconds: int = 300
     cache_summary_ttl_seconds: int = 3600
+    cache_reader_ttl_seconds: int = 3600
 
     @property
     def cors_origins_list(self) -> list[str]:
