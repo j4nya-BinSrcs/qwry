@@ -4,6 +4,9 @@ from uuid import UUID
 import httpx
 from fastapi import Header, HTTPException, Query, Request, Response
 from server.src.api.schemas import (
+    ChatRequest,
+    ChatResponse,
+    ChatSource,
     ItemSummaryResponse,
     ReaderResponse,
     SuggestResponse,
@@ -19,6 +22,7 @@ from server.src.api.schemas import (
 )
 from server.src.core.registry import EndpointRegistry
 from server.src.core.session import get_session_id
+from server.src.services.chat import ChatService
 from server.src.services.reader import ReaderService
 from server.src.services.stats_service import StatsCollector
 from server.src.services.summarizer import Summarizer
@@ -209,6 +213,40 @@ async def read_url(
         reading_time_seconds=result.reading_time_seconds,
         success=result.success,
         error=result.error,
+    )
+
+
+# ── Workspace Chat ─────────────────────────────────────────────────────
+
+
+async def workspace_chat(
+    request: Request,
+    ws_id: UUID,
+    body: ChatRequest,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+) -> ChatResponse:
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        from server.src.db.repository import WorkspaceItemRepo, WorkspaceRepo
+
+        ws_repo = WorkspaceRepo(db)
+        ws = await ws_repo.get_by_session(ws_id, session_id)
+        if not ws:
+            raise HTTPException(status_code=404, detail="Workspace not found")
+        item_repo = WorkspaceItemRepo(db)
+        items = await item_repo.list_by_workspace(ws_id)
+
+    item_dicts = [{"url": it.url, "title": it.title, "snippet": it.snippet} for it in items]
+
+    chat = ChatService(
+        reader=request.app.state.reader,
+        llm=request.app.state.llm,
+    )
+    result = await chat.answer(body.question, item_dicts)
+    return ChatResponse(
+        answer=result.answer,
+        sources=[ChatSource(url=s.url, title=s.title) for s in result.sources],
     )
 
 

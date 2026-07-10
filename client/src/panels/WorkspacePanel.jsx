@@ -1,4 +1,4 @@
-import { Book, ExternalLink, GripVertical, Loader2, Pencil, Sparkles, Trash2, X, Check } from "lucide-react";
+import { Book, ExternalLink, GripVertical, Loader2, MessageCircle, Pencil, Sparkles, Trash2, X, Check } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
@@ -7,6 +7,7 @@ import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
 import { useSessionStore } from "../stores/sessionStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import { useSearchStore } from "../stores/searchStore";
+import ChatModal from "../components/ChatModal";
 import ReaderModal from "../components/ReaderModal";
 
 function WorkspaceItemCard({ item }) {
@@ -169,7 +170,7 @@ function WorkspaceItemCard({ item }) {
   );
 }
 
-function WorkspaceHeader({ workspace, sessionId }) {
+function WorkspaceHeader({ workspace, sessionId, onChatClick }) {
   const updateWorkspace = useWorkspaceStore((s) => s.updateWorkspace);
   const [editing, setEditing] = useState(false);
   const [nameInput, setNameInput] = useState("");
@@ -231,9 +232,20 @@ function WorkspaceHeader({ workspace, sessionId }) {
             )}
           </div>
         )}
-        <p className="text-xs text-muted mt-0.5">
-          {workspace?.item_count ?? 0} items collected
-        </p>
+        <div className="flex items-center gap-2 mt-0.5">
+          <p className="text-xs text-muted">
+            {workspace?.item_count ?? 0} items collected
+          </p>
+          {workspace && workspace.item_count > 0 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onChatClick(); }}
+              className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover transition-colors"
+            >
+              <MessageCircle size={11} />
+              Chat
+            </button>
+          )}
+        </div>
       </div>
       {!workspace && (
         <button
@@ -260,6 +272,7 @@ export default function WorkspacePanel() {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const createWorkspace = useWorkspaceStore((s) => s.createWorkspace);
   const query = useSearchStore((s) => s.query);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const { setNodeRef, isOver } = useDroppable({
     id: "workspace-drop",
@@ -274,7 +287,7 @@ export default function WorkspacePanel() {
 
   return (
     <div className="h-full flex flex-col bg-surface">
-      <WorkspaceHeader workspace={activeWs} sessionId={sessionId} />
+      <WorkspaceHeader workspace={activeWs} sessionId={sessionId} onChatClick={() => setChatOpen(true)} />
 
       {/* Content */}
       <div
@@ -337,6 +350,13 @@ export default function WorkspacePanel() {
           </SortableContext>
         )}
       </div>
+      {chatOpen && activeId && (
+        <ChatModal
+          workspaceId={activeId}
+          workspaceName={activeWs?.name}
+          onClose={() => setChatOpen(false)}
+        />
+      )}
     </div>
   );
 }

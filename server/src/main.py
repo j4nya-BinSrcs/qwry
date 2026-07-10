@@ -44,6 +44,7 @@ async def lifespan(app: FastAPI):
             )
         else:
             raise ValueError(f"Unknown summary_provider: {settings.summary_provider}")
+        app.state.llm = llm
         app.state.summarizer = Summarizer(llm, http_client, settings.summary_max_content_length, app.state.cache)
         app.state.reader = ReaderService(http_client, app.state.cache)
 

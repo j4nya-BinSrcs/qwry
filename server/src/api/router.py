@@ -12,6 +12,7 @@ from server.src.api.endpoints import (
     suggest,
     summarize,
     system_stats,
+    workspace_chat,
     workspace_create,
     workspace_delete,
     workspace_get,
@@ -19,6 +20,7 @@ from server.src.api.endpoints import (
     workspace_update,
 )
 from server.src.api.schemas import (
+    ChatResponse,
     ItemSummaryResponse,
     ReaderResponse,
     SearchResponse,
@@ -75,6 +77,7 @@ workspace_router.add_api_route(
     response_model=WorkspaceItemResponse,
     status_code=201,
 )
+workspace_router.add_api_route("/{ws_id}/chat", workspace_chat, methods=["POST"], response_model=ChatResponse)
 
 item_router = APIRouter(prefix="/api/workspaces/items", tags=["workspaces"])
 item_router.add_api_route("/{item_id}", item_update, methods=["PATCH"], response_model=WorkspaceItemResponse)

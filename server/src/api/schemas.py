@@ -149,6 +149,20 @@ class ItemSummaryResponse(BaseModel):
     model: str
 
 
+class ChatSource(BaseModel):
+    url: str
+    title: str | None = None
+
+
+class ChatRequest(BaseModel):
+    question: str
+
+
+class ChatResponse(BaseModel):
+    answer: str
+    sources: list[ChatSource]
+
+
 class ReaderResponse(BaseModel):
     url: str
     title: str | None = None
