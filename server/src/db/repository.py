@@ -107,11 +107,14 @@ class WorkspaceItemRepo:
         self,
         ws_id: UUID,
         url: str,
+        media_url: str | None = None,
         title: str | None = None,
         snippet: str | None = None,
         source: str | None = None,
     ) -> WorkspaceItem:
-        item = WorkspaceItem(workspace_id=ws_id, url=url, title=title, snippet=snippet, source=source)
+        item = WorkspaceItem(
+            workspace_id=ws_id, url=url, media_url=media_url, title=title, snippet=snippet, source=source
+        )
         self._session.add(item)
         await self._session.commit()
         await self._session.refresh(item)

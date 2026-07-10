@@ -85,10 +85,10 @@ export const useWorkspaceStore = create((set, get) => ({
     }
   },
 
-  addItem: async (sessionId, wsId, url, title, snippet, source) => {
+  addItem: async (sessionId, wsId, url, title, snippet, source, mediaUrl) => {
     set({ error: null });
     try {
-      const item = await api.addItem(sessionId, wsId, url, title, snippet, source);
+      const item = await api.addItem(sessionId, wsId, url, title, snippet, source, mediaUrl);
       set((s) => ({ items: [...s.items, item] }));
       // refresh item_count on workspace
       set((s) => ({

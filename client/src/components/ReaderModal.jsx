@@ -2,7 +2,7 @@ import { Clock, ExternalLink, ImageIcon, Loader2, Play, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { readUrl } from "../api/reader";
 
-export default function ReaderModal({ url, title: initialTitle, onClose }) {
+export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClose }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -12,7 +12,7 @@ export default function ReaderModal({ url, title: initialTitle, onClose }) {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    readUrl(url)
+    readUrl(url, mediaUrl)
       .then((d) => {
         if (!cancelled) {
           setData(d);

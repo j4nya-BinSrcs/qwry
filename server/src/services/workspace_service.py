@@ -28,6 +28,7 @@ def _item_to_response(item: WorkspaceItem) -> WorkspaceItemResponse:
         id=item.id,
         workspace_id=item.workspace_id,
         url=item.url,
+        media_url=item.media_url,
         title=item.title,
         snippet=item.snippet,
         source=item.source,
@@ -106,6 +107,7 @@ async def add_item(
     title: str | None,
     snippet: str | None,
     source: str | None,
+    media_url: str | None = None,
 ) -> WorkspaceItemResponse | None:
     ws_repo = WorkspaceRepo(session)
     ws = await ws_repo.get_by_session(ws_id, session_id)
@@ -115,7 +117,7 @@ async def add_item(
     if count >= MAX_ITEMS_PER_WORKSPACE:
         raise ValueError(f"Workspace limit of {MAX_ITEMS_PER_WORKSPACE} items reached")
     item_repo = WorkspaceItemRepo(session)
-    item = await item_repo.create(ws_id, url, title, snippet, source)
+    item = await item_repo.create(ws_id, url, media_url, title, snippet, source)
     return _item_to_response(item)
 
 

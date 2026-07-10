@@ -16,6 +16,19 @@ WORDS_PER_MINUTE = 200
 
 _IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp", ".ico"}
 _YT_PATTERN = re.compile(r"(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/shorts/)([\w-]+)")
+_BOILERPLATE_PATTERNS = [
+    re.compile(r"javascript\s+is\s+(?:disabled|blocked|required)", re.IGNORECASE),
+    re.compile(r"enable\s+javascript", re.IGNORECASE),
+    re.compile(r"not\s+compatible\s+with\s+your\s+web\s+browser", re.IGNORECASE),
+    re.compile(r"this\s+page\s+will\s+not\s+work\s+without", re.IGNORECASE),
+    re.compile(r"peer[-\s]?tube\s+is\s+not\s+compatible", re.IGNORECASE),
+]
+
+
+def _is_boilerplate_error(text: str) -> bool:
+    """Check if extracted text is a JS-required / browser-block page instead of real content."""
+    short = text[:300]
+    return any(p.search(short) for p in _BOILERPLATE_PATTERNS)
 
 
 def detect_content_type(url: str) -> tuple[str, str | None]:
@@ -180,8 +193,11 @@ class ReaderService:
         self._http = http_client
         self._cache = cache
 
-    async def read_url(self, url: str) -> ReaderResult:
+    async def read_url(self, url: str, media_url: str | None = None) -> ReaderResult:
         logger.info("Reading URL", extra={"url": url})
+
+        # When a direct media_url is provided, use it for content-type detection
+        detect_url = media_url or url
 
         if self._cache and self._cache.available:
             cached = await self._cache.get(CacheService.NAMESPACE_READER, url)
@@ -189,7 +205,7 @@ class ReaderService:
                 logger.debug("Reader cache hit", extra={"url": url})
                 return ReaderResult(**cached)
 
-        ctype, extra = detect_content_type(url)
+        ctype, extra = detect_content_type(detect_url)
 
         # ── Image: return immediately with media_url ────────────────
         if ctype == "image":
@@ -257,6 +273,18 @@ class ReaderService:
             )
 
         title, content = extract_article(html)
+
+        if content and _is_boilerplate_error(content):
+            logger.warning("Boilerplate page (JS required / browser block)", extra={"url": url})
+            return ReaderResult(
+                url=url,
+                title=title,
+                content="",
+                content_length_chars=0,
+                reading_time_seconds=0,
+                success=False,
+                error="This page requires JavaScript and cannot be read automatically.",
+            )
 
         if not content:
             return ReaderResult(

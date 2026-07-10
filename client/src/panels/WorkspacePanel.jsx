@@ -162,6 +162,7 @@ function WorkspaceItemCard({ item }) {
       {readerUrl && (
         <ReaderModal
           url={readerUrl}
+          mediaUrl={item.media_url}
           title={item.title}
           onClose={() => setReaderUrl(null)}
         />

@@ -117,6 +117,7 @@ class WorkspaceResponse(BaseModel):
 
 class WorkspaceItemCreateRequest(BaseModel):
     url: str
+    media_url: str | None = None
     title: str | None = None
     snippet: str | None = None
     source: str | None = None
@@ -133,6 +134,7 @@ class WorkspaceItemResponse(BaseModel):
     id: UUID
     workspace_id: UUID
     url: str
+    media_url: str | None = None
     title: str | None = None
     snippet: str | None = None
     source: str | None = None

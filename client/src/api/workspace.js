@@ -50,11 +50,11 @@ export async function listItems(sessionId, wsId) {
   return res.json();
 }
 
-export async function addItem(sessionId, wsId, url, title, snippet, source) {
+export async function addItem(sessionId, wsId, url, title, snippet, source, mediaUrl) {
   const res = await fetch(`${BASE}/workspaces/${wsId}/items`, {
     method: "POST",
     headers: headers(sessionId),
-    body: JSON.stringify({ url, title, snippet, source }),
+    body: JSON.stringify({ url, title, snippet, source, media_url: mediaUrl }),
   });
   if (!res.ok) {
     const text = await res.text();

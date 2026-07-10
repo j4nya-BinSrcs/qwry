@@ -164,8 +164,16 @@ async def system_stats(request: Request) -> SystemStats:
 async def image_proxy(request: Request, url: str = Query(..., description="Image URL to proxy")):
     http: httpx.AsyncClient = request.app.state.http
     try:
-        headers = {"User-Agent": "Mozilla/5.0 (compatible; QWRY/1.0; +https://github.com/j4nya-BinSrcs/qwry)"}
-        resp = await http.get(url, headers=headers, timeout=10.0)
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+                " AppleWebKit/537.36 (KHTML, like Gecko)"
+                " Chrome/127.0.0.0 Safari/537.36"
+            ),
+            "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+            "Referer": "https://www.google.com/",
+        }
+        resp = await http.get(url, headers=headers, follow_redirects=True, timeout=10.0)
         resp.raise_for_status()
         content_type = resp.headers.get("content-type", "image/jpeg")
         return Response(content=resp.content, media_type=content_type)
@@ -198,10 +206,11 @@ async def summarize(
 async def read_url(
     request: Request,
     url: str = Query(..., description="URL to extract readable content from"),
+    media_url: str | None = Query(None, description="Direct media URL (image/video) for content-type detection"),
 ) -> ReaderResponse:
     reader: ReaderService = request.app.state.reader
     try:
-        result = await reader.read_url(url)
+        result = await reader.read_url(url, media_url)
     except Exception as e:
         logger.error("Reader endpoint failed", extra={"url": url, "error": repr(e)}, exc_info=True)
         raise HTTPException(status_code=502, detail=f"Failed to read page: {e}") from e
@@ -346,7 +355,9 @@ async def item_create(
     maker = request.app.state.db
     async with maker() as db:
         try:
-            result = await add_item(db, session_id, ws_id, body.url, body.title, body.snippet, body.source)
+            result = await add_item(
+                db, session_id, ws_id, body.url, body.title, body.snippet, body.source, body.media_url
+            )
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e)) from None
     if not result:
@@ -418,7 +429,7 @@ async def item_summarize(
         )
 
     summarizer: Summarizer = request.app.state.summarizer
-    result = await summarizer.summarize_url(item.url)
+    result = await summarizer.summarize_url(item.url, item.title, item.snippet, item.media_url)
 
     if not result.success:
         raise HTTPException(status_code=502, detail=result.summary)

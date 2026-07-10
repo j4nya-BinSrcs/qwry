@@ -28,7 +28,7 @@ export default function MediaCard({ result }) {
     (e) => {
       e.stopPropagation();
       if (!activeWsId || saved) return;
-      addItem(sessionId, activeWsId, result.url, result.title, null, result.source || result.category);
+      addItem(sessionId, activeWsId, result.url, result.title, result.snippet || null, result.source || result.category, result.img_src || null);
       setSaved(true);
       setTimeout(() => setSaved(false), 1500);
     },
