@@ -23,6 +23,20 @@ export const useWorkspaceStore = create((set, get) => ({
     }
   },
 
+  updateWorkspace: async (sessionId, wsId, name, description) => {
+    set({ error: null });
+    try {
+      const ws = await api.updateWorkspace(sessionId, wsId, name, description);
+      set((s) => ({
+        workspaces: s.workspaces.map((w) => (w.id === wsId ? ws : w)),
+      }));
+      return ws;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
   createWorkspace: async (sessionId, name, description) => {
     set({ loading: true, error: null });
     try {

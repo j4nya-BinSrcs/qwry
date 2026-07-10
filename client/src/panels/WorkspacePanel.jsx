@@ -1,4 +1,4 @@
-import { ExternalLink, GripVertical, Loader2, Sparkles, Trash2 } from "lucide-react";
+import { ExternalLink, GripVertical, Loader2, Pencil, Sparkles, Trash2, X, Check } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { useSessionStore } from "../stores/sessionStore";
@@ -119,6 +119,87 @@ function WorkspaceItemCard({ item }) {
   );
 }
 
+function WorkspaceHeader({ workspace, sessionId }) {
+  const updateWorkspace = useWorkspaceStore((s) => s.updateWorkspace);
+  const [editing, setEditing] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+
+  const startEdit = useCallback((e) => {
+    e.stopPropagation();
+    setNameInput(workspace?.name || "");
+    setEditing(true);
+  }, [workspace]);
+
+  const cancelEdit = useCallback((e) => {
+    e.stopPropagation();
+    setEditing(false);
+  }, []);
+
+  const saveEdit = useCallback(async (e) => {
+    e.stopPropagation();
+    const trimmed = nameInput.trim();
+    if (trimmed && trimmed !== workspace.name) {
+      await updateWorkspace(sessionId, workspace.id, trimmed, null);
+    }
+    setEditing(false);
+  }, [nameInput, workspace, sessionId, updateWorkspace]);
+
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === "Enter") saveEdit(e);
+    if (e.key === "Escape") cancelEdit(e);
+  }, [saveEdit, cancelEdit]);
+
+  return (
+    <div className="shrink-0 px-4 py-2.5 border-b border-border flex items-center justify-between">
+      <div className="flex-1 min-w-0">
+        {editing ? (
+          <div className="flex items-center gap-1">
+            <input
+              type="text"
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              autoFocus
+              className="flex-1 bg-hover border border-border rounded px-2 py-0.5 text-sm font-semibold text-text outline-none focus:border-accent/30"
+            />
+            <button onClick={saveEdit} className="p-1 rounded text-dim hover:text-accent"><Check size={14} /></button>
+            <button onClick={cancelEdit} className="p-1 rounded text-dim hover:text-text"><X size={14} /></button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 group/title">
+            <h1 className="text-base font-semibold text-text truncate">
+              {workspace?.name || "Research Workspace"}
+            </h1>
+            {workspace && (
+              <button
+                onClick={startEdit}
+                className="p-0.5 rounded text-dim opacity-0 group-hover/title:opacity-100 hover:text-text transition-all"
+                title="Rename"
+              >
+                <Pencil size={12} />
+              </button>
+            )}
+          </div>
+        )}
+        <p className="text-xs text-muted mt-0.5">
+          {workspace?.item_count ?? 0} items collected
+        </p>
+      </div>
+      {!workspace && (
+        <button
+          onClick={() => {
+            const name = prompt("Workspace name:");
+            if (name) createWorkspace(sessionId, name);
+          }}
+          className="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors"
+        >
+          + New Workspace
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function WorkspacePanel() {
   const sessionId = useSessionStore((s) => s.sessionId);
   const activeId = useWorkspaceStore((s) => s.activeWorkspaceId);
@@ -143,28 +224,7 @@ export default function WorkspacePanel() {
 
   return (
     <div className="h-full flex flex-col bg-surface">
-      {/* Header */}
-      <div className="shrink-0 px-4 py-2.5 border-b border-border flex items-center justify-between">
-        <div>
-          <h1 className="text-base font-semibold text-text">
-            {activeWs?.name || "Research Workspace"}
-          </h1>
-          <p className="text-xs text-muted mt-0.5">
-            {activeWs?.item_count ?? 0} items collected
-          </p>
-        </div>
-        {!activeWs && (
-          <button
-            onClick={() => {
-              const name = prompt("Workspace name:");
-              if (name) createWorkspace(sessionId, name);
-            }}
-            className="text-xs px-3 py-1.5 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors"
-          >
-            + New Workspace
-          </button>
-        )}
-      </div>
+      <WorkspaceHeader workspace={activeWs} sessionId={sessionId} />
 
       {/* Content */}
       <div

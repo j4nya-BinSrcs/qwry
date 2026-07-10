@@ -23,6 +23,16 @@ export async function createWorkspace(sessionId, name, description) {
   return res.json();
 }
 
+export async function updateWorkspace(sessionId, wsId, name, description) {
+  const res = await fetch(`${BASE}/workspaces/${wsId}`, {
+    method: "PATCH",
+    headers: headers(sessionId),
+    body: JSON.stringify({ name, description }),
+  });
+  if (!res.ok) throw new Error(`update workspace failed: ${res.status}`);
+  return res.json();
+}
+
 export async function deleteWorkspace(sessionId, wsId) {
   const res = await fetch(`${BASE}/workspaces/${wsId}`, {
     method: "DELETE",
