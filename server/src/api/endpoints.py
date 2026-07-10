@@ -340,7 +340,9 @@ async def item_summarize(
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    if item.summary:
+    if item.summary and not item.summary.startswith(
+        ("Summary generation failed", "Failed to fetch page", "No readable content")
+    ):
         return ItemSummaryResponse(
             item_id=item.id,
             summary=item.summary,
@@ -350,6 +352,10 @@ async def item_summarize(
 
     summarizer: Summarizer = request.app.state.summarizer
     result = await summarizer.summarize_url(item.url)
+
+    if not result.success:
+        raise HTTPException(status_code=502, detail=result.summary)
+
     async with maker() as db:
         await item_repo.update(item_id, summary=result.summary)
     return ItemSummaryResponse(

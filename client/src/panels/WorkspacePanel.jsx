@@ -1,4 +1,4 @@
-import { ExternalLink, FileText, GripVertical, Loader2, Sparkles, Trash2 } from "lucide-react";
+import { ExternalLink, GripVertical, Loader2, Sparkles, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { useSessionStore } from "../stores/sessionStore";
@@ -56,16 +56,14 @@ function WorkspaceItemCard({ item }) {
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          {!hasSummary && (
-            <button
-              onClick={handleSummarize}
-              disabled={isSummarizing}
-              className="p-1.5 rounded-md text-dim hover:text-accent hover:bg-accent/10 transition-all"
-              title="Summarize"
-            >
-              {isSummarizing ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-            </button>
-          )}
+          <button
+            onClick={handleSummarize}
+            disabled={isSummarizing}
+            className="p-1.5 rounded-md text-dim hover:text-accent hover:bg-accent/10 transition-all"
+            title={hasSummary ? "Re-summarize" : "Summarize"}
+          >
+            {isSummarizing ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+          </button>
           <button
             onClick={(e) => {
               e.stopPropagation();

@@ -67,6 +67,9 @@ export async function summarizeItem(sessionId, itemId) {
     method: "POST",
     headers: headers(sessionId),
   });
-  if (!res.ok) throw new Error(`summarize item failed: ${res.status}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `summarize item failed: ${res.status}`);
+  }
   return res.json();
 }
