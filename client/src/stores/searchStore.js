@@ -11,6 +11,7 @@ export const useSearchStore = create((set, get) => ({
   query: "",
   results: [],
   suggestions: [],
+  infobox: null,
   loading: false,
   error: null,
   page: 1,
@@ -24,6 +25,8 @@ export const useSearchStore = create((set, get) => ({
       const data = await searchQuery(q, page, 20, resolvedProvider);
       set({
         results: data.results || [],
+        suggestions: data.suggestions || [],
+        infobox: data.infoboxes?.[0] || null,
         loading: false,
         page: data.page || page,
       });
@@ -31,5 +34,5 @@ export const useSearchStore = create((set, get) => ({
       set({ error: err.message, loading: false });
     }
   },
-  clearResults: () => set({ results: [], query: "", error: null }),
+  clearResults: () => set({ results: [], query: "", error: null, suggestions: [], infobox: null }),
 }));

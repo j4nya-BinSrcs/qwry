@@ -59,8 +59,17 @@ function DraggableResultCard({ result }) {
         <GripVertical size={14} />
       </button>
 
-      {/* Favicon */}
-      <Favicon domain={new URL(result.url).hostname} />
+      {/* Thumbnail / Favicon */}
+      {result.img_src ? (
+        <img
+          src={`/api/image-proxy?url=${encodeURIComponent(result.img_src)}`}
+          alt=""
+          className="size-8 rounded object-cover shrink-0 mt-0.5"
+          onError={(e) => (e.target.style.display = "none")}
+        />
+      ) : (
+        <Favicon domain={new URL(result.url).hostname} />
+      )}
 
       {/* Content */}
       <div className="flex-1 min-w-0">
@@ -68,6 +77,11 @@ function DraggableResultCard({ result }) {
           <span className="text-sm font-medium text-text truncate">
             {result.title}
           </span>
+          {result.category && result.category !== "general" && (
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 shrink-0">
+              {result.category}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-xs text-muted truncate">
