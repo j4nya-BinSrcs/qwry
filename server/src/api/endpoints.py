@@ -163,7 +163,7 @@ async def image_proxy(request: Request, url: str = Query(..., description="Image
         return Response(content=resp.content, media_type=content_type)
     except Exception as e:
         logger.warning("Image proxy failed", extra={"url": url, "error": str(e)})
-        raise HTTPException(status_code=502, detail="Failed to fetch image")
+        raise HTTPException(status_code=502, detail="Failed to fetch image") from e
 
 
 # ── Summarize ──────────────────────────────────────────────────────────
