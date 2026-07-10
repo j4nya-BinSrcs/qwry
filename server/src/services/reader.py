@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from html.parser import HTMLParser
 
 import httpx
+import trafilatura
 from server.src.core.config import settings
 from server.src.services.cache import CacheService
 
@@ -24,7 +25,10 @@ class ReaderResult:
     error: str | None = None
 
 
-class _TextExtractor(HTMLParser):
+# ── Legacy fallback extractors ──────────────────────────────────────
+
+
+class _LegacyTextExtractor(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
         self._parts: list[str] = []
@@ -76,15 +80,46 @@ class _TextExtractor(HTMLParser):
         return "\n\n".join(self._parts)
 
 
-def extract_text(html: str) -> str:
-    parser = _TextExtractor()
+def _legacy_extract_title(html: str) -> str | None:
+    m = re.search(r"<title[^>]*>([^<]+)</title>", html, re.IGNORECASE)
+    return m.group(1).strip() if m else None
+
+
+def _legacy_extract_text(html: str) -> str:
+    parser = _LegacyTextExtractor()
     parser.feed(html)
     return parser.get_text()
 
 
+# ── Primary extraction (trafilatura + legacy fallback) ──────────────
+
+
+def extract_article(html: str) -> tuple[str | None, str]:
+    """Extract (title, text) from HTML using trafilatura, falling back to legacy parser."""
+    try:
+        doc = trafilatura.bare_extraction(
+            html,
+            include_comments=False,
+            include_tables=False,
+            include_links=False,
+            include_images=False,
+        )
+        if doc and doc.text:
+            title = doc.title or _legacy_extract_title(html)
+            return title, doc.text
+    except Exception:
+        pass
+    return _legacy_extract_title(html), _legacy_extract_text(html)
+
+
+def extract_text(html: str) -> str:
+    _, text = extract_article(html)
+    return text
+
+
 def extract_title(html: str) -> str | None:
-    m = re.search(r"<title[^>]*>([^<]+)</title>", html, re.IGNORECASE)
-    return m.group(1).strip() if m else None
+    title, _ = extract_article(html)
+    return title
 
 
 def estimate_reading_time(text: str, wpm: int = WORDS_PER_MINUTE) -> int:
@@ -141,8 +176,7 @@ class ReaderService:
         logger.info("Page fetched for reading", extra={"url": url, "elapsed_ms": round((t_fetch - t_start) * 1000, 1)})
 
         html = resp.text
-        title = extract_title(html)
-        content = extract_text(html)
+        title, content = extract_article(html)
 
         if not content:
             return ReaderResult(

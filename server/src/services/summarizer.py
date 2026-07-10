@@ -6,7 +6,7 @@ import httpx
 from server.src.core.config import settings
 from server.src.services.cache import CacheService
 from server.src.services.llm import LLMBackend
-from server.src.services.reader import FETCH_HEADERS, extract_text, extract_title
+from server.src.services.reader import FETCH_HEADERS, extract_article
 
 logger = logging.getLogger(__name__)
 
@@ -21,19 +21,18 @@ class SummarizeResult:
     success: bool = True
 
 
-SUMMARIZE_SYSTEM_PROMPT = (
-    "You are a helpful assistant that summarizes web pages. "
-    "Be objective, thorough, and cover the full breadth of the page content."
-)
+SUMMARIZE_SYSTEM_PROMPT = "Summarize the webpage content provided. Output only the summary, nothing else."
 
 SUMMARIZE_PROMPT = (
-    "Given the extracted text content of a webpage, produce a structured summary:\n\n"
-    "**What this page is about** — one or two sentences describing the website or page's purpose and overall topic.\n\n"
-    "**Main content** — a paragraph covering the key subjects, sections, and information presented on the page. "
-    "Cover the full scope, not just one section.\n\n"
-    "**Key points** — 3-6 bullet points of the most important takeaways.\n\n"
-    "Be thorough and comprehensive. Cover the full breadth of content on the page.\n\n"
-    "PAGE CONTENT:\n{text}"
+    "Summarize this webpage in a structured format.\n\n"
+    "## What this page is about\n"
+    "One or two sentences describing the overall topic and purpose.\n\n"
+    "## Main content\n"
+    "A paragraph covering the key subjects and information in detail.\n\n"
+    "## Key points\n"
+    "3-6 bullet points of the most important takeaways.\n\n"
+    "OUTPUT ONLY THE SUMMARY. DO NOT include introductions, explanations, or meta-commentary.\n\n"
+    "WEBPAGE CONTENT:\n{text}"
 )
 
 
@@ -79,8 +78,7 @@ class Summarizer:
         logger.info("Page fetched", extra={"url": url, "elapsed_ms": round((t_fetch - t_start) * 1000, 1)})
 
         html = resp.text
-        title = extract_title(html)
-        text = extract_text(html)
+        title, text = extract_article(html)
 
         if not text:
             return SummarizeResult(
