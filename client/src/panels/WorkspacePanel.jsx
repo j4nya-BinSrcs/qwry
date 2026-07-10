@@ -1,4 +1,4 @@
-import { ExternalLink, GripVertical, Trash2 } from "lucide-react";
+import { ExternalLink, FileText, GripVertical, Loader2, Sparkles, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { useSessionStore } from "../stores/sessionStore";
@@ -8,7 +8,12 @@ import { useSearchStore } from "../stores/searchStore";
 function WorkspaceItemCard({ item }) {
   const sessionId = useSessionStore((s) => s.sessionId);
   const deleteItem = useWorkspaceStore((s) => s.deleteItem);
+  const summarizeItem = useWorkspaceStore((s) => s.summarizeItem);
+  const summarizingId = useWorkspaceStore((s) => s.summarizingId);
   const [expanded, setExpanded] = useState(false);
+
+  const isSummarizing = summarizingId === item.id;
+  const hasSummary = !!item.summary;
 
   const handleDelete = useCallback(
     (e) => {
@@ -16,6 +21,14 @@ function WorkspaceItemCard({ item }) {
       deleteItem(sessionId, item.id);
     },
     [sessionId, item.id, deleteItem]
+  );
+
+  const handleSummarize = useCallback(
+    (e) => {
+      e.stopPropagation();
+      summarizeItem(sessionId, item.id);
+    },
+    [sessionId, item.id, summarizeItem]
   );
 
   return (
@@ -43,6 +56,16 @@ function WorkspaceItemCard({ item }) {
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          {!hasSummary && (
+            <button
+              onClick={handleSummarize}
+              disabled={isSummarizing}
+              className="p-1.5 rounded-md text-dim hover:text-accent hover:bg-accent/10 transition-all"
+              title="Summarize"
+            >
+              {isSummarizing ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+            </button>
+          )}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -60,11 +83,38 @@ function WorkspaceItemCard({ item }) {
           </button>
         </div>
       </div>
-      {expanded && (item.notes || item.snippet) && (
-        <div className="px-3.5 pb-3 border-t border-border">
-          <p className="text-xs text-muted mt-2 leading-relaxed">
-            {item.notes || item.snippet}
-          </p>
+      {expanded && (item.snippet || item.notes || hasSummary || isSummarizing) && (
+        <div className="px-3.5 pb-3 border-t border-border space-y-2">
+          {item.snippet && (
+            <p className="text-xs text-muted mt-2 leading-relaxed">
+              {item.snippet}
+            </p>
+          )}
+          {item.notes && (
+            <p className="text-xs text-dim leading-relaxed italic">
+              {item.notes}
+            </p>
+          )}
+          {isSummarizing && (
+            <div className="flex items-center gap-2 text-xs text-muted mt-2">
+              <Loader2 size={12} className="animate-spin" />
+              Generating summary…
+            </div>
+          )}
+          {hasSummary && (
+            <div className="mt-2 space-y-1.5">
+              <div className="flex items-center gap-1.5 text-xs text-accent">
+                <Sparkles size={11} />
+                <span className="font-medium">Summary</span>
+                <span className="text-dim font-normal">
+                  via {item.summary_model || item.summary_provider || "ollama"}
+                </span>
+              </div>
+              <p className="text-xs text-text leading-relaxed whitespace-pre-line">
+                {item.summary}
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>

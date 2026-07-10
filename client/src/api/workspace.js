@@ -61,3 +61,12 @@ export async function deleteItem(sessionId, itemId) {
   if (!res.ok) throw new Error(`delete item failed: ${res.status}`);
   return res.json();
 }
+
+export async function summarizeItem(sessionId, itemId) {
+  const res = await fetch(`${BASE}/workspaces/items/${itemId}/summarize`, {
+    method: "POST",
+    headers: headers(sessionId),
+  });
+  if (!res.ok) throw new Error(`summarize item failed: ${res.status}`);
+  return res.json();
+}

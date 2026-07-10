@@ -88,6 +88,25 @@ export const useWorkspaceStore = create((set, get) => ({
     }
   },
 
+  summarizingId: null,
+
+  summarizeItem: async (sessionId, itemId) => {
+    set({ summarizingId: itemId, error: null });
+    try {
+      const result = await api.summarizeItem(sessionId, itemId);
+      set((s) => ({
+        items: s.items.map((i) =>
+          i.id === itemId
+            ? { ...i, summary: result.summary, summary_provider: result.provider, summary_model: result.model }
+            : i
+        ),
+        summarizingId: null,
+      }));
+    } catch (err) {
+      set({ error: err.message, summarizingId: null });
+    }
+  },
+
   deleteItem: async (sessionId, itemId) => {
     try {
       await api.deleteItem(sessionId, itemId);
