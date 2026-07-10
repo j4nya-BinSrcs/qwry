@@ -126,6 +126,7 @@ class WorkspaceItemUpdateRequest(BaseModel):
     title: str | None = None
     snippet: str | None = None
     notes: str | None = None
+    order_index: int | None = None
 
 
 class WorkspaceItemResponse(BaseModel):

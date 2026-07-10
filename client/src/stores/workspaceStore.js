@@ -9,6 +9,7 @@ export const useWorkspaceStore = create((set, get) => ({
   error: null,
 
   setActiveWorkspace: (id) => set({ activeWorkspaceId: id }),
+  setItems: (items) => set({ items }),
 
   loadWorkspaces: async (sessionId) => {
     set({ loading: true, error: null });
@@ -114,7 +115,15 @@ export const useWorkspaceStore = create((set, get) => ({
             ? { ...i, summary: result.summary, summary_provider: result.provider, summary_model: result.model }
             : i
         ),
-        summarizingId: null,
+  reorderItem: async (sessionId, itemId, orderIndex) => {
+    try {
+      await api.updateItem(sessionId, itemId, { order_index: orderIndex });
+    } catch (err) {
+      set({ error: err.message });
+    }
+  },
+
+  summarizingId: null,
       }));
     } catch (err) {
       set({ error: err.message, summarizingId: null });

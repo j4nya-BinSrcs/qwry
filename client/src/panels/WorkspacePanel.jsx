@@ -1,6 +1,9 @@
 import { ExternalLink, GripVertical, Loader2, Pencil, Sparkles, Trash2, X, Check } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
 import { useSessionStore } from "../stores/sessionStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import { useSearchStore } from "../stores/searchStore";
@@ -11,6 +14,24 @@ function WorkspaceItemCard({ item }) {
   const summarizeItem = useWorkspaceStore((s) => s.summarizeItem);
   const summarizingId = useWorkspaceStore((s) => s.summarizingId);
   const [expanded, setExpanded] = useState(false);
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: item.id,
+    data: { type: "workspace-item", item },
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : undefined,
+  };
 
   const isSummarizing = summarizingId === item.id;
   const hasSummary = !!item.summary;
@@ -33,14 +54,19 @@ function WorkspaceItemCard({ item }) {
 
   return (
     <div
+      ref={setNodeRef}
+      style={style}
       onClick={() => setExpanded(!expanded)}
       className="group bg-elevated border border-border rounded-lg transition-all hover:border-border/80 cursor-pointer"
     >
       <div className="flex items-start gap-3 px-3.5 py-3">
-        <GripVertical
-          size={14}
-          className="mt-1 shrink-0 text-dim cursor-grab active:cursor-grabbing"
-        />
+        <button
+          {...attributes}
+          {...listeners}
+          className="mt-1 shrink-0 text-dim cursor-grab active:cursor-grabbing hover:text-text transition-colors"
+        >
+          <GripVertical size={14} />
+        </button>
         <img
           src={`https://www.google.com/s2/favicons?domain=${new URL(item.url).hostname}&sz=32`}
           alt=""
@@ -278,11 +304,13 @@ export default function WorkspacePanel() {
           </div>
         )}
         {items.length > 0 && (
-          <div className="space-y-1.5 p-3">
-            {items.map((item) => (
-              <WorkspaceItemCard key={item.id} item={item} />
-            ))}
-          </div>
+          <SortableContext items={items.map((i) => i.id)} strategy={rectSortingStrategy}>
+            <div className="space-y-1.5 p-3">
+              {items.map((item) => (
+                <WorkspaceItemCard key={item.id} item={item} />
+              ))}
+            </div>
+          </SortableContext>
         )}
       </div>
     </div>

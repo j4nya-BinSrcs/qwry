@@ -305,6 +305,7 @@ async def item_update(
             title=body.title,
             snippet=body.snippet,
             notes=body.notes,
+            order_index=body.order_index,
         )
     if not result:
         raise HTTPException(status_code=404, detail="Item not found")

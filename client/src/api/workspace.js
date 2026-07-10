@@ -63,6 +63,16 @@ export async function addItem(sessionId, wsId, url, title, snippet, source) {
   return res.json();
 }
 
+export async function updateItem(sessionId, itemId, data) {
+  const res = await fetch(`${BASE}/workspaces/items/${itemId}`, {
+    method: "PATCH",
+    headers: headers(sessionId),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(`update item failed: ${res.status}`);
+  return res.json();
+}
+
 export async function deleteItem(sessionId, itemId) {
   const res = await fetch(`${BASE}/workspaces/items/${itemId}`, {
     method: "DELETE",
