@@ -14,6 +14,38 @@ logger = logging.getLogger(__name__)
 WORDS_PER_MINUTE = 200
 
 
+_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp", ".ico"}
+_YT_PATTERN = re.compile(r"(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/shorts/)([\w-]+)")
+
+
+def detect_content_type(url: str) -> tuple[str, str | None]:
+    """Returns (content_type, extra) where extra is a video_id or image URL."""
+    path = url.split("?", 1)[0].lower()
+    for ext in _IMAGE_EXTS:
+        if path.endswith(ext):
+            return "image", url
+    m = _YT_PATTERN.search(url)
+    if m:
+        return "video", m.group(1)
+    return "article", None
+
+
+def _extract_meta_description(html: str) -> str | None:
+    m = re.search(
+        r'<meta\s+(?:property|name)=["\'](?:og:)?description["\']\s+content=["\']([^"\']+)["\']',
+        html,
+        re.IGNORECASE,
+    )
+    if m:
+        return m.group(1).strip()
+    m = re.search(
+        r'<meta\s+content=["\']([^"\']+)["\']\s+(?:property|name)=["\'](?:og:)?description["\']',
+        html,
+        re.IGNORECASE,
+    )
+    return m.group(1).strip() if m else None
+
+
 @dataclass
 class ReaderResult:
     url: str
@@ -23,6 +55,8 @@ class ReaderResult:
     reading_time_seconds: int
     success: bool = True
     error: str | None = None
+    content_type: str = "article"
+    media_url: str | None = None
 
 
 # ── Legacy fallback extractors ──────────────────────────────────────
@@ -155,13 +189,32 @@ class ReaderService:
                 logger.debug("Reader cache hit", extra={"url": url})
                 return ReaderResult(**cached)
 
-        t_start = time.monotonic()
+        ctype, extra = detect_content_type(url)
 
-        try:
-            resp = await self._http.get(url, timeout=10.0, follow_redirects=True, headers=FETCH_HEADERS)
-            resp.raise_for_status()
-        except Exception as e:
-            logger.warning("Failed to fetch URL for reading", extra={"url": url, "error": str(e)})
+        # ── Image: return immediately with media_url ────────────────
+        if ctype == "image":
+            result = ReaderResult(
+                url=url,
+                title=None,
+                content="",
+                content_length_chars=0,
+                reading_time_seconds=0,
+                content_type="image",
+                media_url=url,
+            )
+            await self._store_cache(url, result)
+            return result
+
+        # ── YouTube / video: fetch page, extract description ────────
+        if ctype == "video":
+            return await self._read_video(url, extra)
+
+        # ── Article: full extraction via trafilatura ─────────────────
+        return await self._read_article(url)
+
+    async def _read_video(self, url: str, video_id: str | None) -> ReaderResult:
+        html = await self._fetch(url)
+        if html is None:
             return ReaderResult(
                 url=url,
                 title=None,
@@ -169,13 +222,40 @@ class ReaderService:
                 content_length_chars=0,
                 reading_time_seconds=0,
                 success=False,
-                error=f"Failed to fetch page: {e}",
+                error="Failed to fetch video page.",
+                content_type="video",
+                media_url=video_id and f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg" or None,
             )
 
-        t_fetch = time.monotonic()
-        logger.info("Page fetched for reading", extra={"url": url, "elapsed_ms": round((t_fetch - t_start) * 1000, 1)})
+        title = _legacy_extract_title(html)
+        desc = _extract_meta_description(html) or ""
+        content = f"{title or ''}\n\n{desc}".strip()
 
-        html = resp.text
+        result = ReaderResult(
+            url=url,
+            title=title,
+            content=content,
+            content_length_chars=len(content),
+            reading_time_seconds=0,
+            content_type="video",
+            media_url=video_id and f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg" or None,
+        )
+        await self._store_cache(url, result)
+        return result
+
+    async def _read_article(self, url: str) -> ReaderResult:
+        html = await self._fetch(url)
+        if html is None:
+            return ReaderResult(
+                url=url,
+                title=None,
+                content="",
+                content_length_chars=0,
+                reading_time_seconds=0,
+                success=False,
+                error="Failed to fetch page.",
+            )
+
         title, content = extract_article(html)
 
         if not content:
@@ -199,6 +279,21 @@ class ReaderService:
             reading_time_seconds=reading_time,
         )
 
+        await self._store_cache(url, result)
+        return result
+
+    async def _fetch(self, url: str) -> str | None:
+        t_start = time.monotonic()
+        try:
+            resp = await self._http.get(url, timeout=10.0, follow_redirects=True, headers=FETCH_HEADERS)
+            resp.raise_for_status()
+            logger.info("Page fetched", extra={"url": url, "elapsed_ms": round((time.monotonic() - t_start) * 1000, 1)})
+            return resp.text
+        except Exception as e:
+            logger.warning("Failed to fetch URL", extra={"url": url, "error": str(e)})
+            return None
+
+    async def _store_cache(self, url: str, result: ReaderResult) -> None:
         if self._cache and self._cache.available:
             await self._cache.set(
                 CacheService.NAMESPACE_READER,
@@ -206,5 +301,3 @@ class ReaderService:
                 settings.cache_reader_ttl_seconds,
                 url,
             )
-
-        return result

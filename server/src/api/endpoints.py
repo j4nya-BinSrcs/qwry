@@ -213,6 +213,8 @@ async def read_url(
         reading_time_seconds=result.reading_time_seconds,
         success=result.success,
         error=result.error,
+        content_type=result.content_type,
+        media_url=result.media_url,
     )
 
 

@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass, field
 
 from server.src.services.llm import LLMBackend
-from server.src.services.reader import ReaderService
+from server.src.services.reader import ReaderService, detect_content_type
 
 logger = logging.getLogger(__name__)
 
@@ -56,17 +56,29 @@ class ChatService:
         for idx, item in enumerate(items[:_MAX_SOURCES]):
             url = item.get("url", "")
             title = item.get("title") or "Untitled"
-            result = await self._reader.read_url(url)
+            ctype, _ = detect_content_type(url)
 
-            if not result.success or not result.content:
-                source_texts.append(f"[{idx + 1}] {title} ({url})\n(Content not available)")
+            if ctype == "image":
+                label = f"[Image] {title}"
+                source_texts.append(f"[{idx + 1}] {label} ({url})\n(Image — visual content, no text available)")
+                used_sources.append(ChatSource(url=url, title=label))
+
+            elif ctype == "video":
+                snippet = item.get("snippet") or title
+                label = f"[Video] {title}"
+                source_texts.append(f"[{idx + 1}] {label} ({url})\n{snippet}")
+                used_sources.append(ChatSource(url=url, title=label))
+
             else:
-                content = result.content[:_MAX_SOURCE_CHARS]
-                if len(result.content) > _MAX_SOURCE_CHARS:
-                    content += "..."
-                source_texts.append(f"[{idx + 1}] {title} ({url})\n{content}")
-
-            used_sources.append(ChatSource(url=url, title=title))
+                result = await self._reader.read_url(url)
+                if not result.success or not result.content:
+                    source_texts.append(f"[{idx + 1}] {title} ({url})\n(Content not available)")
+                else:
+                    content = result.content[:_MAX_SOURCE_CHARS]
+                    if len(result.content) > _MAX_SOURCE_CHARS:
+                        content += "..."
+                    source_texts.append(f"[{idx + 1}] {title} ({url})\n{content}")
+                used_sources.append(ChatSource(url=url, title=title))
 
         if not used_sources:
             return ChatResult(answer="Could not fetch content from any sources.")

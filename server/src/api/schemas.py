@@ -171,3 +171,5 @@ class ReaderResponse(BaseModel):
     reading_time_seconds: int = 0
     success: bool = True
     error: str | None = None
+    content_type: str = "article"
+    media_url: str | None = None

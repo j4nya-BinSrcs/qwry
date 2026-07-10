@@ -1,4 +1,4 @@
-import { Clock, ExternalLink, Loader2, X } from "lucide-react";
+import { Clock, ExternalLink, ImageIcon, Loader2, Play, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { readUrl } from "../api/reader";
 
@@ -43,12 +43,6 @@ export default function ReaderModal({ url, title: initialTitle, onClose }) {
   const mins = data ? Math.round(data.reading_time_seconds / 60) : 0;
   const hostname = data ? new URL(data.url).hostname : "";
 
-  const contentTruncated = data?.content
-    ? data.content.length > 5000
-      ? data.content.slice(0, 5000) + "..."
-      : data.content
-    : "";
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center pt-12 pb-8"
@@ -68,7 +62,7 @@ export default function ReaderModal({ url, title: initialTitle, onClose }) {
             <div className="flex items-center gap-3 mt-1">
               {hostname && (
                 <a
-                  href={data.url}
+                  href={data?.url || url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover"
@@ -77,15 +71,27 @@ export default function ReaderModal({ url, title: initialTitle, onClose }) {
                   {hostname}
                 </a>
               )}
-              {mins > 0 && (
+              {data?.content_type === "article" && mins > 0 && (
                 <span className="flex items-center gap-1 text-xs text-dim">
                   <Clock size={11} />
                   {mins} min read
                 </span>
               )}
-              {data && (
+              {data?.content_type === "article" && (
                 <span className="text-xs text-dim">
                   {data.content_length_chars.toLocaleString()} chars
+                </span>
+              )}
+              {data?.content_type === "image" && (
+                <span className="flex items-center gap-1 text-xs text-dim">
+                  <ImageIcon size={11} />
+                  Image
+                </span>
+              )}
+              {data?.content_type === "video" && (
+                <span className="flex items-center gap-1 text-xs text-dim">
+                  <Play size={11} />
+                  Video
                 </span>
               )}
             </div>
@@ -136,10 +142,86 @@ export default function ReaderModal({ url, title: initialTitle, onClose }) {
             </div>
           )}
 
-          {!loading && !error && data?.success !== false && data?.content && (
+          {!loading && !error && data?.success !== false && data?.content_type === "image" && (
+            <div className="space-y-4">
+              <div className="rounded-lg overflow-hidden bg-hover flex items-center justify-center">
+                {data.media_url ? (
+                  <img
+                    src={`/api/image-proxy?url=${encodeURIComponent(data.media_url)}`}
+                    alt={data.title || ""}
+                    className="max-w-full max-h-[70vh] object-contain"
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                      e.target.parentElement.innerHTML =
+                        '<p class="text-sm text-muted p-8">Image could not be loaded</p>';
+                    }}
+                  />
+                ) : (
+                  <div className="py-16 text-center text-muted text-sm">No image URL available</div>
+                )}
+              </div>
+              {data.title && (
+                <p className="text-sm text-text text-center">{data.title}</p>
+              )}
+              <div className="text-center">
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors"
+                >
+                  <ExternalLink size={12} />
+                  Open original
+                </a>
+              </div>
+            </div>
+          )}
+
+          {!loading && !error && data?.success !== false && data?.content_type === "video" && (
+            <div className="space-y-4">
+              {data.media_url && (
+                <a href={url} target="_blank" rel="noopener noreferrer">
+                  <div className="relative rounded-lg overflow-hidden bg-black aspect-video flex items-center justify-center group cursor-pointer">
+                    <img
+                      src={`/api/image-proxy?url=${encodeURIComponent(data.media_url)}`}
+                      alt={data.title || "Video thumbnail"}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.style.display = "none";
+                      }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="size-14 rounded-full bg-black/60 flex items-center justify-center group-hover:bg-black/80 transition-colors">
+                        <Play size={24} className="text-white ml-1" />
+                      </div>
+                    </div>
+                  </div>
+                </a>
+              )}
+              {data.title && (
+                <h3 className="text-sm font-semibold text-text">{data.title}</h3>
+              )}
+              {data.content && (
+                <p className="text-sm text-muted leading-relaxed">{data.content}</p>
+              )}
+              <div className="text-center">
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors"
+                >
+                  <Play size={12} />
+                  Watch on YouTube
+                </a>
+              </div>
+            </div>
+          )}
+
+          {!loading && !error && data?.success !== false && data?.content_type === "article" && data?.content && (
             <div className={`prose prose-sm max-w-none ${expanded ? "" : "max-h-[60vh] overflow-hidden relative"}`}>
               <div className="text-sm text-text leading-relaxed whitespace-pre-line font-[system-ui]">
-                {expanded ? data.content : contentTruncated}
+                {expanded ? data.content : (data.content.length > 5000 ? data.content.slice(0, 5000) + "..." : data.content)}
               </div>
               {!expanded && data.content.length > 5000 && (
                 <div className="sticky bottom-0 pt-12 pb-2 bg-gradient-to-t from-surface via-surface/95 to-transparent">
@@ -154,7 +236,7 @@ export default function ReaderModal({ url, title: initialTitle, onClose }) {
             </div>
           )}
 
-          {!loading && !error && !data?.content && data?.success !== false && (
+          {!loading && !error && data?.success !== false && data?.content_type === "article" && !data?.content && (
             <div className="py-10 text-center">
               <p className="text-sm text-muted">No content extracted.</p>
             </div>
