@@ -9,6 +9,11 @@ class SearchResultItem(BaseModel):
     url: str
     snippet: str
     source: str
+    img_src: str | None = None
+    thumbnail: str | None = None
+    published_date: str | None = None
+    category: str | None = None
+    engine: str | None = None
 
 
 class SearchResponse(BaseModel):
@@ -18,6 +23,8 @@ class SearchResponse(BaseModel):
     total_results: int
     results: list[SearchResultItem]
     provider: str
+    suggestions: list[str] = []
+    infoboxes: list[dict] = []
 
 
 class ErrorResponse(BaseModel):

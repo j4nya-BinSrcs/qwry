@@ -2,7 +2,7 @@ import logging
 from uuid import UUID
 
 import httpx
-from fastapi import Header, HTTPException, Query, Request
+from fastapi import Header, HTTPException, Query, Request, Response
 from server.src.api.schemas import (
     ItemSummaryResponse,
     SuggestResponse,
@@ -149,6 +149,21 @@ async def system_stats(request: Request) -> SystemStats:
         server_start=request.app.state.server_start,
     )
     return await collector.collect()
+
+
+# ── Image Proxy ────────────────────────────────────────────────────────
+
+
+async def image_proxy(request: Request, url: str = Query(..., description="Image URL to proxy")):
+    http: httpx.AsyncClient = request.app.state.http
+    try:
+        resp = await http.get(url, timeout=10.0)
+        resp.raise_for_status()
+        content_type = resp.headers.get("content-type", "image/jpeg")
+        return Response(content=resp.content, media_type=content_type)
+    except Exception as e:
+        logger.warning("Image proxy failed", extra={"url": url, "error": str(e)})
+        raise HTTPException(status_code=502, detail="Failed to fetch image")
 
 
 # ── Summarize ──────────────────────────────────────────────────────────
