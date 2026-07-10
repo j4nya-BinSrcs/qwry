@@ -107,14 +107,32 @@ export default function ReaderModal({ url, title: initialTitle, onClose }) {
           )}
 
           {error && (
-            <div className="py-10 text-center">
+            <div className="py-10 text-center space-y-4">
               <p className="text-sm text-red-400">{error}</p>
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors"
+              >
+                <ExternalLink size={12} />
+                Open in browser instead
+              </a>
             </div>
           )}
 
           {!loading && !error && data?.success === false && (
-            <div className="py-10 text-center">
+            <div className="py-10 text-center space-y-4">
               <p className="text-sm text-muted">{data.error || "Could not extract content from this page."}</p>
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors"
+              >
+                <ExternalLink size={12} />
+                Open in browser instead
+              </a>
             </div>
           )}
 

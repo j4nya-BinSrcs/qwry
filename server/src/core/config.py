@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     summary_provider: str = "ollama"
     ollama_base_url: str = "http://localhost:11434"
-    summary_model: str = "gemma3:4b"
+    summary_model: str = "gemma3:1b"
     summary_max_content_length: int = 8000
     summary_timeout_seconds: float = 30.0
 

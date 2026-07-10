@@ -196,7 +196,11 @@ async def read_url(
     url: str = Query(..., description="URL to extract readable content from"),
 ) -> ReaderResponse:
     reader: ReaderService = request.app.state.reader
-    result = await reader.read_url(url)
+    try:
+        result = await reader.read_url(url)
+    except Exception as e:
+        logger.error("Reader endpoint failed", extra={"url": url, "error": repr(e)}, exc_info=True)
+        raise HTTPException(status_code=502, detail=f"Failed to read page: {e}") from e
     return ReaderResponse(
         url=result.url,
         title=result.title,

@@ -27,7 +27,7 @@
 * [x] Query validation (Pydantic / min_length on `q` param)
 * [x] Error handling (HTTP 404/502, try/except in all services)
 * [x] Search timeout handling (configurable per-provider)
-* [ ] Retry mechanism
+* [x] Retry mechanism (3 attempts, exponential backoff in SearxngClient + EngineClient)
 
 ## Search Experience
 
@@ -93,14 +93,14 @@
 
 ## Reader View
 
-* [ ] Reader mode
-* [ ] Clean article extraction
+* [x] Reader mode (ReaderService + /api/read + ReaderModal overlay)
+* [x] Clean article extraction (extract_text with HTMLParser)
 * [ ] Reading progress
 * [ ] Highlight text
 * [ ] Notes
 * [ ] Bookmark position
-* [ ] Estimated reading time
-* [ ] Source metadata
+* [x] Estimated reading time (~200 wpm calculation)
+* [x] Source metadata (hostname, char count, reading time)
 
 ---
 
@@ -176,13 +176,13 @@
 
 * [x] Image grid (Discovery panel, MediaCard components)
 * [x] Image preview (via thumbnail in Sources/Discovery)
-* [ ] Save image
+* [x] Save image (Plus button → active workspace)
 
 ## Videos
 
 * [x] Video preview (Discovery panel, MediaCard with thumbnail)
 * [x] Video metadata (engine badge, title)
-* [ ] Save video
+* [x] Save video (Plus button → active workspace)
 
 ## Other Widgets
 

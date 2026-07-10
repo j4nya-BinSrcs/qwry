@@ -1,3 +1,4 @@
+import dataclasses
 import json
 import logging
 from typing import Any
@@ -7,6 +8,14 @@ from redis.typing import EncodableT
 from server.src.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _serialize(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+    if dataclasses.is_dataclass(value):
+        return json.dumps(dataclasses.asdict(value))
+    return json.dumps(value, default=str)
 
 
 class CacheService:
@@ -64,7 +73,7 @@ class CacheService:
         if not self._client:
             return
         key = self._key(namespace, *parts)
-        raw: EncodableT = value if isinstance(value, str) else json.dumps(value, default=str)
+        raw: EncodableT = _serialize(value)
         await self._client.setex(key, ttl, raw)
 
     async def invalidate(self, namespace: str, *parts: str) -> None:
