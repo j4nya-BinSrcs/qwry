@@ -105,28 +105,27 @@ export const useWorkspaceStore = create((set, get) => ({
 
   summarizingId: null,
 
-  summarizeItem: async (sessionId, itemId) => {
+  summarizeItem: async (sessionId, itemId, retries = 3) => {
     set({ summarizingId: itemId, error: null });
-    try {
-      const result = await api.summarizeItem(sessionId, itemId);
-      set((s) => ({
-        items: s.items.map((i) =>
-          i.id === itemId
-            ? { ...i, summary: result.summary, summary_provider: result.provider, summary_model: result.model }
-            : i
-        ),
-  reorderItem: async (sessionId, itemId, orderIndex) => {
-    try {
-      await api.updateItem(sessionId, itemId, { order_index: orderIndex });
-    } catch (err) {
-      set({ error: err.message });
-    }
-  },
-
-  summarizingId: null,
-      }));
-    } catch (err) {
-      set({ error: err.message, summarizingId: null });
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const result = await api.summarizeItem(sessionId, itemId);
+        set((s) => ({
+          items: s.items.map((i) =>
+            i.id === itemId
+              ? { ...i, summary: result.summary, summary_provider: result.provider, summary_model: result.model }
+              : i
+          ),
+          summarizingId: null,
+        }));
+        return;
+      } catch (err) {
+        if (attempt < retries) {
+          await new Promise((r) => setTimeout(r, attempt * 2000));
+        } else {
+          set({ error: err.message, summarizingId: null });
+        }
+      }
     }
   },
 
