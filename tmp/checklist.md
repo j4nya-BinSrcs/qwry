@@ -60,7 +60,7 @@
 ## Workspace
 
 * [x] Create workspace
-* [ ] Rename workspace (API exists: `PATCH /api/workspaces/{ws_id}`, no UI)
+* [x] Rename workspace (inline edit in WorkspaceHeader)
 * [x] Delete workspace
 * [ ] Archive workspace
 * [ ] Workspace settings
@@ -71,7 +71,7 @@
 
 * [x] Add webpage (button + drag-and-drop)
 * [x] Remove webpage
-* [ ] Reorder items (DB has `order_index` column, no UI)
+* [x] Reorder items (drag-to-reorder via SortableContext)
 * [ ] Multi-select
 * [ ] Duplicate detection
 * [ ] Favorite items
@@ -109,6 +109,7 @@
 ## Summarizer
 
 * [x] Summarize webpage (`POST /api/summarize` + `POST .../items/{id}/summarize`)
+* [x] Auto-retry on failure (3 retries with exponential backoff)
 * [ ] Summarize PDF
 * [ ] Summarize multiple sources
 * [ ] Bullet summary (LLM prompt requests structured output, rendered as plain text)
