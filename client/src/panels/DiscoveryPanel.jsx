@@ -26,13 +26,11 @@ function CollapsibleSection({ title, icon: Icon, children, defaultOpen, count })
 
 export default function DiscoveryPanel() {
   const query = useSearchStore((s) => s.query);
-  const results = useSearchStore((s) => s.results);
+  const imageResults = useSearchStore((s) => s.imageResults);
+  const videoResults = useSearchStore((s) => s.videoResults);
   const suggestions = useSearchStore((s) => s.suggestions);
   const infobox = useSearchStore((s) => s.infobox);
   const search = useSearchStore((s) => s.search);
-
-  const imageResults = results.filter((r) => r.category === "images" && r.img_src);
-  const videoResults = results.filter((r) => r.category === "videos" || r.category === "news");
 
   return (
     <div className="h-full flex flex-col bg-panel border-l border-border">

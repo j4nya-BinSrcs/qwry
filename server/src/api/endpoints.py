@@ -51,13 +51,14 @@ async def search(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(10, ge=1, le=100, description="Results per page"),
     provider: str | None = Query(None, description="Search provider override"),
+    categories: str | None = Query(None, description="SearXNG categories (comma-separated)"),
 ):
     orchestrator = request.app.state.orchestrator
     logger.info(
         "Search request",
-        extra={"query": q, "page": page, "page_size": page_size, "provider": provider},
+        extra={"query": q, "page": page, "page_size": page_size, "provider": provider, "categories": categories},
     )
-    return await orchestrator.search(q, page, page_size, provider)
+    return await orchestrator.search(q, page, page_size, provider, categories)
 
 
 # ── Suggest ────────────────────────────────────────────────────────────
@@ -157,7 +158,8 @@ async def system_stats(request: Request) -> SystemStats:
 async def image_proxy(request: Request, url: str = Query(..., description="Image URL to proxy")):
     http: httpx.AsyncClient = request.app.state.http
     try:
-        resp = await http.get(url, timeout=10.0)
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; QWRY/1.0; +https://github.com/j4nya-BinSrcs/qwry)"}
+        resp = await http.get(url, headers=headers, timeout=10.0)
         resp.raise_for_status()
         content_type = resp.headers.get("content-type", "image/jpeg")
         return Response(content=resp.content, media_type=content_type)

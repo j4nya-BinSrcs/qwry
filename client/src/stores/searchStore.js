@@ -10,6 +10,8 @@ export const providers = [
 export const useSearchStore = create((set, get) => ({
   query: "",
   results: [],
+  imageResults: [],
+  videoResults: [],
   suggestions: [],
   infobox: null,
   loading: false,
@@ -22,17 +24,24 @@ export const useSearchStore = create((set, get) => ({
     const resolvedProvider = provider ?? get().provider;
     set({ loading: true, error: null, query: q, page, provider: resolvedProvider });
     try {
-      const data = await searchQuery(q, page, 20, resolvedProvider);
+      const [mainData, imageData, videoData] = await Promise.all([
+        searchQuery(q, page, 20, resolvedProvider),
+        searchQuery(q, 1, 12, resolvedProvider, "images").catch(() => null),
+        searchQuery(q, 1, 12, resolvedProvider, "videos").catch(() => null),
+      ]);
       set({
-        results: data.results || [],
-        suggestions: data.suggestions || [],
-        infobox: data.infoboxes?.[0] || null,
+        results: mainData.results || [],
+        suggestions: mainData.suggestions || [],
+        infobox: mainData.infoboxes?.[0] || null,
+        imageResults: imageData?.results?.filter((r) => r.img_src) || [],
+        videoResults: videoData?.results || [],
         loading: false,
-        page: data.page || page,
+        page: mainData.page || page,
       });
     } catch (err) {
       set({ error: err.message, loading: false });
     }
   },
-  clearResults: () => set({ results: [], query: "", error: null, suggestions: [], infobox: null }),
+  clearResults: () =>
+    set({ results: [], imageResults: [], videoResults: [], query: "", error: null, suggestions: [], infobox: null }),
 }));
