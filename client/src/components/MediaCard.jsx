@@ -1,7 +1,15 @@
-import { ExternalLink, GripVertical } from "lucide-react";
+import { ExternalLink, GripVertical, Plus, Check } from "lucide-react";
+import { useCallback, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
+import { useSessionStore } from "../stores/sessionStore";
+import { useWorkspaceStore } from "../stores/workspaceStore";
 
 export default function MediaCard({ result }) {
+  const sessionId = useSessionStore((s) => s.sessionId);
+  const activeWsId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const addItem = useWorkspaceStore((s) => s.addItem);
+  const [saved, setSaved] = useState(false);
+
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: `media-${result.url}`,
@@ -15,6 +23,17 @@ export default function MediaCard({ result }) {
   const imgSrc = result.img_src || result.thumbnail;
   const isImage = result.category === "images";
   const isVideo = result.category === "videos" || result.category === "news";
+
+  const handleSave = useCallback(
+    (e) => {
+      e.stopPropagation();
+      if (!activeWsId || saved) return;
+      addItem(sessionId, activeWsId, result.url, result.title, null, result.source || result.category);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    },
+    [sessionId, activeWsId, result, addItem, saved]
+  );
 
   return (
     <div
@@ -62,6 +81,14 @@ export default function MediaCard({ result }) {
       </div>
 
       {/* Actions */}
+      <button
+        onClick={handleSave}
+        disabled={!activeWsId}
+        className="p-1 rounded-md text-dim hover:text-accent hover:bg-accent/10 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+        title={activeWsId ? "Save to workspace" : "No active workspace"}
+      >
+        {saved ? <Check size={12} /> : <Plus size={12} />}
+      </button>
       <button
         onClick={() => window.open(result.url, "_blank")}
         className="p-1 rounded-md text-dim hover:text-text opacity-0 group-hover:opacity-100 transition-all"
