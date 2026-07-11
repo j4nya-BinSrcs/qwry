@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, Search } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchStore } from "../stores/searchStore";
 import { llmGenerate } from "../api/llm";
@@ -6,18 +6,23 @@ import { llmGenerate } from "../api/llm";
 export default function SearchAssist() {
   const query = useSearchStore((s) => s.query);
   const results = useSearchStore((s) => s.results);
+  const search = useSearchStore((s) => s.search);
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [deepLoading, setDeepLoading] = useState(false);
   const [error, setError] = useState(null);
   const prevQueryRef = useRef("");
 
-  const generateOverview = useCallback(async (full) => {
+  const generateOverview = useCallback(async (deep) => {
     if (!query || results.length === 0) return;
-    setLoading(true);
+    if (deep) {
+      setDeepLoading(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
     try {
-      const topResults = results.slice(0, full ? 20 : 5);
+      const topResults = results.slice(0, deep ? 50 : 10);
       const data = await llmGenerate(query, topResults);
       setOverview(data.response);
     } catch (err) {
@@ -25,6 +30,7 @@ export default function SearchAssist() {
       setOverview(null);
     } finally {
       setLoading(false);
+      setDeepLoading(false);
     }
   }, [query, results]);
 
@@ -35,9 +41,14 @@ export default function SearchAssist() {
     }
   }, [query, results, generateOverview]);
 
+  const handleDeepSearch = useCallback(() => {
+    search(query);
+    generateOverview(true);
+  }, [query, search, generateOverview]);
+
   if (!query) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex items-center justify-center py-12">
         <div className="text-center px-8">
           <div className="size-8 rounded bg-accent/10 border border-accent/20 flex items-center justify-center mx-auto mb-3">
             <Sparkles size={16} className="text-accent" />
@@ -54,7 +65,6 @@ export default function SearchAssist() {
 
   return (
     <div className="p-3">
-      {/* Quick summary */}
       {loading && !overview && (
         <div className="flex items-center gap-2 px-3 py-2.5 rounded bg-accent/5 border border-accent/10 text-xs text-muted">
           <Loader2 size={12} className="animate-spin text-accent" />
@@ -69,33 +79,36 @@ export default function SearchAssist() {
       )}
 
       {overview && (
-        <div className="rounded bg-accent/5 border border-accent/10 overflow-hidden">
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="flex items-center gap-1.5 w-full px-3 py-2 text-xs font-semibold text-accent hover:bg-accent/5 transition-colors"
-          >
-            {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            <Sparkles size={12} />
-            <span>AI Overview</span>
-          </button>
-          {expanded && (
-            <div className="px-3 pb-3">
-              <p className="text-xs text-text leading-relaxed whitespace-pre-line">
-                {overview}
-              </p>
+        <div className="rounded bg-accent/5 border border-accent/10">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-accent/10">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-accent">
+              <Sparkles size={12} />
+              <span>AI Overview</span>
             </div>
-          )}
-          {!expanded && (
-            <p className="px-3 pb-2 text-xs text-text leading-relaxed line-clamp-3">
+            <button
+              onClick={handleDeepSearch}
+              disabled={deepLoading}
+              className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-accent hover:bg-accent/10 transition-colors disabled:opacity-50"
+            >
+              {deepLoading ? (
+                <Loader2 size={11} className="animate-spin" />
+              ) : (
+                <Search size={11} />
+              )}
+              Deep Search
+            </button>
+          </div>
+          <div className="px-3 py-2.5">
+            <p className="text-xs text-text leading-relaxed whitespace-pre-line">
               {overview}
             </p>
-          )}
+          </div>
         </div>
       )}
 
       {!loading && !overview && !error && (
         <button
-          onClick={() => generateOverview(true)}
+          onClick={() => generateOverview(false)}
           className="flex items-center gap-1.5 text-xs text-accent hover:text-accent-hover transition-colors px-1"
         >
           <Sparkles size={12} />
