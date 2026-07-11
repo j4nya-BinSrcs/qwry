@@ -42,6 +42,9 @@ struct Args {
 
     #[arg(long)]
     lightweight: bool,
+
+    #[arg(long)]
+    adaptive_concurrency: bool,
 }
 
 #[tokio::main]
@@ -65,6 +68,7 @@ async fn main() -> anyhow::Result<()> {
         skip_politeness: args.skip_politeness,
         batch_db_check_size: args.batch_db_check_size,
         lightweight: args.lightweight,
+        adaptive_concurrency: args.adaptive_concurrency,
     };
 
     let crawler = Crawler::new(config, db_pool);

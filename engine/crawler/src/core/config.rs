@@ -13,6 +13,7 @@ pub struct CrawlerConfig {
     pub skip_politeness: bool,
     pub batch_db_check_size: usize,
     pub lightweight: bool,
+    pub adaptive_concurrency: bool,
 }
 
 #[cfg(test)]
@@ -32,6 +33,7 @@ fn test_crawler_config_defaults() {
             skip_politeness: false,
             batch_db_check_size: 100,
             lightweight: false,
+            adaptive_concurrency: false,
         };
         assert_eq!(config.max_depth, 3);
         assert_eq!(config.max_pages, 100);

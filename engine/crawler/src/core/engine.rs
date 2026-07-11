@@ -150,6 +150,7 @@ impl Crawler {
         let visited = ShardedSet::new(4096);
         let stats = Arc::new(CrawlStats::new());
         let shutdown = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let concurrency_goal = Arc::new(AtomicUsize::new(self.config.concurrency));
 
         let start = Instant::now();
 
@@ -208,6 +209,51 @@ impl Crawler {
             });
         }
 
+        // Adaptive concurrency controller
+        if self.config.adaptive_concurrency {
+            let stats = Arc::clone(&stats);
+            let shutdown = Arc::clone(&shutdown);
+            let max_concurrency = self.config.concurrency;
+            let cg = concurrency_goal.clone();
+            tokio::spawn(async move {
+                let mut interval = tokio::time::interval(Duration::from_secs(2));
+                let mut prev_errors: usize = 0;
+                let mut prev_fetches: usize = 0;
+                loop {
+                    interval.tick().await;
+                    if shutdown.load(Ordering::Relaxed) {
+                        break;
+                    }
+                    let cur_fetches = stats.fetch_count.load(Ordering::Relaxed);
+                    let cur_errors = stats.fetch_errors.load(Ordering::Relaxed);
+                    let new_errors = cur_errors.saturating_sub(prev_errors);
+                    let new_total = (cur_fetches.saturating_sub(prev_fetches)).max(1);
+                    prev_errors = cur_errors;
+                    prev_fetches = cur_fetches;
+
+                    let error_rate = new_errors as f64 / new_total as f64;
+
+                    let old_goal = cg.load(Ordering::Relaxed);
+                    let new_goal = if error_rate > 0.20 && old_goal > 1 {
+                        (old_goal as f64 * 0.9).ceil().max(1.0) as usize
+                    } else if error_rate < 0.05 && old_goal < max_concurrency {
+                        old_goal + 1
+                    } else {
+                        old_goal
+                    };
+                    if new_goal != old_goal {
+                        cg.store(new_goal, Ordering::Relaxed);
+                        tracing::info!(
+                            old = old_goal,
+                            new = new_goal,
+                            error_rate = format_args!("{:.2}", error_rate),
+                            "Adaptive concurrency"
+                        );
+                    }
+                }
+            });
+        }
+
         let batch_writer = BatchWriter::new(self.db_pool.clone());
         let batch_tx = batch_writer.sender();
 
@@ -222,6 +268,7 @@ impl Crawler {
                 visited: visited.clone(),
                 stats: Arc::clone(&stats),
                 shutdown: Arc::clone(&shutdown),
+                concurrency_goal: concurrency_goal.clone(),
                 batch_tx: batch_tx.clone(),
                 pending_links: Vec::new(),
             };
@@ -263,6 +310,8 @@ pub struct CrawlStats {
     pub fetch_errors: AtomicUsize,
     pub robots_blocked: AtomicUsize,
     pub retries: AtomicUsize,
+    pub active_fetches: AtomicUsize,
+    pub peak_active_fetches: AtomicUsize,
 }
 
 impl CrawlStats {
@@ -274,6 +323,8 @@ impl CrawlStats {
             fetch_errors: AtomicUsize::new(0),
             robots_blocked: AtomicUsize::new(0),
             retries: AtomicUsize::new(0),
+            active_fetches: AtomicUsize::new(0),
+            peak_active_fetches: AtomicUsize::new(0),
         }
     }
 }
@@ -304,6 +355,7 @@ struct CrawlerWorker {
     visited: ShardedSet,
     stats: Arc<CrawlStats>,
     shutdown: Arc<std::sync::atomic::AtomicBool>,
+    concurrency_goal: Arc<std::sync::atomic::AtomicUsize>,
     batch_tx: tokio::sync::mpsc::Sender<CrawledPage>,
     pending_links: Vec<PendingLink>,
 }
@@ -398,6 +450,20 @@ impl CrawlerWorker {
                 }
             }
 
+            // Throttle: wait while active_fetches exceeds concurrency_goal
+            let goal = self.concurrency_goal.load(Ordering::Relaxed);
+            let cur = self.stats.active_fetches.fetch_add(1, Ordering::Relaxed) + 1;
+            if cur > self.stats.peak_active_fetches.load(Ordering::Relaxed) {
+                self.stats.peak_active_fetches.store(cur, Ordering::Relaxed);
+            }
+            if cur > goal {
+                let mut backoff = 10u64;
+                while self.stats.active_fetches.load(Ordering::Relaxed) > goal {
+                    tokio::time::sleep(Duration::from_millis(backoff)).await;
+                    backoff = (backoff * 2).min(500);
+                }
+            }
+
             self.stats.fetch_count.fetch_add(1, Ordering::Relaxed);
 
             // Phase 1 — async HTTP fetch
@@ -449,6 +515,7 @@ impl CrawlerWorker {
                         Ordering::SeqCst,
                         |v| (v < self.config.max_pages).then_some(v + 1),
                     ).is_err() {
+                        self.stats.active_fetches.fetch_sub(1, Ordering::Relaxed);
                         self.queue.push(job);
                         self.shutdown.store(true, Ordering::SeqCst);
                         break;
@@ -463,6 +530,7 @@ impl CrawlerWorker {
                         indexed: false,
                     };
                     if self.batch_tx.send(page).await.is_err() {
+                        self.stats.active_fetches.fetch_sub(1, Ordering::Relaxed);
                         break;
                     }
 
@@ -513,6 +581,7 @@ impl CrawlerWorker {
                     }
                 }
             }
+            self.stats.active_fetches.fetch_sub(1, Ordering::Relaxed);
         }
     }
 
@@ -574,6 +643,7 @@ mod tests {
             skip_politeness: false,
             batch_db_check_size: 100,
             lightweight: false,
+            adaptive_concurrency: false,
         };
         let pool = test_pool().await;
         let crawler = Crawler::new(config, pool);
@@ -609,6 +679,7 @@ mod tests {
             skip_politeness: false,
             batch_db_check_size: 100,
             lightweight: false,
+            adaptive_concurrency: false,
         };
         let pool = test_pool().await;
         let crawler = Crawler::new(config, pool);
@@ -645,6 +716,7 @@ mod tests {
             skip_politeness: false,
             batch_db_check_size: 100,
             lightweight: false,
+            adaptive_concurrency: false,
         };
         let pool = test_pool().await;
         let crawler = Crawler::new(config, pool);
@@ -669,6 +741,7 @@ mod tests {
             skip_politeness: false,
             batch_db_check_size: 100,
             lightweight: false,
+            adaptive_concurrency: false,
         };
         let pool = test_pool().await;
         let crawler = Crawler::new(config, pool);
@@ -740,6 +813,7 @@ mod tests {
             skip_politeness: true,
             batch_db_check_size: 100,
             lightweight: false,
+            adaptive_concurrency: false,
         };
         let pool = test_pool().await;
         let crawler = Crawler::new(config, pool);
@@ -765,6 +839,7 @@ mod tests {
             skip_politeness: true,
             batch_db_check_size: 100,
             lightweight: false,
+            adaptive_concurrency: false,
         };
         let pool = test_pool().await;
         let crawler = Crawler::new(config, pool.clone());
@@ -794,6 +869,7 @@ mod tests {
             skip_politeness: true,
             batch_db_check_size: 100,
             lightweight: false,
+            adaptive_concurrency: false,
         };
         let pool = test_pool().await;
         let crawler = Crawler::new(config, pool.clone());
