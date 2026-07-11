@@ -1,6 +1,16 @@
 from uuid import UUID
 
-from server.src.db.models import User, Workspace, WorkspaceItem
+from server.src.db.models import (
+    ActivityLog,
+    LLMOverview,
+    Profile,
+    ReadingListItem,
+    SearchHistory,
+    SummaryListItem,
+    User,
+    Workspace,
+    WorkspaceItem,
+)
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -138,3 +148,223 @@ class WorkspaceItemRepo:
         await self._session.delete(item)
         await self._session.commit()
         return True
+
+
+# ── Profile ─────────────────────────────────────────────────────────────
+
+
+class ProfileRepo:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def get(self, session_id: str) -> Profile | None:
+        return await self._session.get(Profile, session_id)
+
+    async def create(self, session_id: str) -> Profile:
+        profile = Profile(session_id=session_id)
+        self._session.add(profile)
+        await self._session.commit()
+        await self._session.refresh(profile)
+        return profile
+
+    async def update(
+        self, session_id: str, username: str | None = None, theme: str | None = None, search_provider: str | None = None
+    ) -> Profile | None:
+        profile = await self.get(session_id)
+        if not profile:
+            return None
+        if username is not None:
+            profile.username = username
+        if theme is not None:
+            profile.theme = theme
+        if search_provider is not None:
+            profile.search_provider = search_provider
+        profile.last_active = func.now()
+        await self._session.commit()
+        await self._session.refresh(profile)
+        return profile
+
+    async def touch(self, session_id: str) -> None:
+        profile = await self.get(session_id)
+        if profile:
+            profile.last_active = func.now()
+            await self._session.commit()
+
+
+# ── Search History ──────────────────────────────────────────────────────
+
+
+class SearchHistoryRepo:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def add(self, session_id: str, query: str, provider: str | None = None) -> SearchHistory:
+        entry = SearchHistory(session_id=session_id, query=query, provider=provider)
+        self._session.add(entry)
+        await self._session.commit()
+        await self._session.refresh(entry)
+        return entry
+
+    async def list_by_session(self, session_id: str, limit: int = 50) -> list[SearchHistory]:
+        result = await self._session.execute(
+            select(SearchHistory)
+            .where(SearchHistory.session_id == session_id)
+            .order_by(SearchHistory.searched_at.desc())
+            .limit(limit),
+        )
+        return list(result.scalars().all())
+
+
+# ── Reading List ────────────────────────────────────────────────────────
+
+
+class ReadingListRepo:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def upsert(
+        self, session_id: str, url: str, title: str | None = None, source: str | None = None,
+        content: str | None = None, content_type: str | None = None, media_url: str | None = None,
+    ) -> ReadingListItem:
+        stmt = (
+            select(ReadingListItem)
+            .where(ReadingListItem.session_id == session_id, ReadingListItem.url == url)
+        )
+        result = await self._session.execute(stmt)
+        item = result.scalar_one_or_none()
+        if item:
+            if title is not None:
+                item.title = title
+            if source is not None:
+                item.source = source
+            if content is not None:
+                item.content = content
+            if content_type is not None:
+                item.content_type = content_type
+            if media_url is not None:
+                item.media_url = media_url
+        else:
+            item = ReadingListItem(
+                session_id=session_id, url=url, title=title, source=source,
+                content=content, content_type=content_type, media_url=media_url,
+            )
+            self._session.add(item)
+        await self._session.commit()
+        await self._session.refresh(item)
+        return item
+
+    async def add(self, session_id: str, url: str, title: str | None = None, source: str | None = None) -> ReadingListItem:
+        return await self.upsert(session_id, url, title=title, source=source)
+
+    async def list_by_session(self, session_id: str, limit: int = 50) -> list[ReadingListItem]:
+        result = await self._session.execute(
+            select(ReadingListItem)
+            .where(ReadingListItem.session_id == session_id)
+            .order_by(ReadingListItem.saved_at.desc())
+            .limit(limit),
+        )
+        return list(result.scalars().all())
+
+
+# ── Summary List ────────────────────────────────────────────────────────
+
+
+class SummaryListRepo:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def upsert(
+        self, session_id: str, url: str, title: str | None = None, source: str | None = None,
+        summary: str | None = None, model: str | None = None,
+    ) -> SummaryListItem:
+        stmt = (
+            select(SummaryListItem)
+            .where(SummaryListItem.session_id == session_id, SummaryListItem.url == url)
+        )
+        result = await self._session.execute(stmt)
+        item = result.scalar_one_or_none()
+        if item:
+            if title is not None:
+                item.title = title
+            if source is not None:
+                item.source = source
+            if summary is not None:
+                item.summary = summary
+            if model is not None:
+                item.model = model
+        else:
+            item = SummaryListItem(
+                session_id=session_id, url=url, title=title, source=source,
+                summary=summary, model=model,
+            )
+            self._session.add(item)
+        await self._session.commit()
+        await self._session.refresh(item)
+        return item
+
+    async def add(self, session_id: str, url: str, title: str | None = None, source: str | None = None) -> SummaryListItem:
+        return await self.upsert(session_id, url, title=title, source=source)
+
+    async def list_by_session(self, session_id: str, limit: int = 50) -> list[SummaryListItem]:
+        result = await self._session.execute(
+            select(SummaryListItem)
+            .where(SummaryListItem.session_id == session_id)
+            .order_by(SummaryListItem.saved_at.desc())
+            .limit(limit),
+        )
+        return list(result.scalars().all())
+
+
+# ── Activity Log ────────────────────────────────────────────────────────
+
+
+class ActivityLogRepo:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def add(self, session_id: str, action_type: str, details: dict | None = None) -> ActivityLog:
+        entry = ActivityLog(session_id=session_id, action_type=action_type, details=details)
+        self._session.add(entry)
+        await self._session.commit()
+        await self._session.refresh(entry)
+        return entry
+
+    async def list_by_session(self, session_id: str, limit: int = 100) -> list[ActivityLog]:
+        result = await self._session.execute(
+            select(ActivityLog)
+            .where(ActivityLog.session_id == session_id)
+            .order_by(ActivityLog.created_at.desc())
+            .limit(limit),
+        )
+        return list(result.scalars().all())
+
+
+# ── LLM Overviews ───────────────────────────────────────────────────────
+
+
+class OverviewRepo:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def upsert(self, session_id: str, query: str, overview: str) -> LLMOverview:
+        stmt = (
+            select(LLMOverview)
+            .where(LLMOverview.session_id == session_id, LLMOverview.query == query)
+        )
+        result = await self._session.execute(stmt)
+        entry = result.scalar_one_or_none()
+        if entry:
+            entry.overview = overview
+        else:
+            entry = LLMOverview(session_id=session_id, query=query, overview=overview)
+            self._session.add(entry)
+        await self._session.commit()
+        await self._session.refresh(entry)
+        return entry
+
+    async def get_by_query(self, session_id: str, query: str) -> LLMOverview | None:
+        result = await self._session.execute(
+            select(LLMOverview)
+            .where(LLMOverview.session_id == session_id, LLMOverview.query == query)
+        )
+        return result.scalar_one_or_none()

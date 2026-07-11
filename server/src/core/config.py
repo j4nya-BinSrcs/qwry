@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     cache_search_ttl_seconds: int = 300
     cache_summary_ttl_seconds: int = 3600
     cache_reader_ttl_seconds: int = 3600
+    cache_llm_ttl_seconds: int = 1800
 
     @property
     def cors_origins_list(self) -> list[str]:

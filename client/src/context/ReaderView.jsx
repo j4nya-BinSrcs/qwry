@@ -1,7 +1,10 @@
 import { Clock, ExternalLink, ImageIcon, Loader2, Play, BookOpen, ChevronDown, ChevronRight, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { readUrl } from "../api/reader";
+import { useContentStore } from "../stores/contentStore";
 import { useUIStore } from "../stores/uiStore";
+
+let _readerId = 0;
 
 export default function ReaderView() {
   const readerUrl = useUIStore((s) => s.readerUrl);
@@ -9,70 +12,89 @@ export default function ReaderView() {
   const readerMediaUrl = useUIStore((s) => s.readerMediaUrl);
   const readerVersion = useUIStore((s) => s.readerVersion);
 
-  const [reads, setReads] = useState([]);
-  const [openId, setOpenId] = useState(null);
-  const submittedRef = useRef(new Set());
-  const counterRef = useRef(0);
-  const readsRef = useRef([]);
-  const readerUrlRef = useRef(null);
+  const storeReads = useContentStore((s) => s.reads);
+  const addRead = useContentStore((s) => s.addRead);
+  const removeReadFromStore = useContentStore((s) => s.removeRead);
 
-  // keep ref in sync with state
-  useEffect(() => { readsRef.current = reads; }, [reads]);
+  const [openId, setOpenId] = useState(null);
+  const [loadingId, setLoadingId] = useState(null);
+  const [loadingUrl, setLoadingUrl] = useState(null);
+  const loadingRef = useRef(null);
+
+  // Merge store reads with in-progress loading entry for display
+  const reads = useMemo(() => {
+    const all = [...storeReads];
+    if (loadingUrl && !all.some((r) => r.url === loadingUrl)) {
+      all.unshift({
+        id: loadingId,
+        url: loadingUrl,
+        title: readerTitle,
+        mediaUrl: readerMediaUrl,
+        loading: true,
+        error: null,
+        data: null,
+      });
+    }
+    return all;
+  }, [storeReads, loadingUrl, loadingId, readerTitle, readerMediaUrl]);
 
   useEffect(() => {
     if (!readerUrl) return;
-    readerUrlRef.current = readerUrl;
 
-    // If this URL already has a read entry, just expand it
-    const existing = readsRef.current.find((r) => r.url === readerUrl);
+    const existing = storeReads.find((r) => r.url === readerUrl);
     if (existing) {
       setOpenId(existing.id);
       return;
     }
 
-    // Guard against React StrictMode double-fire
-    if (submittedRef.current.has(readerUrl)) return;
-    submittedRef.current.add(readerUrl);
+    if (loadingRef.current === readerUrl) return;
+    loadingRef.current = readerUrl;
 
-    const id = ++counterRef.current;
-    const entry = { id, url: readerUrl, title: readerTitle, mediaUrl: readerMediaUrl, loading: true, error: null, data: null };
-    setReads((prev) => [entry, ...prev]);
+    const id = ++_readerId;
+    setLoadingUrl(readerUrl);
+    setLoadingId(id);
     setOpenId(id);
 
     let cancelled = false;
     readUrl(readerUrl, readerMediaUrl)
       .then((d) => {
+        if (cancelled) return;
+        addRead({ id, url: readerUrl, title: d.title || readerTitle, mediaUrl: readerMediaUrl, loading: false, error: null, data: d });
         if (!cancelled) {
-          setReads((prev) =>
-            prev.map((r) => r.id === id ? { ...r, loading: false, data: d } : r)
-          );
+          setLoadingUrl(null);
+          setLoadingId(null);
+          loadingRef.current = null;
         }
       })
       .catch((err) => {
+        if (cancelled) return;
+        addRead({ id, url: readerUrl, title: readerTitle, mediaUrl: readerMediaUrl, loading: false, error: err.message, data: null });
         if (!cancelled) {
-          setReads((prev) =>
-            prev.map((r) => r.id === id ? { ...r, loading: false, error: err.message } : r)
-          );
+          setLoadingUrl(null);
+          setLoadingId(null);
+          loadingRef.current = null;
         }
       });
     return () => { cancelled = true; };
-  }, [readerUrl, readerMediaUrl, readerTitle, readerVersion]);
+  }, [readerUrl, readerMediaUrl, readerTitle, readerVersion, storeReads, addRead]);
 
-  const removeRead = useCallback((id, url) => {
-    submittedRef.current.delete(url);
-    setReads((prev) => prev.filter((r) => r.id !== id));
-    setOpenId((prev) => prev === id ? null : prev);
-  }, []);
+  const removeRead = useCallback(
+    (id, url) => {
+      removeReadFromStore(url);
+      setOpenId((prev) => (prev === id ? null : prev));
+    },
+    [removeReadFromStore],
+  );
 
   const toggleRead = useCallback((id) => {
-    setOpenId((prev) => prev === id ? null : id);
+    setOpenId((prev) => (prev === id ? null : id));
   }, []);
 
   const getHostname = (url) => {
     try { return new URL(url).hostname; } catch { return url; }
   };
 
-  if (!readerUrl && reads.length === 0) {
+  if (!readerUrl && reads.length === 0 && !loadingUrl) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center px-8">
@@ -96,7 +118,7 @@ export default function ReaderView() {
         {reads.map((r) => {
           const data = r.data;
           const hostname = data ? getHostname(data.url) : getHostname(r.url);
-          const mins = data ? Math.round(data.reading_time_seconds / 60) : 0;
+          const mins = data ? Math.round((data.reading_time_seconds || 0) / 60) : 0;
 
           return (
             <div key={r.id} className="rounded bg-elevated border border-border overflow-hidden">
@@ -105,9 +127,7 @@ export default function ReaderView() {
                 onClick={() => toggleRead(r.id)}
               >
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-text truncate">
-                    {r.title || hostname}
-                  </div>
+                  <div className="text-xs font-medium text-text truncate">{r.title || hostname}</div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <a href={r.url} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1 text-[10px] text-accent hover:text-accent-hover"
@@ -117,19 +137,13 @@ export default function ReaderView() {
                       {hostname}
                     </a>
                     {data && data.content_type === "article" && mins > 0 && (
-                      <span className="flex items-center gap-1 text-[10px] text-dim">
-                        <Clock size={10} />{mins} min
-                      </span>
+                      <span className="flex items-center gap-1 text-[10px] text-dim"><Clock size={10} />{mins} min</span>
                     )}
                     {data && data.content_type === "image" && (
-                      <span className="flex items-center gap-1 text-[10px] text-dim">
-                        <ImageIcon size={10} />Image
-                      </span>
+                      <span className="flex items-center gap-1 text-[10px] text-dim"><ImageIcon size={10} />Image</span>
                     )}
                     {data && data.content_type === "video" && (
-                      <span className="flex items-center gap-1 text-[10px] text-dim">
-                        <Play size={10} />Video
-                      </span>
+                      <span className="flex items-center gap-1 text-[10px] text-dim"><Play size={10} />Video</span>
                     )}
                   </div>
                 </div>
@@ -146,9 +160,7 @@ export default function ReaderView() {
               {openId === r.id && (
                 <div className="px-3 py-2">
                   {r.loading && (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 size={18} className="animate-spin text-accent" />
-                    </div>
+                    <div className="flex items-center justify-center py-8"><Loader2 size={18} className="animate-spin text-accent" /></div>
                   )}
 
                   {r.error && (
@@ -157,21 +169,17 @@ export default function ReaderView() {
                       <p className="text-[10px] text-muted">{r.error}</p>
                       <a href={r.url} target="_blank" rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-accent-hover transition-colors"
-                      >
-                        <ExternalLink size={11} /> Open in browser
-                      </a>
+                      ><ExternalLink size={11} /> Open in browser</a>
                     </div>
                   )}
 
                   {!r.loading && !r.error && data?.success === false && (
                     <div className="py-4 text-center space-y-2">
                       <p className="text-xs text-muted">This page could not be read automatically.</p>
-                      <p className="text-[10px] text-dim">{data.error || "The page may require JavaScript or may not be accessible."}</p>
+                      <p className="text-[10px] text-dim">{data.error}</p>
                       <a href={r.url} target="_blank" rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-accent-hover transition-colors"
-                      >
-                        <ExternalLink size={11} /> Open in browser
-                      </a>
+                      ><ExternalLink size={11} /> Open in browser</a>
                     </div>
                   )}
 
@@ -179,12 +187,9 @@ export default function ReaderView() {
                     <div className="space-y-3">
                       {data.media_url && (
                         <div className="rounded bg-hover flex items-center justify-center overflow-hidden">
-                          <img
-                            src={`/api/image-proxy?url=${encodeURIComponent(data.media_url)}`}
-                            alt={data.title || ""}
+                          <img src={`/api/image-proxy?url=${encodeURIComponent(data.media_url)}`} alt={data.title || ""}
                             className="max-w-full max-h-[60vh] object-contain"
-                            onError={(e) => { e.target.style.display = "none"; }}
-                          />
+                            onError={(e) => { e.target.style.display = "none"; }} />
                         </div>
                       )}
                       {data.title && <p className="text-sm text-text text-center">{data.title}</p>}
@@ -196,12 +201,9 @@ export default function ReaderView() {
                       {data.media_url && (
                         <a href={r.url} target="_blank" rel="noopener noreferrer">
                           <div className="relative rounded overflow-hidden bg-black aspect-video flex items-center justify-center group cursor-pointer">
-                            <img
-                              src={`/api/image-proxy?url=${encodeURIComponent(data.media_url)}`}
-                              alt=""
+                            <img src={`/api/image-proxy?url=${encodeURIComponent(data.media_url)}`} alt=""
                               className="w-full h-full object-cover"
-                              onError={(e) => { e.target.style.display = "none"; }}
-                            />
+                              onError={(e) => { e.target.style.display = "none"; }} />
                             <div className="absolute inset-0 flex items-center justify-center">
                               <div className="size-12 rounded-full bg-black/60 flex items-center justify-center group-hover:bg-black/80 transition-colors">
                                 <Play size={22} className="text-white ml-0.5" />
@@ -217,17 +219,13 @@ export default function ReaderView() {
 
                   {!r.loading && !r.error && data?.success !== false && data?.content_type === "article" && (
                     data?.content ? (
-                      <div className="text-sm text-text leading-relaxed whitespace-pre-line font-[system-ui]">
-                        {data.content}
-                      </div>
+                      <div className="text-sm text-text leading-relaxed whitespace-pre-line font-[system-ui]">{data.content}</div>
                     ) : (
                       <div className="py-4 text-center space-y-2">
                         <p className="text-xs text-muted">No readable content was found on this page.</p>
                         <a href={r.url} target="_blank" rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-accent-hover transition-colors"
-                        >
-                          <ExternalLink size={11} /> Open in browser
-                        </a>
+                        ><ExternalLink size={11} /> Open in browser</a>
                       </div>
                     )
                   )}
@@ -237,9 +235,7 @@ export default function ReaderView() {
                       <p className="text-xs text-muted">This content type could not be displayed.</p>
                       <a href={r.url} target="_blank" rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-accent-hover transition-colors"
-                      >
-                        <ExternalLink size={11} /> Open in browser
-                      </a>
+                      ><ExternalLink size={11} /> Open in browser</a>
                     </div>
                   )}
                 </div>

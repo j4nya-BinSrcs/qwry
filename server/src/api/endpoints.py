@@ -1,19 +1,27 @@
+import hashlib
 import logging
 from uuid import UUID
 
 import httpx
 from fastapi import Header, HTTPException, Query, Request, Response
 from server.src.api.schemas import (
+    ActivityLogItem,
     ChatRequest,
     ChatResponse,
     ChatSource,
     ItemSummaryResponse,
     LLMGenerateRequest,
     LLMGenerateResponse,
+    OverviewResponse,
+    ProfileResponse,
+    ProfileUpdateRequest,
     ReaderResponse,
+    ReadingListEntry,
+    SearchHistoryItem,
     SuggestResponse,
     SummarizeRequest,
     SummarizeResponse,
+    SummaryListEntry,
     SystemStats,
     WorkspaceCreateRequest,
     WorkspaceItemCreateRequest,
@@ -22,8 +30,10 @@ from server.src.api.schemas import (
     WorkspaceResponse,
     WorkspaceUpdateRequest,
 )
+from server.src.core.config import settings
 from server.src.core.registry import EndpointRegistry
 from server.src.core.session import get_session_id
+from server.src.services.cache import CacheService
 from server.src.services.chat import ChatService
 from server.src.services.reader import ReaderService
 from server.src.services.stats_service import StatsCollector
@@ -60,13 +70,24 @@ async def search(
     page_size: int = Query(10, ge=1, le=100, description="Results per page"),
     provider: str | None = Query(None, description="Search provider override"),
     categories: str | None = Query(None, description="SearXNG categories (comma-separated)"),
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
 ):
     orchestrator = request.app.state.orchestrator
     logger.info(
         "Search request",
         extra={"query": q, "page": page, "page_size": page_size, "provider": provider, "categories": categories},
     )
-    return await orchestrator.search(q, page, page_size, provider, categories)
+    result = await orchestrator.search(q, page, page_size, provider, categories)
+
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        from server.src.services.profile_service import ProfileService
+
+        svc = ProfileService(db)
+        await svc.log_search(session_id, q, provider or result.provider)
+
+    return result
 
 
 # ── Suggest ────────────────────────────────────────────────────────────
@@ -153,14 +174,24 @@ async def _try_engine_search_suggestions(
 async def llm_generate(
     request: Request,
     body: LLMGenerateRequest,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
 ) -> LLMGenerateResponse:
+    cache: CacheService = request.app.state.cache
     llm = request.app.state.llm
-    system = (
-        "You are a direct answer engine. Output only what is asked. "
-        "Never include introductions ('Okay, here is...', 'Based on the search results...'), "
-        "explanations, meta-commentary, or sign-offs. Begin directly with the content."
-    )
+
+    if cache.available:
+        cache_key = hashlib.sha256(body.query.encode()).hexdigest()
+        cached = await cache.get(CacheService.NAMESPACE_LLM_OVERVIEW, cache_key)
+        if cached:
+            logger.debug("LLM overview cache hit", extra={"query": body.query})
+            return LLMGenerateResponse(response=cached)
+
     if body.results:
+        system = (
+            "You are a direct answer engine. Output only what is asked. "
+            "Never include introductions, explanations, meta-commentary, or sign-offs. "
+            "Begin directly with the content."
+        )
         items_text = "\n\n".join(
             f"Title: {r.title}\nURL: {r.url}\nSnippet: {r.snippet}"
             for r in body.results[:20]
@@ -173,9 +204,49 @@ async def llm_generate(
             f"\n\nOUTPUT ONLY THE OVERVIEW. No greetings, no meta-commentary, no sign-offs."
         )
     else:
-        prompt = body.query
+        system = (
+            "You are a knowledgeable assistant that answers questions directly using your own knowledge. "
+            "Never say you don't have enough information, never make up a story, never refuse to answer. "
+            "If you don't know something, state a single brief fact related to the topic instead. "
+            "Output only the answer — no introductions, no meta-commentary, no sign-offs."
+        )
+        prompt = (
+            f"Answer this question using your own knowledge:\n\n{body.query}\n\n"
+            f"OUTPUT ONLY THE ANSWER. No introductions, no meta-commentary, no sign-offs."
+        )
     response = await llm.generate(prompt, system_prompt=system)
+
+    if cache.available:
+        ttl = getattr(settings, "cache_llm_ttl_seconds", 1800)
+        await cache.set(CacheService.NAMESPACE_LLM_OVERVIEW, response, ttl, cache_key)
+
+    if x_session_id:
+        session_id = get_session_id(request)
+        maker = request.app.state.db
+        async with maker() as db:
+            from server.src.services.profile_service import ProfileService
+
+            svc = ProfileService(db)
+            await svc.save_overview(session_id, body.query, response)
+
     return LLMGenerateResponse(response=response)
+
+
+async def overview_get(
+    request: Request,
+    q: str = Query(..., min_length=1, description="Search query"),
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+) -> OverviewResponse | None:
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        from server.src.services.profile_service import ProfileService
+
+        svc = ProfileService(db)
+        entry = await svc.get_overview(session_id, q)
+        if not entry:
+            return None
+        return OverviewResponse(query=entry.query, overview=entry.overview, created_at=entry.created_at)
 
 
 # ── Stats ──────────────────────────────────────────────────────────────
@@ -221,9 +292,24 @@ async def image_proxy(request: Request, url: str = Query(..., description="Image
 async def summarize(
     request: Request,
     body: SummarizeRequest,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
 ) -> SummarizeResponse:
     summarizer: Summarizer = request.app.state.summarizer
     result = await summarizer.summarize_url(body.url)
+
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        from server.src.services.profile_service import ProfileService
+
+        svc = ProfileService(db)
+        await svc.log_summary(
+            session_id, result.url, result.title,
+            source=result.provider if result.success else None,
+            summary=result.summary if result.success else None,
+            model=result.model if result.success else None,
+        )
+
     return SummarizeResponse(
         url=result.url,
         title=result.title,
@@ -240,6 +326,7 @@ async def read_url(
     request: Request,
     url: str = Query(..., description="URL to extract readable content from"),
     media_url: str | None = Query(None, description="Direct media URL (image/video) for content-type detection"),
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
 ) -> ReaderResponse:
     reader: ReaderService = request.app.state.reader
     try:
@@ -247,6 +334,21 @@ async def read_url(
     except Exception as e:
         logger.error("Reader endpoint failed", extra={"url": url, "error": repr(e)}, exc_info=True)
         raise HTTPException(status_code=502, detail=f"Failed to read page: {e}") from e
+
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        from server.src.services.profile_service import ProfileService
+
+        svc = ProfileService(db)
+        source = result.content_type if result.success else None
+        await svc.log_read(
+            session_id, url, result.title, source,
+            content=result.content if result.success else None,
+            content_type=result.content_type,
+            media_url=result.media_url,
+        )
+
     return ReaderResponse(
         url=result.url,
         title=result.title,
@@ -475,3 +577,127 @@ async def item_summarize(
         provider=result.provider,
         model=result.model,
     )
+
+
+# ── Profile ─────────────────────────────────────────────────────────────
+
+
+async def profile_get(
+    request: Request,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+) -> ProfileResponse:
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        from server.src.services.profile_service import ProfileService
+
+        svc = ProfileService(db)
+        profile = await svc.get_or_create_profile(session_id)
+        return ProfileResponse(
+            session_id=profile.session_id,
+            username=profile.username,
+            theme=profile.theme,
+            search_provider=profile.search_provider,
+            created_at=profile.created_at,
+            last_active=profile.last_active,
+        )
+
+
+async def profile_update(
+    request: Request,
+    body: ProfileUpdateRequest,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+) -> ProfileResponse:
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        from server.src.services.profile_service import ProfileService
+
+        svc = ProfileService(db)
+        profile = await svc.update_profile(
+            session_id,
+            username=body.username,
+            theme=body.theme,
+            search_provider=body.search_provider,
+        )
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        return ProfileResponse(
+            session_id=profile.session_id,
+            username=profile.username,
+            theme=profile.theme,
+            search_provider=profile.search_provider,
+            created_at=profile.created_at,
+            last_active=profile.last_active,
+        )
+
+
+# ── History ─────────────────────────────────────────────────────────────
+
+
+async def history_search(
+    request: Request,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+) -> list[SearchHistoryItem]:
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        from server.src.services.profile_service import ProfileService
+
+        svc = ProfileService(db)
+        entries = await svc.get_search_history(session_id)
+        return [SearchHistoryItem(id=e.id, query=e.query, provider=e.provider, searched_at=e.searched_at) for e in entries]
+
+
+async def history_reads(
+    request: Request,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+) -> list[ReadingListEntry]:
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        from server.src.services.profile_service import ProfileService
+
+        svc = ProfileService(db)
+        entries = await svc.get_reading_list(session_id)
+        return [
+            ReadingListEntry(
+                id=e.id, title=e.title, url=e.url, source=e.source,
+                content=e.content, content_type=e.content_type, media_url=e.media_url,
+                saved_at=e.saved_at,
+            ) for e in entries
+        ]
+
+
+async def history_summaries(
+    request: Request,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+) -> list[SummaryListEntry]:
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        from server.src.services.profile_service import ProfileService
+
+        svc = ProfileService(db)
+        entries = await svc.get_summary_list(session_id)
+        return [
+            SummaryListEntry(
+                id=e.id, title=e.title, url=e.url, source=e.source,
+                summary=e.summary, model=e.model,
+                saved_at=e.saved_at,
+            ) for e in entries
+        ]
+
+
+async def history_activity(
+    request: Request,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+) -> list[ActivityLogItem]:
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        from server.src.services.profile_service import ProfileService
+
+        svc = ProfileService(db)
+        entries = await svc.get_activity_log(session_id)
+        return [ActivityLogItem(id=e.id, action_type=e.action_type, details=e.details, created_at=e.created_at) for e in entries]

@@ -22,6 +22,7 @@ class CacheService:
     NAMESPACE_SEARCH = "search"
     NAMESPACE_SUMMARY = "summary"
     NAMESPACE_READER = "reader"
+    NAMESPACE_LLM_OVERVIEW = "llm_overview"
 
     def __init__(self) -> None:
         self._client: AsyncRedis | None = None

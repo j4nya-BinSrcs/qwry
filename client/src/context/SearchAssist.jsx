@@ -1,7 +1,8 @@
 import { Loader2, Sparkles, Search, ChevronDown, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { fetchOverview, llmGenerate } from "../api/llm";
+import { useContentStore } from "../stores/contentStore";
 import { useSearchStore } from "../stores/searchStore";
-import { llmGenerate } from "../api/llm";
 import MarkdownRenderer from "../components/MarkdownRenderer";
 
 export default function SearchAssist() {
@@ -9,40 +10,67 @@ export default function SearchAssist() {
   const results = useSearchStore((s) => s.results);
   const suggestions = useSearchStore((s) => s.suggestions);
   const search = useSearchStore((s) => s.search);
+
+  const storeOverviews = useContentStore((s) => s.overviews);
+  const setOverviewInStore = useContentStore((s) => s.setOverview);
+
   const [relatedOpen, setRelatedOpen] = useState(false);
-  const [overview, setOverview] = useState(null);
+  const [overview, setOverview] = useState(storeOverviews[query] || null);
   const [loading, setLoading] = useState(false);
   const [deepLoading, setDeepLoading] = useState(false);
   const [error, setError] = useState(null);
   const prevQueryRef = useRef("");
 
-  const generateOverview = useCallback(async (deep) => {
-    if (!query || results.length === 0) return;
-    if (deep) {
-      setDeepLoading(true);
-    } else {
-      setLoading(true);
-    }
-    setError(null);
-    try {
-      const topResults = results.slice(0, deep ? 50 : 10);
-      const data = await llmGenerate(query, topResults);
-      setOverview(data.response);
-    } catch (err) {
-      setError(err.message);
-      setOverview(null);
-    } finally {
-      setLoading(false);
-      setDeepLoading(false);
-    }
-  }, [query, results]);
+  const generateOverview = useCallback(
+    async (deep) => {
+      if (!query) return;
+      if (!deep && results.length === 0) return;
+      if (deep) {
+        setDeepLoading(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
+      try {
+        const topResults = deep ? results.slice(0, 50) : [];
+        const data = await llmGenerate(query, topResults);
+        setOverview(data.response);
+        setOverviewInStore(query, data.response);
+      } catch (err) {
+        setError(err.message);
+        setOverview(null);
+      } finally {
+        setLoading(false);
+        setDeepLoading(false);
+      }
+    },
+    [query, results, setOverviewInStore],
+  );
 
+  // On query change, try: localStorage store → DB → generate
   useEffect(() => {
-    if (query && query !== prevQueryRef.current && results.length > 0) {
-      prevQueryRef.current = query;
-      generateOverview(false);
+    if (!query || query === prevQueryRef.current) return;
+    prevQueryRef.current = query;
+
+    // localStorage
+    const stored = storeOverviews[query];
+    if (stored) {
+      setOverview(stored);
+      setError(null);
+      return;
     }
-  }, [query, results, generateOverview]);
+
+    // DB
+    fetchOverview(query).then((cached) => {
+      if (cached) {
+        setOverview(cached);
+        setOverviewInStore(query, cached);
+        setError(null);
+      } else if (results.length > 0) {
+        generateOverview(false);
+      }
+    });
+  }, [query, results, generateOverview, storeOverviews, setOverviewInStore]);
 
   const handleDeepSearch = useCallback(() => {
     search(query);
@@ -62,7 +90,7 @@ export default function SearchAssist() {
     );
   }
 
-  if (results.length === 0) {
+  if (results.length === 0 && !overview) {
     return null;
   }
 
@@ -117,7 +145,6 @@ export default function SearchAssist() {
         </button>
       )}
 
-      {/* Related searches */}
       {suggestions.length > 0 && (
         <div className="mt-3 rounded border border-border overflow-hidden">
           <button

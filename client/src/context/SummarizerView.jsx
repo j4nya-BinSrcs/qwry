@@ -1,63 +1,101 @@
 import { ExternalLink, Loader2, Sparkles, X, ChevronDown, ChevronRight } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { apiFetch } from "../api/client";
+import { useContentStore } from "../stores/contentStore";
 import { useUIStore } from "../stores/uiStore";
 import MarkdownRenderer from "../components/MarkdownRenderer";
-
-let summaryCounter = 0;
 
 export default function SummarizerView() {
   const summarizeUrl = useUIStore((s) => s.summarizeUrl);
   const summarizeTitle = useUIStore((s) => s.summarizeTitle);
   const summarizeVersion = useUIStore((s) => s.summarizeVersion);
 
-  const [summaries, setSummaries] = useState([]);
+  const storeSummaries = useContentStore((s) => s.summaries);
+  const addSummary = useContentStore((s) => s.addSummary);
+  const removeSummaryFromStore = useContentStore((s) => s.removeSummary);
+
   const [expanded, setExpanded] = useState(new Set());
-  const submittedRef = useRef(new Set());
+  const [loadingUrl, setLoadingUrl] = useState(null);
+  const [loadingId, setLoadingId] = useState(null);
+  const loadingRef = useRef(null);
+
+  // Merge store summaries with in-progress loading entry
+  const summaries = useMemo(() => {
+    const all = [...storeSummaries];
+    if (loadingUrl && !all.some((s) => s.url === loadingUrl)) {
+      all.unshift({
+        id: loadingId,
+        url: loadingUrl,
+        title: summarizeTitle,
+        loading: true,
+        error: null,
+        summary: null,
+        provider: null,
+      });
+    }
+    return all;
+  }, [storeSummaries, loadingUrl, loadingId, summarizeTitle]);
 
   useEffect(() => {
     if (!summarizeUrl) return;
-    if (submittedRef.current.has(summarizeUrl)) return;
-    submittedRef.current.add(summarizeUrl);
 
-    const id = ++summaryCounter;
-    const entry = { id, url: summarizeUrl, title: summarizeTitle, loading: true, error: null, summary: null, provider: null };
-    setSummaries((prev) => [entry, ...prev]);
+    const existing = storeSummaries.find((s) => s.url === summarizeUrl);
+    if (existing) {
+      setExpanded((prev) => new Set([...prev, existing.id]));
+      return;
+    }
+
+    if (loadingRef.current === summarizeUrl) return;
+    loadingRef.current = summarizeUrl;
+
+    const id = crypto.randomUUID();
+    setLoadingUrl(summarizeUrl);
+    setLoadingId(id);
     setExpanded((prev) => new Set([...prev, id]));
 
-    fetch("/api/summarize", {
+    let cancelled = false;
+    apiFetch("/api/summarize", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url: summarizeUrl }),
     })
       .then((r) => {
+        if (cancelled) return;
         if (!r.ok) throw new Error(`Failed: ${r.status}`);
         return r.json();
       })
       .then((d) => {
-        setSummaries((prev) =>
-          prev.map((s) =>
-            s.id === id ? { ...s, loading: false, summary: d.summary, provider: d.provider || "unknown" } : s
-          )
-        );
+        if (cancelled) return;
+        addSummary({ id, url: summarizeUrl, title: d.title || summarizeTitle, loading: false, error: null, summary: d.summary, provider: d.provider || "unknown" });
+        if (!cancelled) {
+          setLoadingUrl(null);
+          setLoadingId(null);
+          loadingRef.current = null;
+        }
       })
       .catch((err) => {
-        setSummaries((prev) =>
-          prev.map((s) =>
-            s.id === id ? { ...s, loading: false, error: err.message } : s
-          )
-        );
+        if (cancelled) return;
+        addSummary({ id, url: summarizeUrl, title: summarizeTitle, loading: false, error: err.message, summary: null, provider: null });
+        if (!cancelled) {
+          setLoadingUrl(null);
+          setLoadingId(null);
+          loadingRef.current = null;
+        }
       });
-  }, [summarizeUrl, summarizeVersion, summarizeTitle]);
+    return () => { cancelled = true; };
+  }, [summarizeUrl, summarizeVersion, summarizeTitle, storeSummaries, addSummary]);
 
-  const removeSummary = useCallback((id, url) => {
-    submittedRef.current.delete(url);
-    setSummaries((prev) => prev.filter((s) => s.id !== id));
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-  }, []);
+  const removeSummary = useCallback(
+    (id, url) => {
+      loadingRef.current?.delete?.(url);
+      removeSummaryFromStore(url);
+      setExpanded((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    },
+    [removeSummaryFromStore],
+  );
 
   const toggleSummary = useCallback((id) => {
     setExpanded((prev) => {
@@ -68,7 +106,7 @@ export default function SummarizerView() {
     });
   }, []);
 
-  if (!summarizeUrl && summaries.length === 0) {
+  if (!summarizeUrl && storeSummaries.length === 0 && !loadingUrl) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center px-8">
@@ -96,9 +134,7 @@ export default function SummarizerView() {
               onClick={() => toggleSummary(s.id)}
             >
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium text-text truncate">
-                  {s.title || new URL(s.url).hostname}
-                </div>
+                <div className="text-xs font-medium text-text truncate">{s.title || new URL(s.url).hostname}</div>
                 <a href={s.url} target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-1 text-[10px] text-accent hover:text-accent-hover mt-0.5"
                   onClick={(e) => e.stopPropagation()}
@@ -138,9 +174,7 @@ export default function SummarizerView() {
                     <p className="text-[10px] text-dim">{s.error}</p>
                     <a href={s.url} target="_blank" rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-accent-hover transition-colors"
-                    >
-                      <ExternalLink size={11} /> Open in browser
-                    </a>
+                    ><ExternalLink size={11} /> Open in browser</a>
                   </div>
                 )}
                 {s.summary && <MarkdownRenderer>{s.summary}</MarkdownRenderer>}

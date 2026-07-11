@@ -184,3 +184,65 @@ class ReaderResponse(BaseModel):
     error: str | None = None
     content_type: str = "article"
     media_url: str | None = None
+
+
+# ── Profile ─────────────────────────────────────────────────────────────
+
+
+class ProfileResponse(BaseModel):
+    session_id: str
+    username: str | None = None
+    theme: str = "light"
+    search_provider: str | None = None
+    created_at: datetime
+    last_active: datetime
+
+
+class ProfileUpdateRequest(BaseModel):
+    username: str | None = None
+    theme: str | None = None
+    search_provider: str | None = None
+
+
+# ── History ─────────────────────────────────────────────────────────────
+
+
+class SearchHistoryItem(BaseModel):
+    id: UUID
+    query: str
+    provider: str | None = None
+    searched_at: datetime
+
+
+class ReadingListEntry(BaseModel):
+    id: UUID
+    title: str | None = None
+    url: str
+    source: str | None = None
+    content: str | None = None
+    content_type: str | None = None
+    media_url: str | None = None
+    saved_at: datetime
+
+
+class SummaryListEntry(BaseModel):
+    id: UUID
+    title: str | None = None
+    url: str
+    source: str | None = None
+    summary: str | None = None
+    model: str | None = None
+    saved_at: datetime
+
+
+class ActivityLogItem(BaseModel):
+    id: UUID
+    action_type: str
+    details: dict | None = None
+    created_at: datetime
+
+
+class OverviewResponse(BaseModel):
+    query: str
+    overview: str
+    created_at: datetime

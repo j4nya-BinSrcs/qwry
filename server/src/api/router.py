@@ -1,6 +1,10 @@
 from fastapi import APIRouter, FastAPI
 from server.src.api.endpoints import (
     health,
+    history_activity,
+    history_reads,
+    history_search,
+    history_summaries,
     image_proxy,
     item_create,
     item_delete,
@@ -8,6 +12,9 @@ from server.src.api.endpoints import (
     item_summarize,
     item_update,
     llm_generate,
+    overview_get,
+    profile_get,
+    profile_update,
     read_url,
     search,
     suggest,
@@ -21,13 +28,19 @@ from server.src.api.endpoints import (
     workspace_update,
 )
 from server.src.api.schemas import (
+    ActivityLogItem,
     ChatResponse,
     ItemSummaryResponse,
     LLMGenerateResponse,
+    OverviewResponse,
+    ProfileResponse,
     ReaderResponse,
+    ReadingListEntry,
+    SearchHistoryItem,
     SearchResponse,
     SuggestResponse,
     SummarizeResponse,
+    SummaryListEntry,
     SystemStats,
     WorkspaceItemResponse,
     WorkspaceResponse,
@@ -95,6 +108,18 @@ item_router.add_api_route("/{item_id}", item_delete, methods=["DELETE"])
 item_router.add_api_route("/{item_id}/summarize", item_summarize, methods=["POST"], response_model=ItemSummaryResponse)
 
 
+profile_router = APIRouter(prefix="/api", tags=["profile"])
+profile_router.add_api_route("/profile", profile_get, methods=["GET"], response_model=ProfileResponse)
+profile_router.add_api_route("/profile", profile_update, methods=["PUT"], response_model=ProfileResponse)
+
+history_router = APIRouter(prefix="/api/history", tags=["history"])
+history_router.add_api_route("/search", history_search, methods=["GET"], response_model=list[SearchHistoryItem])
+history_router.add_api_route("/reads", history_reads, methods=["GET"], response_model=list[ReadingListEntry])
+history_router.add_api_route("/summaries", history_summaries, methods=["GET"], response_model=list[SummaryListEntry])
+history_router.add_api_route("/activity", history_activity, methods=["GET"], response_model=list[ActivityLogItem])
+history_router.add_api_route("/overviews", overview_get, methods=["GET"], response_model=OverviewResponse | None)
+
+
 def register_routes(app: FastAPI) -> None:
     app.include_router(health_router)
     app.include_router(search_router)
@@ -106,3 +131,5 @@ def register_routes(app: FastAPI) -> None:
     app.include_router(summarize_router)
     app.include_router(workspace_router)
     app.include_router(item_router)
+    app.include_router(profile_router)
+    app.include_router(history_router)
