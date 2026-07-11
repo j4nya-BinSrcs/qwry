@@ -26,8 +26,10 @@ export const useUIStore = create((set, get) => ({
   readerUrl: null,
   readerTitle: null,
   readerMediaUrl: null,
+  readerVersion: 0,
   summarizeUrl: null,
   summarizeTitle: null,
+  summarizeVersion: 0,
 
   setPanelOrder: (order) => {
     savePanelOrder(order);
@@ -42,8 +44,19 @@ export const useUIStore = create((set, get) => ({
   setContextMode: (mode) => set({ contextMode: mode }),
 
   openReader: (url, title, mediaUrl) =>
-    set({ contextMode: "reader", readerUrl: url, readerTitle: title || null, readerMediaUrl: mediaUrl || null }),
+    set((state) => ({
+      contextMode: "reader",
+      readerUrl: url,
+      readerTitle: title || null,
+      readerMediaUrl: mediaUrl || null,
+      readerVersion: state.readerVersion + 1,
+    })),
 
   openSummarizer: (url, title) =>
-    set({ contextMode: "summarizer", summarizeUrl: url, summarizeTitle: title || null }),
+    set((state) => ({
+      contextMode: "summarizer",
+      summarizeUrl: url,
+      summarizeTitle: title || null,
+      summarizeVersion: state.summarizeVersion + 1,
+    })),
 }));
