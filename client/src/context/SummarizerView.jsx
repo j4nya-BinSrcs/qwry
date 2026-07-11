@@ -1,6 +1,7 @@
 import { ArrowLeft, ExternalLink, Loader2, Sparkles } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useUIStore } from "../stores/uiStore";
+import MarkdownRenderer from "../components/MarkdownRenderer";
 
 export default function SummarizerView() {
   const summarizeUrl = useUIStore((s) => s.summarizeUrl);
@@ -84,9 +85,7 @@ export default function SummarizerView() {
                 via {data.provider || "unknown"}
               </span>
             </div>
-            <p className="text-sm text-text leading-relaxed whitespace-pre-line">
-              {data.summary}
-            </p>
+            <MarkdownRenderer>{data.summary}</MarkdownRenderer>
           </div>
         )}
       </div>

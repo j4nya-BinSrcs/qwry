@@ -2,6 +2,7 @@ import { Loader2, Sparkles, Search } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchStore } from "../stores/searchStore";
 import { llmGenerate } from "../api/llm";
+import MarkdownRenderer from "../components/MarkdownRenderer";
 
 export default function SearchAssist() {
   const query = useSearchStore((s) => s.query);
@@ -99,9 +100,7 @@ export default function SearchAssist() {
             </button>
           </div>
           <div className="px-3 py-2.5">
-            <p className="text-xs text-text leading-relaxed whitespace-pre-line">
-              {overview}
-            </p>
+            <MarkdownRenderer>{overview}</MarkdownRenderer>
           </div>
         </div>
       )}
