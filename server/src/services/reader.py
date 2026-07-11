@@ -16,6 +16,22 @@ WORDS_PER_MINUTE = 200
 
 _IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp", ".ico"}
 _YT_PATTERN = re.compile(r"(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/shorts/)([\w-]+)")
+_YT_FOOTER_MARKERS = [
+    "About Press Copyright",
+    "Terms Privacy Policy",
+    "© 20",
+    "Share your videos with friends, family, and the world",
+]
+
+
+def _clean_youtube_description(desc: str) -> str:
+    for marker in _YT_FOOTER_MARKERS:
+        idx = desc.find(marker)
+        if idx != -1:
+            desc = desc[:idx]
+    return desc.strip()
+
+
 _BOILERPLATE_PATTERNS = [
     re.compile(r"javascript\s+is\s+(?:disabled|blocked|required)", re.IGNORECASE),
     re.compile(r"enable\s+javascript", re.IGNORECASE),
@@ -196,16 +212,13 @@ class ReaderService:
     async def read_url(self, url: str, media_url: str | None = None) -> ReaderResult:
         logger.info("Reading URL", extra={"url": url})
 
-        # When a direct media_url is provided, use it for content-type detection
-        detect_url = media_url or url
-
         if self._cache and self._cache.available:
             cached = await self._cache.get(CacheService.NAMESPACE_READER, url)
             if cached:
                 logger.debug("Reader cache hit", extra={"url": url})
                 return ReaderResult(**cached)
 
-        ctype, extra = detect_content_type(detect_url)
+        ctype, extra = detect_content_type(url)
 
         # ── Image: return immediately with media_url ────────────────
         if ctype == "image":
@@ -244,14 +257,13 @@ class ReaderService:
             )
 
         title = _legacy_extract_title(html)
-        desc = _extract_meta_description(html) or ""
-        content = f"{title or ''}\n\n{desc}".strip()
+        desc = _clean_youtube_description(_extract_meta_description(html) or "")
 
         result = ReaderResult(
             url=url,
             title=title,
-            content=content,
-            content_length_chars=len(content),
+            content=desc,
+            content_length_chars=len(desc),
             reading_time_seconds=0,
             content_type="video",
             media_url=video_id and f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg" or None,

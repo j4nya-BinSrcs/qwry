@@ -13,9 +13,24 @@ export default function ReaderView() {
   const [openId, setOpenId] = useState(null);
   const submittedRef = useRef(new Set());
   const counterRef = useRef(0);
+  const readsRef = useRef([]);
+  const readerUrlRef = useRef(null);
+
+  // keep ref in sync with state
+  useEffect(() => { readsRef.current = reads; }, [reads]);
 
   useEffect(() => {
     if (!readerUrl) return;
+    readerUrlRef.current = readerUrl;
+
+    // If this URL already has a read entry, just expand it
+    const existing = readsRef.current.find((r) => r.url === readerUrl);
+    if (existing) {
+      setOpenId(existing.id);
+      return;
+    }
+
+    // Guard against React StrictMode double-fire
     if (submittedRef.current.has(readerUrl)) return;
     submittedRef.current.add(readerUrl);
 

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { searchQuery } from "../api/search";
+import { useUIStore } from "./uiStore";
 
 export const providers = [
   { value: null, label: "Meta" },
@@ -21,6 +22,7 @@ export const useSearchStore = create((set, get) => ({
   setQuery: (query) => set({ query }),
   setProvider: (provider) => set({ provider }),
   search: async (q, page = 1, provider) => {
+    useUIStore.getState().setContextMode("search-assist");
     const resolvedProvider = provider ?? get().provider;
     set({ loading: true, error: null, query: q, page, provider: resolvedProvider });
     try {

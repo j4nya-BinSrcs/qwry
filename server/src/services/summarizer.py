@@ -8,6 +8,7 @@ from server.src.services.cache import CacheService
 from server.src.services.llm import LLMBackend
 from server.src.services.reader import (
     FETCH_HEADERS,
+    _clean_youtube_description,
     _extract_meta_description,
     _is_boilerplate_error,
     _legacy_extract_title,
@@ -196,7 +197,7 @@ class Summarizer:
         html = await self._fetch_page(url)
         if html:
             title = _legacy_extract_title(html) or item_title
-            desc = _extract_meta_description(html) or ""
+            desc = _clean_youtube_description(_extract_meta_description(html) or "")
             text_parts.append(f"Title: {title}")
             if desc:
                 text_parts.append(f"Description: {desc}")
