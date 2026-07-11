@@ -48,7 +48,7 @@ function DraggableResultCard({ result }) {
       className={`group relative flex items-start gap-2.5 px-3 py-2.5 rounded-lg transition-all cursor-default ${
         isDragging
           ? "opacity-50"
-          : "hover:bg-hover border border-transparent hover:border-border"
+          : "hover:bg-hover border border-transparent hover:border-border hover:-translate-y-0.5"
       }`}
     >
       {/* Drag handle */}
@@ -149,7 +149,7 @@ export default function SourcesPanel() {
     : results;
 
   return (
-    <div className="h-full flex flex-col bg-panel border-r border-border">
+    <div className="h-full flex flex-col">
       {/* Header */}
       <div className="shrink-0 px-3 py-2.5 border-b border-border">
         <div className="flex items-center justify-between mb-2">

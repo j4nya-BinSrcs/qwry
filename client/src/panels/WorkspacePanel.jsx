@@ -287,7 +287,7 @@ export default function WorkspacePanel() {
   const activeWs = workspaces.find((w) => w.id === activeId);
 
   return (
-    <div className="h-full flex flex-col bg-surface">
+    <div className="h-full flex flex-col">
       <WorkspaceHeader workspace={activeWs} sessionId={sessionId} onChatClick={() => setChatOpen(true)} />
 
       {/* Content */}

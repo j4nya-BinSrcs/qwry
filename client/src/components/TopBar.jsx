@@ -5,7 +5,7 @@ import { useSessionStore } from "../stores/sessionStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import { fetchSuggestions } from "../api/search";
 
-export default function TopBar() {
+export default function TopBar({ toggleTheme, theme }) {
   const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -95,11 +95,11 @@ export default function TopBar() {
             onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
             onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
             placeholder={query || "Search the web..."}
-            className="w-full h-9 pl-9 pr-3 rounded-lg bg-hover border border-border text-sm text-text placeholder:text-dim outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30 transition-all"
+            className="w-full h-9 pl-9 pr-3 rounded-full bg-hover border border-border text-sm text-text placeholder:text-dim outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30 transition-all"
           />
         </div>
         {showSuggestions && (
-          <div className="absolute top-full left-0 right-0 mt-1 rounded-lg bg-elevated border border-border shadow-lg overflow-hidden">
+          <div className="absolute top-full left-0 right-0 mt-1 rounded-xl bg-elevated border border-border shadow-xl backdrop-blur-xl overflow-hidden">
             {suggestions.map((s, i) => (
               <button
                 key={i}
@@ -123,7 +123,7 @@ export default function TopBar() {
           <ChevronDown size={12} className="text-dim" />
         </button>
         {showProviderMenu && (
-          <div className="absolute top-full right-0 mt-1 w-32 rounded-lg bg-elevated border border-border shadow-xl overflow-hidden z-50">
+          <div className="absolute top-full right-0 mt-1 w-32 rounded-xl bg-elevated border border-border shadow-xl backdrop-blur-xl overflow-hidden z-50">
             {providers.map((p) => (
               <button
                 key={p.label}
@@ -159,7 +159,7 @@ export default function TopBar() {
           </span>
         </button>
         {showWsMenu && (
-          <div className="absolute top-full right-0 mt-1 w-56 rounded-lg bg-elevated border border-border shadow-xl overflow-hidden">
+          <div className="absolute top-full right-0 mt-1 w-56 rounded-xl bg-elevated border border-border shadow-xl backdrop-blur-xl overflow-hidden">
             <div className="px-3 py-2 text-xs text-muted font-medium border-b border-border">
               Workspaces
             </div>
@@ -195,6 +195,15 @@ export default function TopBar() {
           </div>
         )}
       </div>
+
+      {/* Theme toggle */}
+      <button
+        onClick={toggleTheme}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-hover border border-border text-xs text-text hover:bg-hover/80 transition-colors shrink-0"
+        title="Toggle theme"
+      >
+        {theme === "dark" ? "☀️" : "🌙"}
+      </button>
 
       {/* AI indicator */}
       <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-hover/50 text-xs text-muted shrink-0">

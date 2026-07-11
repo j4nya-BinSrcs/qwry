@@ -33,7 +33,7 @@ export default function DiscoveryPanel() {
   const search = useSearchStore((s) => s.search);
 
   return (
-    <div className="h-full flex flex-col bg-panel border-l border-border">
+    <div className="h-full flex flex-col">
       <div className="shrink-0 px-3 py-2.5 border-b border-border">
         <h2 className="text-xs font-semibold text-muted uppercase tracking-wider">
           Discovery

@@ -2,19 +2,32 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --color-surface: #0f0f11;
-  --color-panel: #161618;
-  --color-elevated: #1c1c1f;
-  --color-hover: #252529;
-  --color-border: #2a2a2e;
-  --color-accent: #7c73e6;
-  --color-accent-hover: #6b62d5;
-  --color-text: #e4e4e7;
-  --color-muted: #888891;
+  --color-surface: #0d1117;
+  --color-panel: rgba(22, 27, 34, 0.6);
+  --color-elevated: rgba(30, 36, 44, 0.8);
+  --color-hover: rgba(48, 54, 61, 0.5);
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-accent: #58a6ff;
+  --color-accent-hover: #79c0ff;
+  --color-text: #e6edf3;
+  --color-muted: #8b949e;
   --color-dim: #5a5a62;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+}
+
+[data-theme="light"] {
+  --color-surface: #f0f4f8;
+  --color-panel: rgba(255, 255, 255, 0.75);
+  --color-elevated: rgba(255, 255, 255, 0.9);
+  --color-hover: rgba(0, 0, 0, 0.05);
+  --color-border: rgba(0, 0, 0, 0.1);
+  --color-accent: #3182ce;
+  --color-accent-hover: #2b6cb0;
+  --color-text: #1a202c;
+  --color-muted: #4a5568;
+  --color-dim: #718096;
 }
 
 * {
@@ -22,19 +35,65 @@
   scrollbar-color: var(--color-border) transparent;
 }
 
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.4);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.6);
+}
+
 html, body, #root {
   height: 100%;
   margin: 0;
-  background: var(--color-surface);
-  color: var(--color-text);
   font-family: var(--font-sans);
   font-weight: 450;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
 
+body {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  transition: background-color 0.3s, color 0.3s;
+}
+
+body[data-theme="dark"] {
+  background-image:
+    radial-gradient(circle at 15% 50%, rgba(88, 166, 255, 0.05), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(163, 113, 247, 0.05), transparent 25%);
+  background-attachment: fixed;
+}
+
+body[data-theme="light"] {
+  background-image:
+    radial-gradient(circle at 15% 50%, rgba(49, 130, 206, 0.1), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(128, 90, 213, 0.1), transparent 25%);
+  background-attachment: fixed;
+}
+
 ::selection {
   background: color-mix(in srgb, var(--color-accent) 40%, transparent);
+}
+
+::placeholder {
+  color: var(--color-muted);
+  opacity: 0.7;
+}
+
+input, button {
+  color: var(--color-text);
+  font-family: inherit;
 }
 
 /* react-resizable-panels overrides */
@@ -54,4 +113,7 @@ html, body, #root {
   opacity: 0.85;
   transform: scale(1.02);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--color-border);
 }
