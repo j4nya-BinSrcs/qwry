@@ -1,4 +1,4 @@
-import { Clock, ExternalLink, ImageIcon, Loader2, Play, ArrowLeft, BookOpen, ChevronDown, ChevronRight, X } from "lucide-react";
+import { Clock, ExternalLink, ImageIcon, Loader2, Play, BookOpen, ChevronDown, ChevronRight, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { readUrl } from "../api/reader";
 import { useUIStore } from "../stores/uiStore";
@@ -8,7 +8,6 @@ export default function ReaderView() {
   const readerTitle = useUIStore((s) => s.readerTitle);
   const readerMediaUrl = useUIStore((s) => s.readerMediaUrl);
   const readerVersion = useUIStore((s) => s.readerVersion);
-  const setContextMode = useUIStore((s) => s.setContextMode);
 
   const [reads, setReads] = useState([]);
   const [openId, setOpenId] = useState(null);
@@ -73,18 +72,9 @@ export default function ReaderView() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="shrink-0 flex items-center gap-3 px-3 py-2 border-b border-border">
-        <button
-          onClick={() => setContextMode("search-assist")}
-          className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors"
-          title="Back"
-        >
-          <ArrowLeft size={14} />
-        </button>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-semibold text-text">Reader</h2>
-          <p className="text-[10px] text-muted">{reads.length} read{reads.length !== 1 ? "s" : ""}</p>
-        </div>
+      <div className="shrink-0 px-3 py-2 border-b border-border">
+        <h2 className="text-sm font-semibold text-text">Reader</h2>
+        <p className="text-[10px] text-muted">{reads.length} read{reads.length !== 1 ? "s" : ""}</p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
@@ -148,7 +138,8 @@ export default function ReaderView() {
 
                   {r.error && (
                     <div className="py-4 text-center space-y-2">
-                      <p className="text-xs text-red-400">{r.error}</p>
+                      <p className="text-xs text-red-400">Unable to load this page.</p>
+                      <p className="text-[10px] text-muted">{r.error}</p>
                       <a href={r.url} target="_blank" rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-accent-hover transition-colors"
                       >
@@ -159,7 +150,8 @@ export default function ReaderView() {
 
                   {!r.loading && !r.error && data?.success === false && (
                     <div className="py-4 text-center space-y-2">
-                      <p className="text-xs text-muted">{data.error || "Could not extract content."}</p>
+                      <p className="text-xs text-muted">This page could not be read automatically.</p>
+                      <p className="text-[10px] text-dim">{data.error || "The page may require JavaScript or may not be accessible."}</p>
                       <a href={r.url} target="_blank" rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-accent-hover transition-colors"
                       >
@@ -168,7 +160,7 @@ export default function ReaderView() {
                     </div>
                   )}
 
-                  {!r.loading && !r.error && data?.content_type === "image" && (
+                  {!r.loading && !r.error && data?.success !== false && data?.content_type === "image" && (
                     <div className="space-y-3">
                       {data.media_url && (
                         <div className="rounded bg-hover flex items-center justify-center overflow-hidden">
@@ -184,7 +176,7 @@ export default function ReaderView() {
                     </div>
                   )}
 
-                  {!r.loading && !r.error && data?.content_type === "video" && (
+                  {!r.loading && !r.error && data?.success !== false && data?.content_type === "video" && (
                     <div className="space-y-3">
                       {data.media_url && (
                         <a href={r.url} target="_blank" rel="noopener noreferrer">
@@ -208,9 +200,31 @@ export default function ReaderView() {
                     </div>
                   )}
 
-                  {!r.loading && !r.error && data?.content_type === "article" && data?.content && (
-                    <div className="text-sm text-text leading-relaxed whitespace-pre-line font-[system-ui]">
-                      {data.content}
+                  {!r.loading && !r.error && data?.success !== false && data?.content_type === "article" && (
+                    data?.content ? (
+                      <div className="text-sm text-text leading-relaxed whitespace-pre-line font-[system-ui]">
+                        {data.content}
+                      </div>
+                    ) : (
+                      <div className="py-4 text-center space-y-2">
+                        <p className="text-xs text-muted">No readable content was found on this page.</p>
+                        <a href={r.url} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-accent-hover transition-colors"
+                        >
+                          <ExternalLink size={11} /> Open in browser
+                        </a>
+                      </div>
+                    )
+                  )}
+
+                  {!r.loading && !r.error && data && !["image", "video", "article"].includes(data.content_type) && (
+                    <div className="py-4 text-center space-y-2">
+                      <p className="text-xs text-muted">This content type could not be displayed.</p>
+                      <a href={r.url} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-accent-hover transition-colors"
+                      >
+                        <ExternalLink size={11} /> Open in browser
+                      </a>
                     </div>
                   )}
                 </div>

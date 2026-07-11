@@ -1,4 +1,4 @@
-import { ArrowLeft, ExternalLink, Loader2, Sparkles, X, ChevronDown, ChevronRight } from "lucide-react";
+import { ExternalLink, Loader2, Sparkles, X, ChevronDown, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useUIStore } from "../stores/uiStore";
 import MarkdownRenderer from "../components/MarkdownRenderer";
@@ -9,7 +9,6 @@ export default function SummarizerView() {
   const summarizeUrl = useUIStore((s) => s.summarizeUrl);
   const summarizeTitle = useUIStore((s) => s.summarizeTitle);
   const summarizeVersion = useUIStore((s) => s.summarizeVersion);
-  const setContextMode = useUIStore((s) => s.setContextMode);
 
   const [summaries, setSummaries] = useState([]);
   const [expanded, setExpanded] = useState(new Set());
@@ -84,18 +83,9 @@ export default function SummarizerView() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="shrink-0 flex items-center gap-3 px-3 py-2 border-b border-border">
-        <button
-          onClick={() => setContextMode("search-assist")}
-          className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors"
-          title="Back"
-        >
-          <ArrowLeft size={14} />
-        </button>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-semibold text-text">Summarizer</h2>
-          <p className="text-[10px] text-muted">{summaries.length} {summaries.length === 1 ? "summary" : "summaries"}</p>
-        </div>
+      <div className="shrink-0 px-3 py-2 border-b border-border">
+        <h2 className="text-sm font-semibold text-text">Summarizer</h2>
+        <p className="text-[10px] text-muted">{summaries.length} {summaries.length === 1 ? "summary" : "summaries"}</p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
@@ -143,7 +133,15 @@ export default function SummarizerView() {
                   </div>
                 )}
                 {s.error && (
-                  <p className="text-xs text-red-400">{s.error}</p>
+                  <div className="py-3 text-center space-y-2">
+                    <p className="text-xs text-muted">Could not generate a summary for this page.</p>
+                    <p className="text-[10px] text-dim">{s.error}</p>
+                    <a href={s.url} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-accent-hover transition-colors"
+                    >
+                      <ExternalLink size={11} /> Open in browser
+                    </a>
+                  </div>
                 )}
                 {s.summary && <MarkdownRenderer>{s.summary}</MarkdownRenderer>}
               </div>

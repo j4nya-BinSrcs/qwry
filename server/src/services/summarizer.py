@@ -28,17 +28,21 @@ class SummarizeResult:
     success: bool = True
 
 
-_SUMMARY_SYSTEM = "Summarize the content provided. Output only the summary, nothing else."
+_SUMMARY_SYSTEM = (
+    "You are a direct summarizer. Output only the summary — nothing else. "
+    "Never include greetings, meta-commentary ('Here is a summary...'), "
+    "explanations, or sign-offs. Begin directly with the content."
+)
 
 _SUMMARY_PROMPT_ARTICLE = (
-    "Summarize this webpage in a structured format.\n\n"
+    "Summarize this webpage.\n\n"
     "## What this page is about\n"
     "One or two sentences describing the overall topic and purpose.\n\n"
     "## Main content\n"
-    "A paragraph covering the key subjects and information in detail.\n\n"
+    "A paragraph covering the key subjects and information.\n\n"
     "## Key points\n"
     "3-6 bullet points of the most important takeaways.\n\n"
-    "OUTPUT ONLY THE SUMMARY. DO NOT include introductions, explanations, or meta-commentary.\n\n"
+    "OUTPUT ONLY THE SUMMARY. NO greetings, no meta-commentary, no sign-offs.\n\n"
     "WEBPAGE CONTENT:\n{text}"
 )
 
@@ -50,7 +54,7 @@ _SUMMARY_PROMPT_VIDEO = (
     "A paragraph describing the key content and information presented.\n\n"
     "## Key points\n"
     "3-6 bullet points of the most important takeaways.\n\n"
-    "OUTPUT ONLY THE SUMMARY. DO NOT include introductions, explanations, or meta-commentary.\n\n"
+    "OUTPUT ONLY THE SUMMARY. NO greetings, no meta-commentary, no sign-offs.\n\n"
     "VIDEO:\n{text}"
 )
 
@@ -62,9 +66,27 @@ _SUMMARY_PROMPT_IMAGE = (
     "A paragraph describing what can be inferred about the image.\n\n"
     "## Key points\n"
     "Any notable elements visible or inferred from the image.\n\n"
-    "OUTPUT ONLY THE SUMMARY. If no meaningful description is available, state that.\n\n"
+    "OUTPUT ONLY THE SUMMARY. NO greetings, no meta-commentary, no sign-offs.\n\n"
     "IMAGE CONTEXT:\n{text}"
 )
+
+_FILLER_PATTERNS = [
+    "please provide", "i need access", "please state", "could you share",
+    "you haven't provided", "no content was provided", "the webpage content was not provided",
+    "please share", "i don't have access", "cannot summarize", "i'm unable to",
+    "i do not have", "you did not provide", "no text was provided",
+]
+
+def _is_filler_response(text: str) -> bool:
+    """Check if LLM response is filler instead of a real summary."""
+    lower = text.lower().strip()
+    if not lower or len(lower) < 20:
+        return True
+    for pat in _FILLER_PATTERNS:
+        if pat in lower:
+            return True
+    return False
+
 
 _TRANSCRIPT_URL = "https://youtubetranscript.com"
 
@@ -150,12 +172,16 @@ class Summarizer:
 
         try:
             summary = await self._llm.generate(prompt, _SUMMARY_SYSTEM)
-            result = self._success_result(url, title, summary.strip() or "Could not describe image.")
+            summary = summary.strip() or "Could not describe image."
+            if _is_filler_response(summary):
+                return self._error_result(url, "Could not generate a meaningful summary from the available information.")
+            result = self._success_result(url, title, summary)
             await self._store_cache(url, result)
             return result
         except Exception as e:
             logger.error("Image LLM summary failed", extra={"error": repr(e)})
             return self._error_result(url, f"Summary generation failed: {e}")
+
 
     async def _summarize_video(
         self,
@@ -192,7 +218,10 @@ class Summarizer:
 
         try:
             summary = await self._llm.generate(prompt, _SUMMARY_SYSTEM)
-            result = self._success_result(url, title, summary.strip() or "Could not summarize video.")
+            summary = summary.strip() or "Could not summarize video."
+            if _is_filler_response(summary):
+                return self._error_result(url, "Could not generate a meaningful summary from the available information.")
+            result = self._success_result(url, title, summary)
             await self._store_cache(url, result)
             return result
         except Exception as e:
@@ -231,7 +260,10 @@ class Summarizer:
 
         try:
             summary = await self._llm.generate(prompt, _SUMMARY_SYSTEM)
-            result = self._success_result(url, title, summary.strip() or "No summary generated.")
+            summary = summary.strip() or "No summary generated."
+            if _is_filler_response(summary):
+                return self._error_result(url, "Could not generate a meaningful summary from the available information.")
+            result = self._success_result(url, title, summary)
             await self._store_cache(url, result)
             return result
         except Exception as e:

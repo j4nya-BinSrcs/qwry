@@ -155,7 +155,11 @@ async def llm_generate(
     body: LLMGenerateRequest,
 ) -> LLMGenerateResponse:
     llm = request.app.state.llm
-    system = "You are a helpful research assistant. Provide concise, accurate overviews based on the search results given."
+    system = (
+        "You are a direct answer engine. Output only what is asked. "
+        "Never include introductions ('Okay, here is...', 'Based on the search results...'), "
+        "explanations, meta-commentary, or sign-offs. Begin directly with the content."
+    )
     if body.results:
         items_text = "\n\n".join(
             f"Title: {r.title}\nURL: {r.url}\nSnippet: {r.snippet}"
@@ -164,8 +168,9 @@ async def llm_generate(
         prompt = (
             f"Search query: {body.query}\n\n"
             f"Here are the top search results:\n{items_text}\n\n"
-            f"Please provide a concise overview of what these results tell us about the query. "
-            f"Focus on key themes, facts, and perspectives. Cite sources by title where relevant."
+            f"Concisely summarize what these results reveal about the query. "
+            f"Cover key themes, facts, and perspectives. Cite sources by title where relevant."
+            f"\n\nOUTPUT ONLY THE OVERVIEW. No greetings, no meta-commentary, no sign-offs."
         )
     else:
         prompt = body.query
