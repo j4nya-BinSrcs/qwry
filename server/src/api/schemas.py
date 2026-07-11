@@ -168,6 +168,7 @@ class ChatResponse(BaseModel):
 class LLMGenerateRequest(BaseModel):
     query: str
     results: list[SearchResultItem] = []
+    mode: str = "short"
 
 
 class LLMGenerateResponse(BaseModel):

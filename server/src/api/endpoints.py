@@ -179,48 +179,86 @@ async def llm_generate(
     cache: CacheService = request.app.state.cache
     llm = request.app.state.llm
 
+    cache_key = hashlib.sha256(f"{body.query}|{body.mode}".encode()).hexdigest()
     if cache.available:
-        cache_key = hashlib.sha256(body.query.encode()).hexdigest()
         cached = await cache.get(CacheService.NAMESPACE_LLM_OVERVIEW, cache_key)
         if cached:
-            logger.debug("LLM overview cache hit", extra={"query": body.query})
+            logger.debug("LLM overview cache hit", extra={"query": body.query, "mode": body.mode})
             return LLMGenerateResponse(response=cached)
 
-    if body.results:
+    if body.mode == "elaborate":
         system = (
-            "You are a direct answer engine. Output only what is asked. "
-            "Never include introductions, explanations, meta-commentary, or sign-offs. "
+            "You are a search engine answer engine. You provide comprehensive, well-structured "
+            "overviews using your own knowledge. "
+            "Output only the overview — no greetings, no meta-commentary, no sign-offs. "
+            "Never ask questions back, never offer follow-up assistance. "
             "Begin directly with the content."
         )
-        items_text = "\n\n".join(
-            f"Title: {r.title}\nURL: {r.url}\nSnippet: {r.snippet}"
-            for r in body.results[:20]
-        )
         prompt = (
-            f"Search query: {body.query}\n\n"
-            f"Here are the top search results:\n{items_text}\n\n"
-            f"Concisely summarize what these results reveal about the query. "
-            f"Cover key themes, facts, and perspectives. Cite sources by title where relevant."
-            f"\n\nOUTPUT ONLY THE OVERVIEW. No greetings, no meta-commentary, no sign-offs."
+            f"Provide a comprehensive, detailed overview of {body.query}. "
+            f"Organize the overview with clear sections covering key facts, background, "
+            f"notable details, and relevant context. Use your own knowledge."
         )
+
+    elif body.mode == "study":
+        system = (
+            "You are a research assistant that synthesizes information from web pages "
+            "into a clean, well-organized report. "
+            "Output only the report — no greetings, no meta-commentary, no sign-offs."
+        )
+        reader = request.app.state.reader
+        import asyncio
+
+        async def _read_one(r):
+            try:
+                result = await reader.read_url(r.url)
+                if result.success and result.content:
+                    return f"Title: {r.title}\nURL: {r.url}\n\nContent:\n{result.content[:3000]}"
+            except Exception:
+                pass
+            return None
+
+        read_tasks = [_read_one(r) for r in body.results[:5]]
+        read_results = await asyncio.gather(*read_tasks)
+        contents = [c for c in read_results if c]
+
+        if contents:
+            items_text = "\n\n---\n\n".join(contents)
+            prompt = (
+                f"Search query: {body.query}\n\n"
+                f"Here are the full contents extracted from the top search results:\n{items_text}\n\n"
+                f"Synthesize a comprehensive, well-organized report based on these sources. "
+                f"Extract key facts, data points, and insights from each source. "
+                f"Cover different perspectives and highlight important details. "
+                f"Cite sources by title."
+            )
+        else:
+            prompt = (
+                f"Provide a comprehensive, well-organized report on {body.query}. "
+                f"Use your own knowledge."
+            )
     else:
         system = (
-            "You are a knowledgeable assistant that answers questions directly using your own knowledge. "
-            "Never say you don't have enough information, never make up a story, never refuse to answer. "
-            "If you don't know something, state a single brief fact related to the topic instead. "
-            "Output only the answer — no introductions, no meta-commentary, no sign-offs."
+            "You are a search engine answer engine. You provide concise, factual overviews "
+            "directly answering the user's query. "
+            "Output exactly one or two sentences (35-50 words total) — no more. "
+            "Never introduce yourself, never ask questions back, never offer follow-up assistance. "
+            "Never use phrases like 'I will...', 'I'd be happy to...', 'Would you like...', "
+            "'If you would like them', 'Let me know', or any offer of further help. "
+            "Begin directly with the answer."
         )
         prompt = (
-            f"Answer this question using your own knowledge:\n\n{body.query}\n\n"
-            f"OUTPUT ONLY THE ANSWER. No introductions, no meta-commentary, no sign-offs."
+            f"Provide a brief 35-50 word overview of {body.query} in 1-2 sentences. "
+            f"Use your own knowledge. Output only the overview."
         )
+
     response = await llm.generate(prompt, system_prompt=system)
 
     if cache.available:
         ttl = getattr(settings, "cache_llm_ttl_seconds", 1800)
         await cache.set(CacheService.NAMESPACE_LLM_OVERVIEW, response, ttl, cache_key)
 
-    if x_session_id:
+    if x_session_id and body.mode == "short":
         session_id = get_session_id(request)
         maker = request.app.state.db
         async with maker() as db:
