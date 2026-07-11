@@ -38,6 +38,40 @@ impl ShardedSet {
         self.shard(s).read().unwrap().contains(s)
     }
 
+    /// Batch-insert multiple items, grouping by shard and locking each shard once.
+    /// Returns the subset of items that were newly inserted.
+    pub fn insert_batch(&self, items: &[String]) -> Vec<String> {
+        // Track items per shard by index
+        let mut shard_map: Vec<usize> = vec![0; items.len()];
+        for (i, item) in items.iter().enumerate() {
+            let mut hasher = DefaultHasher::new();
+            item.hash(&mut hasher);
+            shard_map[i] = hasher.finish() as usize & self.mask;
+        }
+
+        // Sort indices by shard so each shard is visited contiguously
+        let mut order: Vec<usize> = (0..items.len()).collect();
+        order.sort_by(|&a, &b| shard_map[a].cmp(&shard_map[b]));
+
+        let mut fresh: Vec<String> = Vec::new();
+        let mut i = 0;
+        while i < order.len() {
+            let shard_idx = shard_map[order[i]];
+            let start = i;
+            while i < order.len() && shard_map[order[i]] == shard_idx {
+                i += 1;
+            }
+            // Take write lock once for this shard
+            let mut shard = self.shards[shard_idx].write().unwrap();
+            for &idx in &order[start..i] {
+                if shard.insert(items[idx].clone()) {
+                    fresh.push(items[idx].clone());
+                }
+            }
+        }
+        fresh
+    }
+
     /// Check membership with a read lock first; only acquires a write lock if absent.
     /// Returns `true` if the item was newly inserted.
     pub fn contains_or_insert(&self, s: &str) -> bool {
@@ -156,5 +190,33 @@ mod tests {
             let len = shard.read().unwrap().len();
             assert!(len > 0, "every shard should have at least one item");
         }
+    }
+
+    #[test]
+    fn test_insert_batch_returns_fresh_items() {
+        let set = ShardedSet::new(16);
+        set.insert("existing".into());
+        let batch = vec!["existing".into(), "new1".into(), "new2".into()];
+        let fresh = set.insert_batch(&batch);
+        assert_eq!(fresh.len(), 2);
+        assert!(fresh.contains(&"new1".into()));
+        assert!(fresh.contains(&"new2".into()));
+        assert!(!fresh.contains(&"existing".into()));
+    }
+
+    #[test]
+    fn test_insert_batch_all_new() {
+        let set = ShardedSet::new(16);
+        let batch: Vec<String> = (0..100).map(|i| format!("item-{i}")).collect();
+        let fresh = set.insert_batch(&batch);
+        assert_eq!(fresh.len(), 100);
+        assert_eq!(set.len(), 100);
+    }
+
+    #[test]
+    fn test_insert_batch_empty() {
+        let set = ShardedSet::new(16);
+        let fresh = set.insert_batch(&[]);
+        assert!(fresh.is_empty());
     }
 }

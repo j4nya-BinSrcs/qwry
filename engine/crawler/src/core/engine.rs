@@ -213,7 +213,7 @@ impl Crawler {
 
         let mut handles = Vec::with_capacity(self.config.concurrency);
         for _ in 0..self.config.concurrency {
-            let worker = CrawlerWorker {
+            let mut worker = CrawlerWorker {
                 config: self.config.clone(),
                 client: self.client.clone(),
                 robots_cache: Arc::clone(&self.robots_cache),
@@ -223,6 +223,7 @@ impl Crawler {
                 stats: Arc::clone(&stats),
                 shutdown: Arc::clone(&shutdown),
                 batch_tx: batch_tx.clone(),
+                pending_links: Vec::new(),
             };
             handles.push(tokio::spawn(async move { worker.run().await }));
         }
@@ -287,6 +288,13 @@ impl Default for CrawlStats {
 // CrawlerWorker – per-worker state and run loop
 // ---------------------------------------------------------------------------
 
+const LINK_BATCH_SIZE: usize = 100;
+
+struct PendingLink {
+    url: String,
+    depth: usize,
+}
+
 struct CrawlerWorker {
     config: CrawlerConfig,
     client: Client,
@@ -297,17 +305,44 @@ struct CrawlerWorker {
     stats: Arc<CrawlStats>,
     shutdown: Arc<std::sync::atomic::AtomicBool>,
     batch_tx: tokio::sync::mpsc::Sender<CrawledPage>,
+    pending_links: Vec<PendingLink>,
 }
 
 impl CrawlerWorker {
-    async fn run(&self) {
+    async fn flush_pending_links(&mut self) {
+        if self.pending_links.is_empty() {
+            return;
+        }
+        let batch: Vec<String> = self.pending_links.iter().map(|p| p.url.clone()).collect();
+        let fresh = self.visited.insert_batch(&batch);
+        let fresh_set: std::collections::HashSet<&str> =
+            fresh.iter().map(|s| s.as_str()).collect();
+        let mut new_jobs: Vec<CrawlJob> = Vec::with_capacity(fresh.len());
+        for pending in self.pending_links.drain(..) {
+            if fresh_set.contains(pending.url.as_str()) {
+                self.stats.urls_discovered.fetch_add(1, Ordering::Relaxed);
+                new_jobs.push(CrawlJob {
+                    url: pending.url,
+                    depth: pending.depth,
+                    retry_count: 0,
+                });
+            }
+        }
+        if !new_jobs.is_empty() {
+            self.queue.push_batch(new_jobs);
+        }
+    }
+
+    async fn run(&mut self) {
         let mut idle_count: u32 = 0;
         loop {
             if self.shutdown.load(Ordering::SeqCst) {
+                self.flush_pending_links().await;
                 break;
             }
 
             let Some(job) = self.queue.pop_or_wait().await else {
+                self.flush_pending_links().await;
                 idle_count += 1;
                 if idle_count >= 3 {
                     break;
@@ -431,19 +466,14 @@ impl CrawlerWorker {
                         break;
                     }
 
-                    let mut new_jobs = Vec::new();
                     for link in &result.outgoing_links {
-                        if self.visited.contains_or_insert(link) {
-                            self.stats.urls_discovered.fetch_add(1, Ordering::Relaxed);
-                            new_jobs.push(CrawlJob {
-                                url: link.clone(),
-                                depth: job.depth + 1,
-                                retry_count: 0,
-                            });
-                        }
+                        self.pending_links.push(PendingLink {
+                            url: link.clone(),
+                            depth: job.depth + 1,
+                        });
                     }
-                    if !new_jobs.is_empty() {
-                        self.queue.push_batch(new_jobs);
+                    if self.pending_links.len() >= LINK_BATCH_SIZE {
+                        self.flush_pending_links().await;
                     }
                 }
                 Err(err) => {
