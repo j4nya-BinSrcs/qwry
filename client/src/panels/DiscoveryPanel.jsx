@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Hash, Image, Youtube, Maximize2, Minimize2, ShoppingBag, Newspaper, ExternalLink, BookOpen, Sparkles, Plus, GripVertical, Check } from "lucide-react";
+import { ChevronDown, ChevronRight, Hash, Image, Youtube, Maximize2, Minimize2, ShoppingBag, Newspaper, ExternalLink, BookOpen, Sparkles, Plus, Check, GripVertical } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { useSearchStore } from "../stores/searchStore";
@@ -13,7 +13,6 @@ const FILTERS = [
   { id: "videos", label: "Videos" },
   { id: "news", label: "News" },
   { id: "shopping", label: "Shopping" },
-  { id: "related", label: "Related" },
 ];
 
 function SectionHeader({ title, icon: Icon, count, children }) {
@@ -316,40 +315,11 @@ function DraggableShoppingCard({ result }) {
   );
 }
 
-function RelatedAccordion({ suggestions }) {
-  const [openIndex, setOpenIndex] = useState(null);
-
-  return (
-    <div className="px-3 pb-2 space-y-0.5">
-      {suggestions.map((s, i) => (
-        <div key={i} className="rounded border border-border overflow-hidden">
-          <button
-            onClick={() => setOpenIndex(openIndex === i ? null : i)}
-            className="flex items-center gap-2 w-full px-2.5 py-1.5 text-xs text-text hover:bg-hover transition-colors"
-          >
-            {openIndex === i ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-            <span className="truncate">{s}</span>
-          </button>
-          {openIndex === i && (
-            <div className="px-2.5 pb-2">
-              <p className="text-[10px] text-muted leading-relaxed">
-                Search for &ldquo;{s}&rdquo; to see related results.
-              </p>
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export default function DiscoveryPanel() {
   const query = useSearchStore((s) => s.query);
   const imageResults = useSearchStore((s) => s.imageResults);
   const videoResults = useSearchStore((s) => s.videoResults);
-  const suggestions = useSearchStore((s) => s.suggestions);
   const infobox = useSearchStore((s) => s.infobox);
-  const search = useSearchStore((s) => s.search);
   const results = useSearchStore((s) => s.results);
   const [activeFilter, setActiveFilter] = useState("all");
   const expandedPanel = useUIStore((s) => s.expandedPanel);
@@ -366,8 +336,7 @@ export default function DiscoveryPanel() {
 
   const hasContent = query && (
     infobox || imageResults.length > 0 || videoResults.length > 0 ||
-    newsResults.length > 0 || shoppingResults.length > 0 ||
-    suggestions.length > 0
+    newsResults.length > 0 || shoppingResults.length > 0
   );
 
   const showAll = activeFilter === "all" || activeFilter === "all";
@@ -467,14 +436,6 @@ export default function DiscoveryPanel() {
                       <DraggableShoppingCard key={`shop-${r.url}-${i}`} result={r} />
                     ))}
                   </HorizontalScroll>
-                </SectionHeader>
-              </div>
-            )}
-
-            {(showAll || activeFilter === "related") && suggestions.length > 0 && (
-              <div className="border-t border-border">
-                <SectionHeader title="Related Searches" count={suggestions.length}>
-                  <RelatedAccordion suggestions={suggestions} />
                 </SectionHeader>
               </div>
             )}

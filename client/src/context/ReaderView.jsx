@@ -1,5 +1,5 @@
-import { Clock, ExternalLink, ImageIcon, Loader2, Play, ArrowLeft } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { Clock, ExternalLink, ImageIcon, Loader2, Play, ArrowLeft, BookOpen } from "lucide-react";
+import { useEffect, useState } from "react";
 import { readUrl } from "../api/reader";
 import { useUIStore } from "../stores/uiStore";
 
@@ -12,13 +12,13 @@ export default function ReaderView() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     if (!readerUrl) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setData(null);
     readUrl(readerUrl, readerMediaUrl)
       .then((d) => {
         if (!cancelled) { setData(d); setLoading(false); }
@@ -31,6 +31,19 @@ export default function ReaderView() {
 
   const mins = data ? Math.round(data.reading_time_seconds / 60) : 0;
   const hostname = data ? new URL(data.url).hostname : "";
+
+  if (!readerUrl) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center px-8">
+          <div className="size-8 rounded bg-accent/10 border border-accent/20 flex items-center justify-center mx-auto mb-3">
+            <BookOpen size={16} className="text-accent" />
+          </div>
+          <p className="text-sm text-muted">Select a result to read</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -148,15 +161,7 @@ export default function ReaderView() {
 
         {!loading && !error && data?.content_type === "article" && data?.content && (
           <div className="text-sm text-text leading-relaxed whitespace-pre-line font-[system-ui]">
-            {expanded ? data.content : (data.content.length > 5000 ? data.content.slice(0, 5000) + "..." : data.content)}
-            {!expanded && data.content.length > 5000 && (
-              <button
-                onClick={() => setExpanded(true)}
-                className="block mt-3 mx-auto text-xs px-3 py-1.5 rounded bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
-              >
-                Show all ({data.content.length.toLocaleString()} chars)
-              </button>
-            )}
+            {data.content}
           </div>
         )}
       </div>

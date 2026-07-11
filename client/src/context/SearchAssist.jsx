@@ -1,4 +1,4 @@
-import { Loader2, Sparkles, Search } from "lucide-react";
+import { Loader2, Sparkles, Search, ChevronDown, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchStore } from "../stores/searchStore";
 import { llmGenerate } from "../api/llm";
@@ -7,7 +7,9 @@ import MarkdownRenderer from "../components/MarkdownRenderer";
 export default function SearchAssist() {
   const query = useSearchStore((s) => s.query);
   const results = useSearchStore((s) => s.results);
+  const suggestions = useSearchStore((s) => s.suggestions);
   const search = useSearchStore((s) => s.search);
+  const [relatedOpen, setRelatedOpen] = useState(false);
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [deepLoading, setDeepLoading] = useState(false);
@@ -113,6 +115,33 @@ export default function SearchAssist() {
           <Sparkles size={12} />
           Generate AI overview
         </button>
+      )}
+
+      {/* Related searches */}
+      {suggestions.length > 0 && (
+        <div className="mt-3 rounded border border-border overflow-hidden">
+          <button
+            onClick={() => setRelatedOpen(!relatedOpen)}
+            className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-muted uppercase tracking-wider hover:text-text transition-colors"
+          >
+            {relatedOpen ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+            <span>Related Searches</span>
+            <span className="text-dim font-normal">{suggestions.length}</span>
+          </button>
+          {relatedOpen && (
+            <div className="px-3 pb-2 flex flex-wrap gap-1.5">
+              {suggestions.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => search(s)}
+                  className="px-2.5 py-1 text-[10px] rounded-full bg-hover text-muted border border-border hover:text-text hover:border-accent/30 transition-colors"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
