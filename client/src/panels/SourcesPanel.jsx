@@ -1,5 +1,5 @@
-import { ExternalLink, GripVertical, Maximize2, Minimize2, Plus, BookOpen, Sparkles } from "lucide-react";
-import { useCallback, useState } from "react";
+import { ExternalLink, GripVertical, Maximize2, Minimize2, Plus, BookOpen, Sparkles, Info } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { useSearchStore } from "../stores/searchStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
@@ -7,11 +7,61 @@ import { useSessionStore } from "../stores/sessionStore";
 import { useUIStore } from "../stores/uiStore";
 
 const CATEGORY_FILTERS = [
-  { id: "all", label: "All" },
-  { id: "research", label: "Research" },
-  { id: "discussions", label: "Discussions" },
-  { id: "social", label: "Social" },
+  { id: "all", label: "All", tip: "Everything" },
+  { id: "research", label: "Research", tip: "Papers, documentation, encyclopedias, universities" },
+  { id: "articles", label: "Articles", tip: "Blogs, tutorials, opinion pieces, long-form content" },
+  { id: "discussions", label: "Discussions", tip: "Reddit, Stack Overflow, Quora, forums" },
+  { id: "videos", label: "Videos", tip: "YouTube, Vimeo, Twitch" },
+  { id: "news", label: "News", tip: "News outlets and current events" },
+  { id: "shopping", label: "Shopping", tip: "Marketplaces and product pages" },
+  { id: "official", label: "Official", tip: "Company websites, official documentation, standards" },
+  { id: "code", label: "Code", tip: "GitHub, GitLab, package registries, developer docs" },
 ];
+
+function FilterButton({ filter, active, onClick }) {
+  const [showTip, setShowTip] = useState(false);
+  const tipRef = useRef(null);
+
+  return (
+    <div className="relative flex items-center">
+      <button
+        onClick={onClick}
+        className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+          active
+            ? "bg-accent/10 text-accent font-medium"
+            : "text-muted hover:text-text hover:bg-hover"
+        }`}
+      >
+        {filter.label}
+      </button>
+      {filter.tip && (
+        <>
+          <button
+            onMouseEnter={() => setShowTip(true)}
+            onMouseLeave={() => setShowTip(false)}
+            onFocus={() => setShowTip(true)}
+            onBlur={() => setShowTip(false)}
+            className="p-0.5 rounded text-dim hover:text-text transition-colors"
+            tabIndex={-1}
+          >
+            <Info size={11} />
+          </button>
+          {showTip && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowTip(false)} />
+              <div
+                ref={tipRef}
+                className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 z-50 px-2.5 py-1.5 rounded bg-elevated border border-border shadow-lg backdrop-blur-xl text-[10px] text-muted whitespace-nowrap pointer-events-none"
+              >
+                {filter.tip}
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
 
 function Favicon({ domain }) {
   return (
@@ -168,6 +218,63 @@ function DraggableResultCard({ result }) {
   );
 }
 
+function matchFilter(r, filterId) {
+  if (filterId === "all") return true;
+  const cat = (r.category || "").toLowerCase();
+  let host = "";
+  try { host = new URL(r.url).hostname.toLowerCase(); } catch {}
+  const title = (r.title || "").toLowerCase();
+  const snippet = (r.snippet || "").toLowerCase();
+  const text = title + " " + snippet;
+
+  switch (filterId) {
+    case "research":
+      return cat === "general" || cat === "science" || cat === "encyclopedia" || cat === "reference" ||
+             host.endsWith(".edu") || host.includes("wikipedia") || host.includes("academic") ||
+             host.includes("scholar") || host.includes("arxiv") || host.includes("cambridge") ||
+             host.includes("springer") || host.includes("ieee") || host.includes("acm.org") ||
+             text.includes("research paper") || text.includes("study shows");
+    case "articles":
+      return cat === "articles" || cat === "blog" || cat === "opinion" || cat === "blogs" ||
+             host.includes("medium.com") || host.includes("substack") || host.includes("wordpress") ||
+             host.includes("blog") || host.includes("tutorial") ||
+             text.includes("blog post") || text.includes("tutorial") || text.includes("opinion");
+    case "discussions":
+      return cat.includes("discuss") || cat.includes("forum") || cat.includes("qa") || cat === "social media" ||
+             host.includes("reddit") || host.includes("stackoverflow") || host.includes("stackexchange") ||
+             host.includes("quora") || host.includes("discourse") || host.includes("forum");
+    case "videos":
+      return cat === "videos" || cat === "video" ||
+             host.includes("youtube") || host.includes("youtu.be") || host.includes("vimeo") ||
+             host.includes("twitch") || host.includes("dailymotion");
+    case "news":
+      return cat === "news" || cat === "newspaper" ||
+             host.includes("cnn.com") || host.includes("nytimes") || host.includes("reuters") ||
+             host.includes("bbc") || host.includes("theguardian") || host.includes("bloomberg") ||
+             text.includes("breaking news") || text.includes("report") && text.includes("today");
+    case "shopping":
+      return cat === "shopping" || cat.includes("shop") || cat === "products" ||
+             host.includes("amazon") || host.includes("ebay") || host.includes("walmart") ||
+             host.includes("etsy") || host.includes("bestbuy") || host.includes("target.com") ||
+             host.includes("alibaba") || host.includes("aliexpress") ||
+             text.includes("buy ") || text.includes("price") || text.includes("$");
+    case "official":
+      return host.endsWith(".gov") || host.endsWith(".mil") || host.endsWith(".gov.uk") ||
+             cat.includes("official") || cat.includes("documentation") || cat === "standards" ||
+             host.includes("company/") || host.includes("about") ||
+             text.includes("official website") || text.includes("documentation") || text.includes("standards");
+    case "code":
+      return host.includes("github") || host.includes("gitlab") || host.includes("bitbucket") ||
+             host.includes("npmjs") || host.includes("pypi") || host.includes("crates.io") ||
+             host.includes("docs.rs") || host.includes("packagist") || host.includes("nuget") ||
+             host.includes("docker") || host.includes("hub.docker") ||
+             cat === "it" || cat === "code" || cat === "repository" || cat === "package" ||
+             text.includes("source code") || text.includes("api reference") || text.includes("sdk");
+    default:
+      return false;
+  }
+}
+
 export default function SourcesPanel() {
   const query = useSearchStore((s) => s.query);
   const results = useSearchStore((s) => s.results);
@@ -177,16 +284,7 @@ export default function SourcesPanel() {
   const expandedPanel = useUIStore((s) => s.expandedPanel);
   const toggleExpand = useUIStore((s) => s.toggleExpand);
   const isExpanded = expandedPanel === "sources";
-
-  const filtered = activeFilter === "all"
-    ? results
-    : results.filter((r) => {
-        const cat = (r.category || "").toLowerCase();
-        if (activeFilter === "research") return cat === "general" || cat === "science" || cat === "documentation" || cat === "";
-        if (activeFilter === "discussions") return cat.includes("discuss") || cat.includes("forum") || cat.includes("qa");
-        if (activeFilter === "social") return cat.includes("social");
-        return true;
-      });
+  const filtered = results.filter((r) => matchFilter(r, activeFilter));
 
   return (
     <div className="h-full flex flex-col">
@@ -207,19 +305,14 @@ export default function SourcesPanel() {
           </div>
         </div>
         {/* Category filter nav */}
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-wrap">
           {CATEGORY_FILTERS.map((f) => (
-            <button
+            <FilterButton
               key={f.id}
+              filter={f}
+              active={activeFilter === f.id}
               onClick={() => setActiveFilter(f.id)}
-              className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
-                activeFilter === f.id
-                  ? "bg-accent/10 text-accent font-medium"
-                  : "text-muted hover:text-text hover:bg-hover"
-              }`}
-            >
-              {f.label}
-            </button>
+            />
           ))}
         </div>
       </div>
