@@ -1,9 +1,17 @@
-import { ExternalLink, GripVertical, Plus, Search } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { ExternalLink, GripVertical, Maximize2, Minimize2, Plus, BookOpen, Sparkles } from "lucide-react";
+import { useCallback, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { useSearchStore } from "../stores/searchStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import { useSessionStore } from "../stores/sessionStore";
+import { useUIStore } from "../stores/uiStore";
+
+const CATEGORY_FILTERS = [
+  { id: "all", label: "All" },
+  { id: "research", label: "Research" },
+  { id: "discussions", label: "Discussions" },
+  { id: "social", label: "Social" },
+];
 
 function Favicon({ domain }) {
   return (
@@ -30,6 +38,8 @@ function DraggableResultCard({ result }) {
   const sessionId = useSessionStore((s) => s.sessionId);
   const activeId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const addItem = useWorkspaceStore((s) => s.addItem);
+  const openReader = useUIStore((s) => s.openReader);
+  const openSummarizer = useUIStore((s) => s.openSummarizer);
 
   const handleAdd = useCallback(
     (e) => {
@@ -41,17 +51,32 @@ function DraggableResultCard({ result }) {
     [sessionId, activeId, result, addItem]
   );
 
+  const handleReader = useCallback(
+    (e) => {
+      e.stopPropagation();
+      openReader(result.url, result.title, result.img_src);
+    },
+    [result, openReader]
+  );
+
+  const handleSummarizer = useCallback(
+    (e) => {
+      e.stopPropagation();
+      openSummarizer(result.url, result.title);
+    },
+    [result, openSummarizer]
+  );
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative flex items-start gap-2.5 px-3 py-2.5 rounded-lg transition-all cursor-default ${
+      className={`group relative flex items-start gap-2.5 px-3 py-2.5 rounded-md transition-all cursor-default ${
         isDragging
           ? "opacity-50"
           : "hover:bg-hover border border-transparent hover:border-border hover:-translate-y-0.5"
       }`}
     >
-      {/* Drag handle */}
       <button
         {...listeners}
         className="mt-0.5 shrink-0 text-dim cursor-grab active:cursor-grabbing hover:text-text transition-colors"
@@ -59,7 +84,6 @@ function DraggableResultCard({ result }) {
         <GripVertical size={14} />
       </button>
 
-      {/* Thumbnail / Favicon */}
       {result.img_src ? (
         <img
           src={`/api/image-proxy?url=${encodeURIComponent(result.img_src)}`}
@@ -71,14 +95,13 @@ function DraggableResultCard({ result }) {
         <Favicon domain={new URL(result.url).hostname} />
       )}
 
-      {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-text truncate">
             {result.title}
           </span>
           {result.category && result.category !== "general" && (
-            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 shrink-0">
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-accent/10 text-accent shrink-0">
               {result.category}
             </span>
           )}
@@ -111,18 +134,31 @@ function DraggableResultCard({ result }) {
         )}
       </div>
 
-      {/* Actions */}
       <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
+          onClick={handleReader}
+          className="p-1 rounded text-dim hover:text-accent hover:bg-accent/10 transition-all"
+          title="Reader view"
+        >
+          <BookOpen size={13} />
+        </button>
+        <button
+          onClick={handleSummarizer}
+          className="p-1 rounded text-dim hover:text-accent-hover hover:bg-accent/10 transition-all"
+          title="Summarize"
+        >
+          <Sparkles size={13} />
+        </button>
+        <button
           onClick={() => window.open(result.url, "_blank")}
-          className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-all"
+          className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
           title="Open"
         >
           <ExternalLink size={13} />
         </button>
         <button
           onClick={handleAdd}
-          className="p-1 rounded-md text-dim hover:text-accent hover:bg-accent/10 transition-all"
+          className="p-1 rounded text-dim hover:text-accent hover:bg-accent/10 transition-all"
           title="Add to workspace"
         >
           <Plus size={13} />
@@ -137,45 +173,57 @@ export default function SourcesPanel() {
   const results = useSearchStore((s) => s.results);
   const loading = useSearchStore((s) => s.loading);
   const error = useSearchStore((s) => s.error);
-  const search = useSearchStore((s) => s.search);
-  const [filter, setFilter] = useState("");
+  const [activeFilter, setActiveFilter] = useState("all");
+  const expandedPanel = useUIStore((s) => s.expandedPanel);
+  const toggleExpand = useUIStore((s) => s.toggleExpand);
+  const isExpanded = expandedPanel === "sources";
 
-  const filtered = filter
-    ? results.filter(
-        (r) =>
-          r.title?.toLowerCase().includes(filter.toLowerCase()) ||
-          r.snippet?.toLowerCase().includes(filter.toLowerCase())
-      )
-    : results;
+  const filtered = activeFilter === "all"
+    ? results
+    : results.filter((r) => {
+        const cat = (r.category || "").toLowerCase();
+        if (activeFilter === "research") return cat === "general" || cat === "science" || cat === "documentation" || cat === "";
+        if (activeFilter === "discussions") return cat.includes("discuss") || cat.includes("forum") || cat.includes("qa");
+        if (activeFilter === "social") return cat.includes("social");
+        return true;
+      });
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="shrink-0 px-3 py-2.5 border-b border-border">
+      <div className="shrink-0 px-3 py-2 border-b border-border">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-xs font-semibold text-muted uppercase tracking-wider">
             Sources
           </h2>
-          <span className="text-xs text-dim">{results.length} results</span>
-        </div>
-        {query && (
-          <div className="relative">
-            <Search
-              size={13}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dim"
-            />
-            <input
-              type="text"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              placeholder="Filter results..."
-              className="w-full h-7 pl-8 pr-2 rounded-md bg-hover border border-border text-xs text-text placeholder:text-dim outline-none focus:border-accent/30 transition-all"
-            />
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-dim">{filtered.length} results</span>
+            <button
+              onClick={() => toggleExpand("sources")}
+              className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors"
+              title={isExpanded ? "Collapse" : "Expand"}
+            >
+              {isExpanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+            </button>
           </div>
-        )}
+        </div>
+        {/* Category filter nav */}
+        <div className="flex gap-1">
+          {CATEGORY_FILTERS.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setActiveFilter(f.id)}
+              className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+                activeFilter === f.id
+                  ? "bg-accent/10 text-accent font-medium"
+                  : "text-muted hover:text-text hover:bg-hover"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Results */}
       <div className="flex-1 overflow-y-auto py-1">
         {loading && (
           <div className="flex items-center justify-center py-12">
@@ -183,7 +231,7 @@ export default function SourcesPanel() {
           </div>
         )}
         {error && (
-          <div className="px-4 py-3 text-sm text-red-400 bg-red-500/5 rounded-lg mx-2">
+          <div className="px-4 py-3 text-sm text-red-400 bg-red-500/5 rounded-md mx-2">
             {error}
           </div>
         )}
@@ -195,6 +243,11 @@ export default function SourcesPanel() {
         {!loading && !error && results.length === 0 && !query && (
           <div className="px-4 py-12 text-center text-sm text-muted">
             Search the web to see results here
+          </div>
+        )}
+        {!loading && !error && results.length > 0 && filtered.length === 0 && (
+          <div className="px-4 py-12 text-center text-sm text-muted">
+            No results match the selected filter
           </div>
         )}
         <div className="space-y-0.5 px-1">
