@@ -41,28 +41,28 @@ export default function AppLayout({ toggleTheme, theme }) {
     <div className="h-full flex flex-col">
       <TopBar toggleTheme={toggleTheme} theme={theme} />
       <div className="flex-1 min-h-0">
-        <PanelGroup direction="horizontal">
-          {panelOrder.map((id, index) => {
-            const isExpanded = expandedPanel !== null;
-            const isThisExpanded = expandedPanel === id;
-            return (
+        {expandedPanel ? (
+          <PanelGroup direction="horizontal">
+            <Panel defaultSize={100} minSize={100}>
+              {renderPanel(expandedPanel)}
+            </Panel>
+          </PanelGroup>
+        ) : (
+          <PanelGroup direction="horizontal">
+            {panelOrder.map((id, index) => (
               <Fragment key={id}>
-                {index > 0 && (
-                  <PanelResizeHandle
-                    style={isExpanded && !isThisExpanded ? { display: "none" } : undefined}
-                  />
-                )}
+                {index > 0 && <PanelResizeHandle />}
                 <Panel
                   defaultSize={PANEL_DEFAULTS[id]}
-                  minSize={isExpanded && !isThisExpanded ? 3 : PANEL_MINS[id]}
-                  maxSize={isExpanded && isThisExpanded ? 100 : PANEL_MAXS[id]}
+                  minSize={PANEL_MINS[id]}
+                  maxSize={PANEL_MAXS[id]}
                 >
                   {renderPanel(id)}
                 </Panel>
               </Fragment>
-            );
-          })}
-        </PanelGroup>
+            ))}
+          </PanelGroup>
+        )}
       </div>
     </div>
   );
