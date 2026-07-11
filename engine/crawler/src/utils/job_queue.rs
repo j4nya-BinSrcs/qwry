@@ -1,4 +1,5 @@
 use crate::core::types::CrawlJob;
+use crate::utils::db_job_queue::DbJobQueue;
 use std::{
     collections::VecDeque,
     sync::{Arc, Mutex},
@@ -66,6 +67,35 @@ impl JobQueue {
 impl Default for JobQueue {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[derive(Clone)]
+pub enum QueueSource {
+    Memory(JobQueue),
+    Distributed(DbJobQueue),
+}
+
+impl QueueSource {
+    pub async fn push(&self, job: CrawlJob) {
+        match self {
+            Self::Memory(q) => q.push(job),
+            Self::Distributed(q) => q.push(job).await,
+        }
+    }
+
+    pub async fn push_batch(&self, jobs: Vec<CrawlJob>) {
+        match self {
+            Self::Memory(q) => q.push_batch(jobs),
+            Self::Distributed(q) => q.push_batch(jobs).await,
+        }
+    }
+
+    pub async fn pop_or_wait(&self) -> Option<CrawlJob> {
+        match self {
+            Self::Memory(q) => q.pop_or_wait().await,
+            Self::Distributed(q) => q.pop_or_wait().await,
+        }
     }
 }
 

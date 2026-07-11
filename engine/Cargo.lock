@@ -588,6 +588,7 @@ dependencies = [
  "scraper",
  "serde_json",
  "shared",
+ "sqlx",
  "tokio",
  "tracing",
  "tracing-subscriber",

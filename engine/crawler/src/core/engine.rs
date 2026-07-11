@@ -17,7 +17,7 @@ use crate::{
     parser::html::parse_page,
     parser::robots::{fetch_robots_txt, RobotsRules},
     utils::batch_writer::BatchWriter,
-    utils::job_queue::JobQueue,
+    utils::job_queue::QueueSource,
     utils::sharded_set::ShardedSet,
 };
 
@@ -146,7 +146,11 @@ impl Crawler {
     }
 
     pub async fn run(&self, seeds: &[String]) {
-        let queue = JobQueue::new();
+        let queue = if self.config.distributed {
+            QueueSource::Distributed(crate::utils::db_job_queue::DbJobQueue::new_with_table(self.db_pool.clone()).await)
+        } else {
+            QueueSource::Memory(crate::utils::job_queue::JobQueue::new())
+        };
         let visited = ShardedSet::new(4096);
         let stats = Arc::new(CrawlStats::new());
         let shutdown = Arc::new(std::sync::atomic::AtomicBool::new(false));
@@ -160,7 +164,7 @@ impl Crawler {
                 url: url.clone(),
                 depth: 0,
                 retry_count: 0,
-            });
+            }).await;
         }
         stats.urls_discovered.fetch_add(seeds.len(), Ordering::Relaxed);
 
@@ -351,7 +355,7 @@ struct CrawlerWorker {
     client: Client,
     robots_cache: Arc<RwLock<HashMap<String, RobotsRules>>>,
     domain_last_request: Arc<RwLock<HashMap<String, Instant>>>,
-    queue: JobQueue,
+    queue: QueueSource,
     visited: ShardedSet,
     stats: Arc<CrawlStats>,
     shutdown: Arc<std::sync::atomic::AtomicBool>,
@@ -381,7 +385,7 @@ impl CrawlerWorker {
             }
         }
         if !new_jobs.is_empty() {
-            self.queue.push_batch(new_jobs);
+            self.queue.push_batch(new_jobs).await;
         }
     }
 
@@ -516,7 +520,7 @@ impl CrawlerWorker {
                         |v| (v < self.config.max_pages).then_some(v + 1),
                     ).is_err() {
                         self.stats.active_fetches.fetch_sub(1, Ordering::Relaxed);
-                        self.queue.push(job);
+                        self.queue.push(job).await;
                         self.shutdown.store(true, Ordering::SeqCst);
                         break;
                     }
@@ -557,6 +561,7 @@ impl CrawlerWorker {
                         let depth = job.depth;
                         let retry_count = job.retry_count + 1;
                         let queue = self.queue.clone();
+                        let queue_clone = queue.clone();
                         tokio::spawn(async move {
                             tokio::time::sleep(delay).await;
                             let allowed = match fetch_robots_txt_for_url(&client, &url).await {
@@ -564,11 +569,11 @@ impl CrawlerWorker {
                                 None => true,
                             };
                             if allowed {
-                                queue.push(CrawlJob {
+                                queue_clone.push(CrawlJob {
                                     url,
                                     depth,
                                     retry_count,
-                                });
+                                }).await;
                             }
                         });
                     } else {
@@ -644,6 +649,7 @@ mod tests {
             batch_db_check_size: 100,
             lightweight: false,
             adaptive_concurrency: false,
+            distributed: false,
         };
         let pool = test_pool().await;
         let crawler = Crawler::new(config, pool);
@@ -680,6 +686,7 @@ mod tests {
             batch_db_check_size: 100,
             lightweight: false,
             adaptive_concurrency: false,
+            distributed: false,
         };
         let pool = test_pool().await;
         let crawler = Crawler::new(config, pool);
@@ -717,6 +724,7 @@ mod tests {
             batch_db_check_size: 100,
             lightweight: false,
             adaptive_concurrency: false,
+            distributed: false,
         };
         let pool = test_pool().await;
         let crawler = Crawler::new(config, pool);
@@ -742,6 +750,7 @@ mod tests {
             batch_db_check_size: 100,
             lightweight: false,
             adaptive_concurrency: false,
+            distributed: false,
         };
         let pool = test_pool().await;
         let crawler = Crawler::new(config, pool);
@@ -814,6 +823,7 @@ mod tests {
             batch_db_check_size: 100,
             lightweight: false,
             adaptive_concurrency: false,
+            distributed: false,
         };
         let pool = test_pool().await;
         let crawler = Crawler::new(config, pool);
@@ -840,6 +850,7 @@ mod tests {
             batch_db_check_size: 100,
             lightweight: false,
             adaptive_concurrency: false,
+            distributed: false,
         };
         let pool = test_pool().await;
         let crawler = Crawler::new(config, pool.clone());
@@ -870,6 +881,7 @@ mod tests {
             batch_db_check_size: 100,
             lightweight: false,
             adaptive_concurrency: false,
+            distributed: false,
         };
         let pool = test_pool().await;
         let crawler = Crawler::new(config, pool.clone());

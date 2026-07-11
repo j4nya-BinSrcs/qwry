@@ -72,6 +72,7 @@ mod tests {
             batch_db_check_size: 100,
             lightweight: false,
             adaptive_concurrency: false,
+            distributed: false,
         }
     }
 
