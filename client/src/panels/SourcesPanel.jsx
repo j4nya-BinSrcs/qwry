@@ -1,5 +1,5 @@
-import { ExternalLink, GripVertical, Maximize2, Minimize2, Plus, BookOpen, Sparkles, Info } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { ExternalLink, GripVertical, Maximize2, Minimize2, Plus, BookOpen, Sparkles } from "lucide-react";
+import { useCallback, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { useSearchStore } from "../stores/searchStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
@@ -20,10 +20,13 @@ const CATEGORY_FILTERS = [
 
 function FilterButton({ filter, active, onClick }) {
   const [showTip, setShowTip] = useState(false);
-  const tipRef = useRef(null);
 
   return (
-    <div className="relative flex items-center">
+    <div
+      className="relative"
+      onMouseEnter={() => setShowTip(true)}
+      onMouseLeave={() => setShowTip(false)}
+    >
       <button
         onClick={onClick}
         className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
@@ -34,30 +37,10 @@ function FilterButton({ filter, active, onClick }) {
       >
         {filter.label}
       </button>
-      {filter.tip && (
-        <>
-          <button
-            onMouseEnter={() => setShowTip(true)}
-            onMouseLeave={() => setShowTip(false)}
-            onFocus={() => setShowTip(true)}
-            onBlur={() => setShowTip(false)}
-            className="p-0.5 rounded text-dim hover:text-text transition-colors"
-            tabIndex={-1}
-          >
-            <Info size={11} />
-          </button>
-          {showTip && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowTip(false)} />
-              <div
-                ref={tipRef}
-                className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 z-50 px-2.5 py-1.5 rounded bg-elevated border border-border shadow-lg backdrop-blur-xl text-[10px] text-muted whitespace-nowrap pointer-events-none"
-              >
-                {filter.tip}
-              </div>
-            </>
-          )}
-        </>
+      {showTip && filter.tip && (
+        <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 z-50 px-2.5 py-1.5 rounded bg-elevated border border-border shadow-lg backdrop-blur-xl text-[10px] text-muted whitespace-nowrap">
+          {filter.tip}
+        </div>
       )}
     </div>
   );
