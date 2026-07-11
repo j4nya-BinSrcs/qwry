@@ -7,14 +7,14 @@
   --color-elevated: rgba(30, 36, 44, 0.8);
   --color-hover: rgba(48, 54, 61, 0.5);
   --color-border: rgba(255, 255, 255, 0.1);
-  --color-accent: #58a6ff;
-  --color-accent-hover: #79c0ff;
+  --color-accent: #a855f7;
+  --color-accent-hover: #c084fc;
   --color-text: #e6edf3;
   --color-muted: #8b949e;
   --color-dim: #5a5a62;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
 }
 
 [data-theme="light"] {
@@ -23,8 +23,8 @@
   --color-elevated: rgba(255, 255, 255, 0.9);
   --color-hover: rgba(0, 0, 0, 0.05);
   --color-border: rgba(0, 0, 0, 0.1);
-  --color-accent: #3182ce;
-  --color-accent-hover: #2b6cb0;
+  --color-accent: #7c3aed;
+  --color-accent-hover: #6d28d9;
   --color-text: #1a202c;
   --color-muted: #4a5568;
   --color-dim: #718096;
@@ -70,15 +70,15 @@ body {
 
 body[data-theme="dark"] {
   background-image:
-    radial-gradient(circle at 15% 50%, rgba(88, 166, 255, 0.05), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(163, 113, 247, 0.05), transparent 25%);
+    radial-gradient(circle at 15% 50%, rgba(168, 85, 247, 0.06), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(192, 132, 252, 0.04), transparent 25%);
   background-attachment: fixed;
 }
 
 body[data-theme="light"] {
   background-image:
-    radial-gradient(circle at 15% 50%, rgba(49, 130, 206, 0.1), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(128, 90, 213, 0.1), transparent 25%);
+    radial-gradient(circle at 15% 50%, rgba(124, 58, 237, 0.08), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.06), transparent 25%);
   background-attachment: fixed;
 }
 
@@ -96,9 +96,8 @@ input, button {
   font-family: inherit;
 }
 
-/* react-resizable-panels overrides */
 [data-panel-group-direction="horizontal"] > [data-panel-resize-handle] {
-  width: 4px;
+  width: 3px;
   background: transparent;
   transition: background 0.15s;
   position: relative;
@@ -108,7 +107,6 @@ input, button {
   background: var(--color-accent);
 }
 
-/* dnd-kit drag overlay */
 .drag-overlay {
   opacity: 0.85;
   transform: scale(1.02);
