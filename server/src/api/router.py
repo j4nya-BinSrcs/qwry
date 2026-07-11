@@ -7,6 +7,7 @@ from server.src.api.endpoints import (
     item_list,
     item_summarize,
     item_update,
+    llm_generate,
     read_url,
     search,
     suggest,
@@ -22,6 +23,7 @@ from server.src.api.endpoints import (
 from server.src.api.schemas import (
     ChatResponse,
     ItemSummaryResponse,
+    LLMGenerateResponse,
     ReaderResponse,
     SearchResponse,
     SuggestResponse,
@@ -45,6 +47,14 @@ image_router.add_api_route("/image-proxy", image_proxy, methods=["GET"])
 
 suggest_router = APIRouter(prefix="/api", tags=["suggest"])
 suggest_router.add_api_route("/suggest", suggest, methods=["GET"], response_model=SuggestResponse)
+
+llm_router = APIRouter(prefix="/api/llm", tags=["llm"])
+llm_router.add_api_route(
+    "/generate",
+    llm_generate,
+    methods=["POST"],
+    response_model=LLMGenerateResponse,
+)
 
 reader_router = APIRouter(prefix="/api", tags=["reader"])
 reader_router.add_api_route("/read", read_url, methods=["GET"], response_model=ReaderResponse)
@@ -88,6 +98,7 @@ item_router.add_api_route("/{item_id}/summarize", item_summarize, methods=["POST
 def register_routes(app: FastAPI) -> None:
     app.include_router(health_router)
     app.include_router(search_router)
+    app.include_router(llm_router)
     app.include_router(stats_router)
     app.include_router(suggest_router)
     app.include_router(image_router)

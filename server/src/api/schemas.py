@@ -165,6 +165,15 @@ class ChatResponse(BaseModel):
     sources: list[ChatSource]
 
 
+class LLMGenerateRequest(BaseModel):
+    query: str
+    results: list[SearchResultItem] = []
+
+
+class LLMGenerateResponse(BaseModel):
+    response: str
+
+
 class ReaderResponse(BaseModel):
     url: str
     title: str | None = None

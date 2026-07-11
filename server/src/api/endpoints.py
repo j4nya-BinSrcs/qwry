@@ -8,6 +8,8 @@ from server.src.api.schemas import (
     ChatResponse,
     ChatSource,
     ItemSummaryResponse,
+    LLMGenerateRequest,
+    LLMGenerateResponse,
     ReaderResponse,
     SuggestResponse,
     SummarizeRequest,
@@ -143,6 +145,32 @@ async def _try_engine_search_suggestions(
     except Exception:
         pass
     return [], "none"
+
+
+# ── LLM Generate ───────────────────────────────────────────────────────
+
+
+async def llm_generate(
+    request: Request,
+    body: LLMGenerateRequest,
+) -> LLMGenerateResponse:
+    llm = request.app.state.llm
+    system = "You are a helpful research assistant. Provide concise, accurate overviews based on the search results given."
+    if body.results:
+        items_text = "\n\n".join(
+            f"Title: {r.title}\nURL: {r.url}\nSnippet: {r.snippet}"
+            for r in body.results[:20]
+        )
+        prompt = (
+            f"Search query: {body.query}\n\n"
+            f"Here are the top search results:\n{items_text}\n\n"
+            f"Please provide a concise overview of what these results tell us about the query. "
+            f"Focus on key themes, facts, and perspectives. Cite sources by title where relevant."
+        )
+    else:
+        prompt = body.query
+    response = await llm.generate(prompt, system_prompt=system)
+    return LLMGenerateResponse(response=response)
 
 
 # ── Stats ──────────────────────────────────────────────────────────────
