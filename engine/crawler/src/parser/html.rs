@@ -460,6 +460,45 @@ fn extract_links_lightweight(html: &str, base_url: &Url, allow_external: bool) -
     links
 }
 
+/// CPU-bound phase of page fetching — runs synchronously.
+/// Should be called inside `tokio::task::spawn_blocking`.
+pub fn parse_page(body: &str, url_str: &str, allow_external: bool, lightweight: bool) -> Result<CrawlResult> {
+    if lightweight {
+        let content = strip_html_tags(body);
+        let base_url = Url::parse(url_str)?;
+        let title = extract_title_lightweight(body);
+        let outgoing_links = extract_links_lightweight(body, &base_url, allow_external);
+
+        return Ok(CrawlResult {
+            url: url_str.to_string(),
+            title,
+            description: None,
+            content,
+            outgoing_links,
+        });
+    }
+
+    let doc = Html::parse_document(body);
+    let base_url = Url::parse(url_str)?;
+
+    let title = extract_title(&doc);
+    let description = extract_description(&doc);
+    let content = extract_clean_text(&doc);
+    let outgoing_links = extract_links(&doc, &base_url, allow_external);
+
+    Ok(CrawlResult {
+        url: url_str.to_string(),
+        title,
+        description,
+        content,
+        outgoing_links,
+    })
+}
+
+/// Full async fetch + parse pipeline.
+/// Fetches the URL over HTTP, then calls [`parse_page`] on the response body.
+/// For high-throughput crawls, prefer calling [`parse_page`] inside
+/// `spawn_blocking` after fetching manually.
 pub async fn fetch_page(
     client: &Client,
     url_str: &str,
@@ -479,37 +518,7 @@ pub async fn fetch_page(
     }
 
     let body = resp.text().await?;
-
-    if lightweight {
-        let content = strip_html_tags(&body);
-        let base_url = Url::parse(url_str)?;
-        let title = extract_title_lightweight(&body);
-        let outgoing_links = extract_links_lightweight(&body, &base_url, allow_external);
-
-        return Ok(CrawlResult {
-            url: url_str.to_string(),
-            title,
-            description: None,
-            content,
-            outgoing_links,
-        });
-    }
-
-    let doc = Html::parse_document(&body);
-    let base_url = Url::parse(url_str)?;
-
-    let title = extract_title(&doc);
-    let description = extract_description(&doc);
-    let content = extract_clean_text(&doc);
-    let outgoing_links = extract_links(&doc, &base_url, allow_external);
-
-    Ok(CrawlResult {
-        url: url_str.to_string(),
-        title,
-        description,
-        content,
-        outgoing_links,
-    })
+    parse_page(&body, url_str, allow_external, lightweight)
 }
 
 #[cfg(test)]

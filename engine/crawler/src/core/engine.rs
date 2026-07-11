@@ -14,7 +14,7 @@ use crate::{
     core::config::CrawlerConfig,
     utils::retry::{classify_error, max_retries_for, retry_delay},
     core::types::CrawlJob,
-    parser::html::fetch_page,
+    parser::html::parse_page,
     parser::robots::{fetch_robots_txt, RobotsRules},
     utils::batch_writer::BatchWriter,
     utils::job_queue::JobQueue,
@@ -336,7 +336,49 @@ impl CrawlerWorker {
 
             self.stats.fetch_count.fetch_add(1, Ordering::Relaxed);
 
-            match fetch_page(&self.client, &job.url, self.config.external_domains, self.config.lightweight).await {
+            // Phase 1 — async HTTP fetch
+            let fetch_result = self.client.get(&job.url).send().await;
+            let fetch_result = match fetch_result {
+                Ok(resp) => {
+                    if let Err(e) = resp.error_for_status_ref() {
+                        Err(anyhow::anyhow!(e))
+                    } else if !resp
+                        .headers()
+                        .get(reqwest::header::CONTENT_TYPE)
+                        .and_then(|v| v.to_str().ok())
+                        .unwrap_or("")
+                        .contains("text/html")
+                    {
+                        Err(anyhow::anyhow!("Non-HTML content type"))
+                    } else {
+                        match resp.text().await {
+                            Ok(body) => Ok(body),
+                            Err(e) => Err(anyhow::anyhow!(e)),
+                        }
+                    }
+                }
+                Err(e) => Err(anyhow::anyhow!(e)),
+            };
+
+            // Phase 2 — CPU-bound parsing on blocking thread pool
+            let result = match fetch_result {
+                Ok(body) => {
+                    let url_str = job.url.clone();
+                    let ext = self.config.external_domains;
+                    let light = self.config.lightweight;
+                    match tokio::task::spawn_blocking(move || {
+                        parse_page(&body, &url_str, ext, light)
+                    })
+                    .await
+                    {
+                        Ok(r) => r,
+                        Err(e) => Err(anyhow::anyhow!("parse task panicked: {e}")),
+                    }
+                }
+                Err(e) => Err(e),
+            };
+
+            match result {
                 Ok(result) => {
                     let claimed = self.stats.pages_crawled.fetch_update(
                         Ordering::SeqCst,
