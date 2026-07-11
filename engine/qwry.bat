@@ -88,10 +88,12 @@ for /f %%i in ('call :get_cfg crawler max_retries 3') do set "retries=%%i"
 for /f %%i in ('call :get_cfg crawler retry_base_delay_secs 5.0') do set "retry_delay=%%i"
 for /f %%i in ('call :get_cfg crawler skip_politeness false') do set "skip_polite=%%i"
 for /f %%i in ('call :get_cfg crawler batch_db_check_size 100') do set "batch_size=%%i"
+for /f %%i in ('call :get_cfg crawler lightweight false') do set "lightweight=%%i"
 
 set "crawl_flags=--max-depth !max_depth! --concurrency !concurrency! --max-pages !max_pages! --politeness-delay-secs !politeness! --user-agent !ua! --max-retries !retries! --retry-base-delay-secs !retry_delay! --batch-db-check-size !batch_size!"
 if /i "!skip_polite!"=="true" set "crawl_flags=!crawl_flags! --skip-politeness"
 if /i "!ext_dom!"=="true" set "crawl_flags=!crawl_flags! --external-domains"
+if /i "!lightweight!"=="true" set "crawl_flags=!crawl_flags! --lightweight"
 
 echo === Starting crawl ===
 cargo run --release --manifest-path "%QWRY_DIR%Cargo.toml" --bin crawler -- !crawl_flags! !extra_args! --seeds !seeds!

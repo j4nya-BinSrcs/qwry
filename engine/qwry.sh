@@ -45,7 +45,7 @@ build_crawl_args() {
     local max_depth       concurrency       max_pages
     local politeness_delay_secs  user_agent  external_domains
     local max_retries     retry_base_delay_secs  skip_politeness
-    local batch_size
+    local batch_size      lightweight
 
     max_depth=$(get_cfg crawler max_depth 3)
     concurrency=$(get_cfg crawler concurrency 10)
@@ -57,6 +57,7 @@ build_crawl_args() {
     retry_base_delay_secs=$(get_cfg crawler retry_base_delay_secs 5.0)
     skip_politeness=$(get_cfg crawler skip_politeness false)
     batch_size=$(get_cfg crawler batch_db_check_size 100)
+    lightweight=$(get_cfg crawler lightweight false)
 
     # Forward all user flags; --seeds is handled separately.
     printf -- '--max-depth %s --concurrency %s --max-pages %s ' \
@@ -72,6 +73,9 @@ build_crawl_args() {
     fi
     if [[ "$external_domains" == "true" ]]; then
         printf -- '--external-domains '
+    fi
+    if [[ "$lightweight" == "true" ]]; then
+        printf -- '--lightweight '
     fi
 }
 

@@ -121,6 +121,7 @@ async fn test_full_crawl_index_search_pipeline() -> Result<()> {
         retry_base_delay: Duration::from_millis(50),
         skip_politeness: true,
         batch_db_check_size: 10,
+        lightweight: false,
     };
     let crawler = crawler::core::engine::Crawler::new(config, pool.clone());
     crawler.run(&[base_url.clone()]).await;

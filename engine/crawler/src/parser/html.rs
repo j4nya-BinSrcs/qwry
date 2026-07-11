@@ -196,6 +196,99 @@ pub fn extract_clean_text(doc: &Html) -> String {
     collapse_whitespace(&buf)
 }
 
+const MAX_LIGHTWEIGHT_CONTENT: usize = 32_768;
+
+/// Strips HTML tags from raw HTML using a simple state machine.
+/// Much faster than full DOM parsing — O(n), no allocations per tag.
+/// Handles `<script>` / `<style>` blocks by skipping until the closing tag.
+pub fn strip_html_tags(html: &str) -> String {
+    let mut result = String::with_capacity(html.len().min(MAX_LIGHTWEIGHT_CONTENT));
+    let bytes = html.as_bytes();
+    let max = bytes.len();
+    let mut pos = 0;
+    let mut in_script = false;
+    let mut in_style = false;
+
+    while pos < max && result.len() < MAX_LIGHTWEIGHT_CONTENT {
+        if bytes[pos] == b'<' {
+            pos += 1;
+            if pos >= max {
+                break;
+            }
+
+            // Check if this starts a script or style tag
+            if !in_script && !in_style {
+                if max - pos >= 6 && bytes[pos..pos+6].eq_ignore_ascii_case(b"script") && !is_tag_char(bytes, pos + 6, max) {
+                    in_script = true;
+                    skip_tag(&bytes, &mut pos, max);
+                    continue;
+                }
+                if max - pos >= 5 && bytes[pos..pos+5].eq_ignore_ascii_case(b"style") && !is_tag_char(bytes, pos + 5, max) {
+                    in_style = true;
+                    skip_tag(&bytes, &mut pos, max);
+                    continue;
+                }
+            }
+
+            // Check for closing script/style tags
+            if in_script && max - pos >= 7 && bytes[pos..pos+7].eq_ignore_ascii_case(b"/script") {
+                in_script = false;
+                skip_tag(&bytes, &mut pos, max);
+                continue;
+            }
+            if in_style && max - pos >= 6 && bytes[pos..pos+6].eq_ignore_ascii_case(b"/style") {
+                in_style = false;
+                skip_tag(&bytes, &mut pos, max);
+                continue;
+            }
+
+            if in_script || in_style {
+                skip_tag(&bytes, &mut pos, max);
+                continue;
+            }
+
+            // Regular tag — skip until >
+            skip_tag(&bytes, &mut pos, max);
+            continue;
+        }
+
+        if in_script || in_style {
+            pos += 1;
+            continue;
+        }
+
+        // Character between tags — append to result
+        let ch = bytes[pos] as char;
+        if ch.is_whitespace() {
+            if !result.ends_with(' ') {
+                result.push(' ');
+            }
+        } else {
+            result.push(ch);
+        }
+        pos += 1;
+    }
+
+    result.trim().to_string()
+}
+
+#[inline]
+fn is_tag_char(bytes: &[u8], pos: usize, max: usize) -> bool {
+    if pos >= max { return false; }
+    let b = bytes[pos];
+    b.is_ascii_alphanumeric()
+}
+
+#[inline]
+fn skip_tag(bytes: &[u8], pos: &mut usize, max: usize) {
+    while *pos < max && bytes[*pos] != b'>' {
+        *pos += 1;
+    }
+    if *pos < max && bytes[*pos] == b'>' {
+        *pos += 1;
+    }
+}
+
 pub fn extract_links(doc: &Html, base_url: &Url, allow_external: bool) -> Vec<String> {
     let mut links: Vec<String> = Vec::new();
 
@@ -244,10 +337,134 @@ pub fn extract_links(doc: &Html, base_url: &Url, allow_external: bool) -> Vec<St
     links
 }
 
+/// Extract title from raw HTML via simple substring search.
+/// Works on the raw HTML bytes with case-insensitive matching.
+fn extract_title_lightweight(html: &str) -> Option<String> {
+    let bytes = html.as_bytes();
+    let n = bytes.len();
+
+    // Find <title or <TITLE (case-insensitive)
+    let mut start_pos = None;
+    let mut i = 0;
+    while i + 6 < n {
+        if bytes[i] == b'<' {
+            let rest = &bytes[i + 1..];
+            if rest.len() >= 5 && rest[..5].eq_ignore_ascii_case(b"title") {
+                start_pos = Some(i);
+                break;
+            }
+        }
+        i += 1;
+    }
+    let tag_start = start_pos?;
+
+    // Find > after <title
+    let content_start = bytes[tag_start..].iter().position(|&b| b == b'>')? + tag_start + 1;
+
+    // Find </title> (case-insensitive)
+    let remaining = &bytes[content_start..];
+    let mut j = 0;
+    while j + 8 < remaining.len() {
+        if remaining[j] == b'<' && remaining[j + 1] == b'/' {
+            if remaining[j + 2..].len() >= 5 && remaining[j + 2..j + 7].eq_ignore_ascii_case(b"title") {
+                let end_pos = content_start + j;
+                let title = html[content_start..end_pos].trim();
+                if title.is_empty() {
+                    return None;
+                }
+                return Some(title.to_string());
+            }
+        }
+        j += 1;
+    }
+    None
+}
+
+/// Extract links from raw HTML by scanning for `href="..."` patterns.
+/// Much faster than full DOM parsing — O(n), single pass.
+fn extract_links_lightweight(html: &str, base_url: &Url, allow_external: bool) -> Vec<String> {
+    let mut links: Vec<String> = Vec::new();
+    let href = "href=";
+    let bytes = html.as_bytes();
+
+    let mut pos = 0;
+    while pos < bytes.len() {
+        // Find next href=
+        match bytes[pos..].windows(href.len()).position(|w| w.eq_ignore_ascii_case(href.as_bytes())) {
+            Some(offset) => {
+                pos += offset + href.len();
+            }
+            None => break,
+        }
+
+        // Skip whitespace and expect quote
+        while pos < bytes.len() && bytes[pos].is_ascii_whitespace() {
+            pos += 1;
+        }
+        if pos >= bytes.len() || (bytes[pos] != b'"' && bytes[pos] != b'\'') {
+            continue;
+        }
+        let quote = bytes[pos];
+        pos += 1;
+
+        // Extract URL value
+        let start = pos;
+        while pos < bytes.len() && bytes[pos] != quote {
+            pos += 1;
+        }
+        if pos <= start {
+            continue;
+        }
+        let href_val = &html[start..pos];
+        pos += 1; // skip closing quote
+
+        // Normalize and validate
+        let normalized = match normalize_url(href_val, base_url) {
+            Ok(u) => u,
+            Err(_) => continue,
+        };
+
+        // Filter by domain
+        if !allow_external {
+            let parsed = match Url::parse(&normalized) {
+                Ok(u) => u,
+                Err(_) => continue,
+            };
+            let base_host = base_url.host_str().unwrap_or("");
+            let link_host = parsed.host_str().unwrap_or("");
+            let same_host = link_host == base_host
+                || link_host.ends_with(&format!(".{}", base_host));
+            if !same_host {
+                continue;
+            }
+        }
+
+        // Filter extensions
+        let parsed_url = match Url::parse(&normalized) {
+            Ok(u) => u,
+            Err(_) => continue,
+        };
+        let path = parsed_url.path();
+        if EXTENSION_BLOCKLIST
+            .iter()
+            .any(|ext| path.ends_with(ext) || path.to_lowercase().ends_with(ext))
+        {
+            continue;
+        }
+
+        links.push(normalized);
+    }
+
+    links.sort();
+    links.dedup();
+    links
+}
+
 pub async fn fetch_page(
     client: &Client,
     url_str: &str,
     allow_external: bool,
+    lightweight: bool,
 ) -> Result<CrawlResult> {
     let resp = client.get(url_str).send().await?;
     resp.error_for_status_ref().context("HTTP error status")?;
@@ -262,6 +479,22 @@ pub async fn fetch_page(
     }
 
     let body = resp.text().await?;
+
+    if lightweight {
+        let content = strip_html_tags(&body);
+        let base_url = Url::parse(url_str)?;
+        let title = extract_title_lightweight(&body);
+        let outgoing_links = extract_links_lightweight(&body, &base_url, allow_external);
+
+        return Ok(CrawlResult {
+            url: url_str.to_string(),
+            title,
+            description: None,
+            content,
+            outgoing_links,
+        });
+    }
+
     let doc = Html::parse_document(&body);
     let base_url = Url::parse(url_str)?;
 
@@ -675,5 +908,157 @@ mod tests {
         assert_eq!(links.len(), 2);
         assert_eq!(links[0], "https://example.com/internal");
         assert_eq!(links[1], "https://sub.example.com/page");
+    }
+
+    // -----------------------------------------------------------------------
+    // strip_html_tags tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_strip_html_tags_basic() {
+        let html = "<html><body><p>Hello World</p></body></html>";
+        assert_eq!(strip_html_tags(html), "Hello World");
+    }
+
+    #[test]
+    fn test_strip_html_tags_removes_script() {
+        let html = r#"<html><body><p>Visible</p><script>alert("x")</script><p>Also</p></body></html>"#;
+        let result = strip_html_tags(html);
+        assert!(result.contains("Visible"));
+        assert!(result.contains("Also"));
+        assert!(!result.contains("alert"), "script content should be removed");
+    }
+
+    #[test]
+    fn test_strip_html_tags_removes_style() {
+        let html = r#"<html><head><style>body{color:red}</style></head><body><p>Text</p></body></html>"#;
+        let result = strip_html_tags(html);
+        assert_eq!(result, "Text");
+        assert!(!result.contains("color"), "style content should be removed");
+    }
+
+    #[test]
+    fn test_strip_html_tags_collapses_whitespace() {
+        let html = r#"<html><body><p>Hello    World</p></body></html>"#;
+        assert_eq!(strip_html_tags(html), "Hello World");
+    }
+
+    #[test]
+    fn test_strip_html_tags_empty() {
+        assert_eq!(strip_html_tags(""), "");
+    }
+
+    #[test]
+    fn test_strip_html_tags_no_html() {
+        assert_eq!(strip_html_tags("just plain text"), "just plain text");
+    }
+
+    #[test]
+    fn test_strip_html_tags_with_attributes() {
+        let html = r#"<div class="content"><a href="/link">click here</a></div>"#;
+        assert_eq!(strip_html_tags(html), "click here");
+    }
+
+    #[test]
+    fn test_strip_html_tags_truncates_at_max_size() {
+        let long = format!("<p>{}</p>", "a".repeat(40_000));
+        let result = strip_html_tags(&long);
+        assert!(result.len() <= 32_768);
+        assert!(result.contains("aaaa"));
+    }
+
+    #[test]
+    fn test_strip_html_tags_self_closing() {
+        let html = r#"<br/><p>Text</p><img src="x.png"/>"#;
+        assert_eq!(strip_html_tags(html), "Text");
+    }
+
+    // -----------------------------------------------------------------------
+    // extract_title_lightweight tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_extract_title_lightweight_basic() {
+        let html = "<html><head><title>Hello World</title></head><body></body></html>";
+        assert_eq!(extract_title_lightweight(html), Some("Hello World".into()));
+    }
+
+    #[test]
+    fn test_extract_title_lightweight_none() {
+        let html = "<html><head></head><body></body></html>";
+        assert_eq!(extract_title_lightweight(html), None);
+    }
+
+    #[test]
+    fn test_extract_title_lightweight_empty() {
+        let html = "<html><head><title>  </title></head><body></body></html>";
+        assert_eq!(extract_title_lightweight(html), None);
+    }
+
+    #[test]
+    fn test_extract_title_lightweight_with_whitespace() {
+        let html = "<html><head><title>   Spaced Title   </title></head><body></body></html>";
+        assert_eq!(extract_title_lightweight(html), Some("Spaced Title".into()));
+    }
+
+    // -----------------------------------------------------------------------
+    // extract_links_lightweight tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_extract_links_lightweight_basic() {
+        let html = r#"<html><body><a href="/page1">Page 1</a><a href="/page2">Page 2</a></body></html>"#;
+        let base = Url::parse("https://example.com/").unwrap();
+        let links = extract_links_lightweight(html, &base, false);
+        assert_eq!(links.len(), 2);
+        assert_eq!(links[0], "https://example.com/page1");
+        assert_eq!(links[1], "https://example.com/page2");
+    }
+
+    #[test]
+    fn test_extract_links_lightweight_filters_external() {
+        let html = r#"<html><body><a href="https://external.com/page">External</a><a href="/internal">Internal</a></body></html>"#;
+        let base = Url::parse("https://example.com/").unwrap();
+        let links = extract_links_lightweight(html, &base, false);
+        assert_eq!(links, vec!["https://example.com/internal"]);
+    }
+
+    #[test]
+    fn test_extract_links_lightweight_allows_external() {
+        let html = r#"<html><body><a href="https://external.com/page">External</a><a href="/internal">Internal</a></body></html>"#;
+        let base = Url::parse("https://example.com/").unwrap();
+        let links = extract_links_lightweight(html, &base, true);
+        assert_eq!(links.len(), 2);
+    }
+
+    #[test]
+    fn test_extract_links_lightweight_filters_extensions() {
+        let html = r#"<html><body>
+            <a href="/page">Page</a>
+            <a href="/image.png">Image</a>
+            <a href="/doc.pdf">PDF</a>
+        </body></html>"#;
+        let base = Url::parse("https://example.com/").unwrap();
+        let links = extract_links_lightweight(html, &base, false);
+        assert_eq!(links, vec!["https://example.com/page"]);
+    }
+
+    #[test]
+    fn test_extract_links_lightweight_none() {
+        let html = r#"<html><body><p>No links here</p></body></html>"#;
+        let base = Url::parse("https://example.com/").unwrap();
+        let links = extract_links_lightweight(html, &base, false);
+        assert!(links.is_empty());
+    }
+
+    #[test]
+    fn test_extract_links_lightweight_dedup() {
+        let html = r#"<html><body>
+            <a href="/page">Page 1</a>
+            <a href="/page">Page 2</a>
+        </body></html>"#;
+        let base = Url::parse("https://example.com/").unwrap();
+        let links = extract_links_lightweight(html, &base, false);
+        assert_eq!(links, vec!["https://example.com/page"]);
     }
 }

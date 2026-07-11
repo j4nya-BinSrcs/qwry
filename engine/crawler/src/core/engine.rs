@@ -336,7 +336,7 @@ impl CrawlerWorker {
 
             self.stats.fetch_count.fetch_add(1, Ordering::Relaxed);
 
-            match fetch_page(&self.client, &job.url, self.config.external_domains).await {
+            match fetch_page(&self.client, &job.url, self.config.external_domains, self.config.lightweight).await {
                 Ok(result) => {
                     let claimed = self.stats.pages_crawled.fetch_update(
                         Ordering::SeqCst,
@@ -484,6 +484,7 @@ mod tests {
             retry_base_delay: Duration::from_secs(5),
             skip_politeness: false,
             batch_db_check_size: 100,
+            lightweight: false,
         };
         let pool = test_pool().await;
         let crawler = Crawler::new(config, pool);
@@ -518,6 +519,7 @@ mod tests {
             retry_base_delay: Duration::from_secs(5),
             skip_politeness: false,
             batch_db_check_size: 100,
+            lightweight: false,
         };
         let pool = test_pool().await;
         let crawler = Crawler::new(config, pool);
@@ -553,6 +555,7 @@ mod tests {
             retry_base_delay: Duration::from_secs(5),
             skip_politeness: false,
             batch_db_check_size: 100,
+            lightweight: false,
         };
         let pool = test_pool().await;
         let crawler = Crawler::new(config, pool);
@@ -576,6 +579,7 @@ mod tests {
             retry_base_delay: Duration::from_secs(5),
             skip_politeness: false,
             batch_db_check_size: 100,
+            lightweight: false,
         };
         let pool = test_pool().await;
         let crawler = Crawler::new(config, pool);
@@ -646,6 +650,7 @@ mod tests {
             retry_base_delay: Duration::from_secs(5),
             skip_politeness: true,
             batch_db_check_size: 100,
+            lightweight: false,
         };
         let pool = test_pool().await;
         let crawler = Crawler::new(config, pool);
@@ -670,6 +675,7 @@ mod tests {
             retry_base_delay: Duration::from_secs(1),
             skip_politeness: true,
             batch_db_check_size: 100,
+            lightweight: false,
         };
         let pool = test_pool().await;
         let crawler = Crawler::new(config, pool.clone());
@@ -698,6 +704,7 @@ mod tests {
             retry_base_delay: Duration::from_secs(1),
             skip_politeness: true,
             batch_db_check_size: 100,
+            lightweight: false,
         };
         let pool = test_pool().await;
         let crawler = Crawler::new(config, pool.clone());

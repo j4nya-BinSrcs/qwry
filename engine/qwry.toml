@@ -9,6 +9,7 @@ max_retries = 3
 retry_base_delay_secs = 5.0
 skip_politeness = false
 batch_db_check_size = 100
+lightweight = false
 
 [indexer]
 port = 8001

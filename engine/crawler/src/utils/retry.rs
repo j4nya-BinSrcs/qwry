@@ -70,6 +70,7 @@ mod tests {
             retry_base_delay: Duration::from_secs(5),
             skip_politeness: true,
             batch_db_check_size: 100,
+            lightweight: false,
         }
     }
 

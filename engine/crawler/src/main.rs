@@ -39,6 +39,9 @@ struct Args {
 
     #[arg(long, default_value = "100")]
     batch_db_check_size: usize,
+
+    #[arg(long)]
+    lightweight: bool,
 }
 
 #[tokio::main]
@@ -61,6 +64,7 @@ async fn main() -> anyhow::Result<()> {
         retry_base_delay: Duration::from_secs_f64(args.retry_base_delay_secs),
         skip_politeness: args.skip_politeness,
         batch_db_check_size: args.batch_db_check_size,
+        lightweight: args.lightweight,
     };
 
     let crawler = Crawler::new(config, db_pool);
