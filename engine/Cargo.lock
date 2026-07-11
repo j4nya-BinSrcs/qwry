@@ -1630,6 +1630,7 @@ dependencies = [
  "chrono",
  "clap",
  "dotenvy",
+ "rayon",
  "serde",
  "serde_json",
  "shared",

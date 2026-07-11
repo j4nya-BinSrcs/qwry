@@ -11,7 +11,7 @@ use shared::DbPool;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
-use crate::services::index::SearchIndex;
+use crate::services::sharded::ShardedIndex;
 
 #[derive(Deserialize)]
 pub struct SearchParams {
@@ -21,7 +21,7 @@ pub struct SearchParams {
 }
 
 async fn search_handler(
-    State(index): State<Arc<SearchIndex>>,
+    State(index): State<Arc<ShardedIndex>>,
     Query(params): Query<SearchParams>,
 ) -> impl IntoResponse {
     let limit = params.limit.unwrap_or(10).min(100);
@@ -41,7 +41,7 @@ async fn health_handler() -> impl IntoResponse {
 }
 
 pub async fn run_server(
-    index: SearchIndex,
+    index: ShardedIndex,
     _db_pool: DbPool,
     port: u16,
 ) -> Result<()> {

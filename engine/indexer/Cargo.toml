@@ -17,3 +17,4 @@ anyhow = "1.0"
 dotenvy = "0.15"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
 chrono = { version = "0.4", features = ["serde"] }
+rayon = "1.10"

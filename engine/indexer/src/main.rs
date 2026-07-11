@@ -2,8 +2,8 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use indexer::services::index;
 use indexer::services::serve;
+use indexer::services::sharded::ShardedIndex;
 use tracing_subscriber::EnvFilter;
 
 #[derive(Parser)]
@@ -11,6 +11,9 @@ use tracing_subscriber::EnvFilter;
 struct Cli {
     #[arg(long, default_value = "./data/index")]
     index_dir: PathBuf,
+
+    #[arg(long, default_value = "1")]
+    shards: usize,
 
     #[command(subcommand)]
     command: Command,
@@ -46,8 +49,8 @@ async fn main() -> Result<()> {
 
     let cli = Cli::parse();
 
-    let search_index = index::SearchIndex::open_or_create(&cli.index_dir)?;
-    tracing::info!(path = %cli.index_dir.display(), "Index opened/created");
+    let search_index = ShardedIndex::open_or_create(&cli.index_dir, cli.shards)?;
+    tracing::info!(path = %cli.index_dir.display(), shards = cli.shards, "Index opened/created");
 
     let db_pool = shared::init_db().await?;
 

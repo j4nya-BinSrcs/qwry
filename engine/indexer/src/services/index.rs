@@ -49,7 +49,7 @@ impl SearchIndex {
         Ok(self.index.writer(100_000_000)?)
     }
 
-    fn page_to_doc(&self, page: &CrawledPage) -> tantivy::TantivyDocument {
+    pub fn page_to_doc(&self, page: &CrawledPage) -> tantivy::TantivyDocument {
         let mut doc = doc!(
             self.url_field => page.url.clone(),
         );
