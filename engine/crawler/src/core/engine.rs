@@ -179,6 +179,35 @@ impl Crawler {
             shutdown_ctrl.store(true, Ordering::SeqCst);
         });
 
+        // Periodic progress reporter (every 500ms)
+        {
+            let stats = Arc::clone(&stats);
+            let shutdown = Arc::clone(&shutdown);
+            let max = self.config.max_pages;
+            tokio::spawn(async move {
+                let mut interval = tokio::time::interval(Duration::from_millis(500));
+                let start = Instant::now();
+                loop {
+                    interval.tick().await;
+                    if shutdown.load(Ordering::Relaxed) {
+                        break;
+                    }
+                    let elapsed = start.elapsed().as_secs_f64();
+                    let count = stats.pages_crawled.load(Ordering::Relaxed);
+                    let errors = stats.fetch_errors.load(Ordering::Relaxed);
+                    if elapsed > 0.5 && count > 0 {
+                        tracing::info!(
+                            count,
+                            max,
+                            pps = format_args!("{:.0}", count as f64 / elapsed),
+                            errors,
+                            "Progress"
+                        );
+                    }
+                }
+            });
+        }
+
         let batch_writer = BatchWriter::new(self.db_pool.clone());
         let batch_tx = batch_writer.sender();
 
@@ -380,27 +409,15 @@ impl CrawlerWorker {
 
             match result {
                 Ok(result) => {
-                    let claimed = self.stats.pages_crawled.fetch_update(
+                    if self.stats.pages_crawled.fetch_update(
                         Ordering::SeqCst,
                         Ordering::SeqCst,
                         |v| (v < self.config.max_pages).then_some(v + 1),
-                    );
-                    let count = match claimed {
-                        Ok(prev) => prev + 1,
-                        Err(_) => {
-                            self.queue.push(job);
-                            self.shutdown.store(true, Ordering::SeqCst);
-                            break;
-                        }
-                    };
-                    tracing::info!(
-                        count,
-                        max = self.config.max_pages,
-                        url = %result.url,
-                        depth = job.depth,
-                        "Processed"
-                    );
-
+                    ).is_err() {
+                        self.queue.push(job);
+                        self.shutdown.store(true, Ordering::SeqCst);
+                        break;
+                    }
                     let page = CrawledPage {
                         id: None,
                         url: result.url,
