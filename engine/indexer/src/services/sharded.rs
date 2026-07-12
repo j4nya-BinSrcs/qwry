@@ -9,26 +9,37 @@ const EMBED_BATCH_SIZE: usize = 64;
 use shared::{mark_pages_as_indexed, CrawledPage, DbPool};
 use tantivy::schema::Value;
 
-use crate::services::embed::EmbeddingGenerator;
+use crate::services::embed::{EmbeddingGenerator, Reranker};
 use crate::services::index::SearchIndex;
-use crate::services::search::{SearchHit, SearchResponse};
+use crate::services::search::{FusionConfig, SearchHit, SearchMode, SearchResponse};
 use tantivy::indexer::NoMergePolicy;
+
+// ── Shard-local BM25 result (used by search and helper methods) ──
+struct ShardSearchResult {
+    hits: Vec<(f32, tantivy::DocAddress)>,
+    total_hits: usize,
+    searcher: tantivy::Searcher,
+    snippet_generator: tantivy::snippet::SnippetGenerator,
+    shard_id: usize,
+}
 
 pub struct ShardedIndex {
     shards: Vec<SearchIndex>,
     num_shards: usize,
     pub embed_generator: Option<Mutex<EmbeddingGenerator>>,
+    pub reranker: Option<Mutex<Reranker>>,
 }
 
 impl ShardedIndex {
     pub fn open_or_create(index_dir: &Path, num_shards: usize) -> Result<Self> {
-        Self::open_or_create_with_embed(index_dir, num_shards, None)
+        Self::open_or_create_with_embed(index_dir, num_shards, None, None)
     }
 
     pub fn open_or_create_with_embed(
         index_dir: &Path,
         num_shards: usize,
         embed_generator: Option<Mutex<EmbeddingGenerator>>,
+        reranker: Option<Mutex<Reranker>>,
     ) -> Result<Self> {
         let num_shards = num_shards.next_power_of_two().max(1);
 
@@ -45,7 +56,7 @@ impl ShardedIndex {
                 .collect::<Result<_>>()?
         };
 
-        Ok(ShardedIndex { shards, num_shards, embed_generator })
+        Ok(ShardedIndex { shards, num_shards, embed_generator, reranker })
     }
 
     fn shard_for(&self, url: &str) -> usize {
@@ -273,71 +284,79 @@ impl ShardedIndex {
         query_str: &str,
         limit: usize,
         offset: usize,
+        mode: SearchMode,
+        fusion: FusionConfig,
+        do_rerank: bool,
     ) -> Result<SearchResponse> {
         let per_shard_limit = limit + offset;
+        let mode_name = match mode {
+            SearchMode::Bm25 => "bm25",
+            SearchMode::Vector => "vector",
+            SearchMode::Hybrid => "hybrid",
+        };
 
         // ── BM25 pass (parallel across shards) ────────────────
-        struct ShardSearchResult {
-            hits: Vec<(f32, tantivy::DocAddress)>,
-            total_hits: usize,
-            searcher: tantivy::Searcher,
-            snippet_generator: tantivy::snippet::SnippetGenerator,
-            shard_id: usize,
-        }
+        let (shard_results, bm25_merged, bm25_total) = if mode != SearchMode::Vector {
+            let results: Vec<ShardSearchResult> = (0..self.num_shards)
+                .into_par_iter()
+                .map(|sid| -> Result<ShardSearchResult> {
+                    let shard = &self.shards[sid];
+                    let _ = shard.reader.reload();
+                    let searcher = shard.reader.searcher();
 
-        let shard_results: Vec<ShardSearchResult> = (0..self.num_shards)
-            .into_par_iter()
-            .map(|sid| -> Result<ShardSearchResult> {
-                let shard = &self.shards[sid];
-                let _ = shard.reader.reload();
-                let searcher = shard.reader.searcher();
+                    let mut query_parser = tantivy::query::QueryParser::for_index(
+                        &shard.index,
+                        vec![shard.title_field, shard.desc_field, shard.content_field],
+                    );
+                    query_parser.set_field_boost(shard.title_field, 2.5);
+                    query_parser.set_field_boost(shard.desc_field, 1.5);
+                    query_parser.set_field_boost(shard.content_field, 1.0);
 
-                let mut query_parser = tantivy::query::QueryParser::for_index(
-                    &shard.index,
-                    vec![shard.title_field, shard.desc_field, shard.content_field],
-                );
-                query_parser.set_field_boost(shard.title_field, 2.5);
-                query_parser.set_field_boost(shard.desc_field, 1.5);
-                query_parser.set_field_boost(shard.content_field, 1.0);
+                    let query = query_parser.parse_query(query_str)?;
 
-                let query = query_parser.parse_query(query_str)?;
+                    let collector = (
+                        tantivy::collector::TopDocs::with_limit(per_shard_limit),
+                        tantivy::collector::Count,
+                    );
+                    let (top_docs, shard_total) = searcher.search(&query, &collector)?;
 
-                let collector = (
-                    tantivy::collector::TopDocs::with_limit(per_shard_limit),
-                    tantivy::collector::Count,
-                );
-                let (top_docs, shard_total) = searcher.search(&query, &collector)?;
+                    let snippet_generator =
+                        tantivy::snippet::SnippetGenerator::create(&searcher, &query, shard.content_field)?;
 
-                let snippet_generator =
-                    tantivy::snippet::SnippetGenerator::create(&searcher, &query, shard.content_field)?;
-
-                Ok(ShardSearchResult {
-                    hits: top_docs,
-                    total_hits: shard_total,
-                    searcher,
-                    snippet_generator,
-                    shard_id: sid,
+                    Ok(ShardSearchResult {
+                        hits: top_docs,
+                        total_hits: shard_total,
+                        searcher,
+                        snippet_generator,
+                        shard_id: sid,
+                    })
                 })
-            })
-            .collect::<Result<Vec<_>>>()?;
+                .collect::<Result<Vec<_>>>()?;
 
-        let bm25_total: usize = shard_results.iter().map(|r| r.total_hits).sum();
+            let total: usize = results.iter().map(|r| r.total_hits).sum();
 
-        // Merge BM25 results from all shards, sorted by BM25 score desc
-        let mut bm25_merged: Vec<(f32, tantivy::DocAddress, usize)> = shard_results
-            .par_iter()
-            .flat_map(|r| {
-                let sid = r.shard_id;
-                r.hits
-                    .par_iter()
-                    .map(move |(score, addr)| (*score, *addr, sid))
-            })
-            .collect();
+            let mut merged: Vec<(f32, tantivy::DocAddress, usize)> = results
+                .par_iter()
+                .flat_map(|r| {
+                    let sid = r.shard_id;
+                    r.hits
+                        .par_iter()
+                        .map(move |(score, addr)| (*score, *addr, sid))
+                })
+                .collect();
+            merged.par_sort_unstable_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
 
-        bm25_merged.par_sort_unstable_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+            (results, merged, total)
+        } else {
+            (vec![], vec![], 0)
+        };
 
-        // ── Semantic pass ─────────────────────────────────────
-        let query_vec = self.embed_query(query_str)?;
+        // ── Vector / semantic pass ─────────────────────────────
+        let query_vec = if mode != SearchMode::Bm25 {
+            self.embed_query(query_str)?
+        } else {
+            None
+        };
         let vec_hits = if let Some(ref qv) = query_vec {
             shared::vector_search(db_pool, qv, per_shard_limit)
                 .await
@@ -346,50 +365,208 @@ impl ShardedIndex {
             vec![]
         };
 
-        // ── Reciprocal Rank Fusion ────────────────────────────
-        const RRF_K: f32 = 60.0;
+        // ── Build ranked list (URL, score) ─────────────────────
+        let ranked: Vec<(String, f32)> = match mode {
+            SearchMode::Bm25 => {
+                bm25_merged
+                    .iter()
+                    .filter_map(|(_score, doc_address, shard_id)| {
+                        let sr = &shard_results[*shard_id];
+                        sr.searcher
+                            .doc::<tantivy::TantivyDocument>(*doc_address)
+                            .ok()
+                            .and_then(|doc| {
+                                let url = doc
+                                    .get_first(self.shards[*shard_id].url_field)
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("")
+                                    .to_string();
+                                Some((url, *_score))
+                            })
+                    })
+                    .collect()
+            }
+            SearchMode::Vector => {
+                vec_hits.iter().map(|h| (h.url.clone(), h.similarity as f32)).collect()
+            }
+            SearchMode::Hybrid => self.fuse_results(&shard_results, &bm25_merged, &vec_hits, &fusion),
+        };
 
-        // Map URL → (fused_score, BM25_rank, vec_rank)
-        let mut fused: std::collections::BTreeMap<String, (f32, Option<usize>, Option<usize>)> =
-            std::collections::BTreeMap::new();
+        // ── Reranking pass (cross-encoder) ─────────────────────
+        let (final_ranked, was_reranked) = if do_rerank && self.reranker.is_some() && ranked.len() > 1 {
+            let rerank_top = std::cmp::min(30, ranked.len());
+            let candidates: Vec<String> = ranked[..rerank_top]
+                .iter()
+                .map(|(url, _)| self.doc_text_for_url(&shard_results, &bm25_merged, &vec_hits, url))
+                .collect();
 
-        for (rank, (_score, doc_address, shard_id)) in bm25_merged.iter().enumerate() {
+            if candidates.len() > 1 {
+                let scores = {
+                    let mut rr = self.reranker.as_ref().unwrap().lock().unwrap();
+                    rr.rerank(query_str, &candidates).ok()
+                };
+
+                if let Some(scores) = scores {
+                    let mut rescored: Vec<(String, f32)> = ranked[..rerank_top]
+                        .iter()
+                        .enumerate()
+                        .map(|(i, (url, _))| (url.clone(), *scores.get(i).unwrap_or(&0.0)))
+                        .collect();
+                    rescored.par_sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+                    if rerank_top < ranked.len() {
+                        rescored.extend(ranked[rerank_top..].iter().cloned());
+                    }
+                    (rescored, true)
+                } else {
+                    (ranked, false)
+                }
+            } else {
+                (ranked, false)
+            }
+        } else {
+            (ranked, false)
+        };
+
+        self.build_search_response(
+            &shard_results,
+            &bm25_merged,
+            &vec_hits,
+            &final_ranked,
+            query_str,
+            limit,
+            offset,
+            bm25_total,
+            mode_name,
+            was_reranked,
+        )
+        .await
+    }
+
+    /// Look up the full document text for a URL, used as input to the reranker.
+    fn doc_text_for_url(
+        &self,
+        shard_results: &[ShardSearchResult],
+        bm25_merged: &[(f32, tantivy::DocAddress, usize)],
+        _vec_hits: &[shared::VectorSearchHit],
+        url: &str,
+    ) -> String {
+        for (_score, doc_address, shard_id) in bm25_merged {
             let sr = &shard_results[*shard_id];
             if let Ok(doc) = sr.searcher.doc::<tantivy::TantivyDocument>(*doc_address) {
-                let url = doc
+                let doc_url = doc
                     .get_first(self.shards[*shard_id].url_field)
                     .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string();
-                let rrf = 1.0 / (RRF_K + rank as f32);
-                let entry = fused.entry(url).or_insert((0.0, None, None));
-                entry.0 += rrf;
-                entry.1 = Some(rank);
+                    .unwrap_or("");
+                if doc_url == url {
+                    let parts: [&str; 3] = [
+                        doc.get_first(self.shards[*shard_id].title_field)
+                            .and_then(|v| v.as_str())
+                            .unwrap_or(""),
+                        doc.get_first(self.shards[*shard_id].desc_field)
+                            .and_then(|v| v.as_str())
+                            .unwrap_or(""),
+                        doc.get_first(self.shards[*shard_id].content_field)
+                            .and_then(|v| v.as_str())
+                            .unwrap_or(""),
+                    ];
+                    let non_empty: Vec<&str> = parts.into_iter().filter(|s| !s.is_empty()).collect();
+                    if non_empty.is_empty() {
+                        return url.to_string();
+                    }
+                    return non_empty.join(" ");
+                }
             }
         }
+        url.to_string()
+    }
 
-        for (rank, hit) in vec_hits.iter().enumerate() {
-            let rrf = 1.0 / (RRF_K + rank as f32);
-            let entry = fused.entry(hit.url.clone()).or_insert((0.0, None, None));
-            entry.0 += rrf;
-            entry.2 = Some(rank);
+    /// Produce a fused ranked list from BM25 + vector results.
+    fn fuse_results(
+        &self,
+        shard_results: &[ShardSearchResult],
+        bm25_merged: &[(f32, tantivy::DocAddress, usize)],
+        vec_hits: &[shared::VectorSearchHit],
+        fusion: &FusionConfig,
+    ) -> Vec<(String, f32)> {
+        // Use weighted fusion if alpha/beta differ from RRF defaults
+        let use_weighted = (fusion.alpha - 0.5).abs() > 0.01 || (fusion.beta - 0.5).abs() > 0.01;
+
+        if use_weighted {
+            let max_bm25 = bm25_merged.first().map(|(s, _, _)| *s).unwrap_or(1.0);
+            let max_vec = vec_hits.first().map(|h| h.similarity as f32).unwrap_or(1.0);
+
+            let mut scores: std::collections::HashMap<String, f32> = std::collections::HashMap::new();
+
+            for (_score, doc_address, shard_id) in bm25_merged {
+                let sr = &shard_results[*shard_id];
+                if let Ok(doc) = sr.searcher.doc::<tantivy::TantivyDocument>(*doc_address) {
+                    let url = doc
+                        .get_first(self.shards[*shard_id].url_field)
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    let norm = if max_bm25 > 0.0 { _score / max_bm25 } else { 0.0 };
+                    *scores.entry(url).or_insert(0.0) += fusion.alpha * norm;
+                }
+            }
+
+            for hit in vec_hits {
+                let norm = if max_vec > 0.0 { hit.similarity as f32 / max_vec } else { 0.0 };
+                *scores.entry(hit.url.clone()).or_insert(0.0) += fusion.beta * norm;
+            }
+
+            let mut ranked: Vec<(String, f32)> = scores.into_iter().collect();
+            ranked.par_sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+            ranked
+        } else {
+            // RRF fusion
+            let mut fused: std::collections::BTreeMap<String, f32> = std::collections::BTreeMap::new();
+
+            for (rank, (_score, doc_address, shard_id)) in bm25_merged.iter().enumerate() {
+                let sr = &shard_results[*shard_id];
+                if let Ok(doc) = sr.searcher.doc::<tantivy::TantivyDocument>(*doc_address) {
+                    let url = doc
+                        .get_first(self.shards[*shard_id].url_field)
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    *fused.entry(url).or_insert(0.0) += 1.0 / (fusion.rrf_k + rank as f32);
+                }
+            }
+
+            for (rank, hit) in vec_hits.iter().enumerate() {
+                *fused.entry(hit.url.clone()).or_insert(0.0) += 1.0 / (fusion.rrf_k + rank as f32);
+            }
+
+            let mut ranked: Vec<(String, f32)> = fused.into_iter().collect();
+            ranked.par_sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+            ranked
         }
+    }
 
-        // Sort by fused score descending
-        let mut ranked: Vec<(String, f32)> = fused.into_iter().map(|(u, (s, _, _))| (u, s)).collect();
-        ranked.par_sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-
-        // ── Build response hits ───────────────────────────────
-        // We need to fetch snippet/doc details. Use the top BM25 result for a URL
-        // as the source for snippets.
+    /// Build the final `SearchResponse` from a ranked URL list, fetching
+    /// snippet/doc details from BM25 (or vector hits as fallback).
+    async fn build_search_response(
+        &self,
+        shard_results: &[ShardSearchResult],
+        bm25_merged: &[(f32, tantivy::DocAddress, usize)],
+        vec_hits: &[shared::VectorSearchHit],
+        ranked: &[(String, f32)],
+        query_str: &str,
+        limit: usize,
+        offset: usize,
+        bm25_total: usize,
+        mode_name: &str,
+        reranked: bool,
+    ) -> Result<SearchResponse> {
         let fetch_range = offset..std::cmp::min(offset + limit, ranked.len());
         let hits: Vec<SearchHit> = ranked[fetch_range]
             .iter()
-            .filter_map(|(url, fused_score)| {
-                // Find this URL in BM25 results for snippet/doc details
-                for (_score, doc_address, shard_id) in &bm25_merged {
+            .filter_map(|(url, score)| {
+                // Prefer BM25 for snippet/doc details
+                for (_score, doc_address, shard_id) in bm25_merged {
                     let sr = &shard_results[*shard_id];
-            if let Ok(doc) = sr.searcher.doc::<tantivy::TantivyDocument>(*doc_address) {
+                    if let Ok(doc) = sr.searcher.doc::<tantivy::TantivyDocument>(*doc_address) {
                         let doc_url = doc
                             .get_first(self.shards[*shard_id].url_field)
                             .and_then(|v| v.as_str())
@@ -409,27 +586,28 @@ impl ShardedIndex {
                                 title,
                                 description,
                                 snippet: snippet.to_html(),
-                                score: *fused_score,
+                                score: *score,
                             });
                         }
                     }
                 }
-                // URL not found in BM25 (pure vector hit) — construct minimal hit
+                // Fallback to vector hit metadata
                 vec_hits.iter().find(|v| v.url == *url).map(|vh| SearchHit {
                     url: url.clone(),
                     title: vh.title.clone(),
                     description: None,
                     snippet: String::new(),
-                    score: *fused_score,
+                    score: *score,
                 })
             })
             .collect();
 
-        let global_total = if query_vec.is_some() {
-            // With vector search, total is a union estimate
-            std::cmp::max(bm25_total, ranked.len())
-        } else {
+        let global_total = if mode_name == "bm25" {
             bm25_total
+        } else if vec_hits.is_empty() && !bm25_merged.is_empty() {
+            bm25_total
+        } else {
+            std::cmp::max(bm25_total, ranked.len())
         };
 
         Ok(SearchResponse {
@@ -438,6 +616,8 @@ impl ShardedIndex {
             query: query_str.to_string(),
             limit,
             offset,
+            mode: mode_name.into(),
+            reranked,
         })
     }
 }
@@ -541,7 +721,7 @@ mod tests {
 
         idx.index_new_pages(&pool).await.unwrap();
 
-        let response = idx.search(&pool, "programming language", 10, 0).await.unwrap();
+        let response = idx.search(&pool, "programming language", 10, 0, SearchMode::Bm25, FusionConfig::default(), false).await.unwrap();
         assert!(response.total_hits >= 3, "should find all 3 pages, got {}", response.total_hits);
         assert_eq!(response.hits.len(), 3, "all pages should be in top results");
     }
@@ -558,7 +738,7 @@ mod tests {
         }
         idx.index_new_pages(&pool).await.unwrap();
 
-        let response = idx.search(&pool, "testing", 3, 0).await.unwrap();
+        let response = idx.search(&pool, "testing", 3, 0, SearchMode::Bm25, FusionConfig::default(), false).await.unwrap();
         assert_eq!(response.hits.len(), 3, "limit=3 should return 3 hits");
     }
 
@@ -574,8 +754,8 @@ mod tests {
         }
         idx.index_new_pages(&pool).await.unwrap();
 
-        let all = idx.search(&pool, "offset", 10, 0).await.unwrap();
-        let offset = idx.search(&pool, "offset", 10, 3).await.unwrap();
+        let all = idx.search(&pool, "offset", 10, 0, SearchMode::Bm25, FusionConfig::default(), false).await.unwrap();
+        let offset = idx.search(&pool, "offset", 10, 3, SearchMode::Bm25, FusionConfig::default(), false).await.unwrap();
         assert_eq!(offset.hits.len(), all.hits.len().saturating_sub(3));
         if !offset.hits.is_empty() {
             assert_eq!(offset.hits[0].url, all.hits[3].url);
@@ -591,7 +771,7 @@ mod tests {
         insert_page(&pool, "https://shard-zebra.example", "Zebra", "Zebras are African equines.").await;
         idx.index_new_pages(&pool).await.unwrap();
 
-        let response = idx.search(&pool, "quantum", 10, 0).await.unwrap();
+        let response = idx.search(&pool, "quantum", 10, 0, SearchMode::Bm25, FusionConfig::default(), false).await.unwrap();
         assert_eq!(response.total_hits, 0);
         assert!(response.hits.is_empty());
     }
@@ -602,13 +782,13 @@ mod tests {
         let pool = test_pool().await;
         let idx = ShardedIndex::open_or_create(&dir, 4).unwrap();
 
-        insert_page(&pool, "https://shard-snippet.example", "Snippet", "The quick brown fox jumps over the lazy dog.").await;
+        insert_page(&pool, "https://shard-snippet.example", "Snippet", "shard snippet unique quick brown fox").await;
         idx.index_new_pages(&pool).await.unwrap();
 
-        let response = idx.search(&pool, "fox", 10, 0).await.unwrap();
+        let response = idx.search(&pool, "shard snippet unique", 10, 0, SearchMode::Bm25, FusionConfig::default(), false).await.unwrap();
         assert!(!response.hits.is_empty());
         let snippet = &response.hits[0].snippet;
-        assert!(snippet.contains("fox"), "snippet should contain search term: {snippet}");
+        assert!(snippet.contains("shard") && snippet.contains("unique"), "snippet should contain search terms: {snippet}");
     }
 
     #[tokio::test]
@@ -622,12 +802,12 @@ mod tests {
 
         idx.index_new_pages(&pool).await.unwrap();
 
-        let before = idx.search(&pool, "content", 10, 0).await.unwrap();
+        let before = idx.search(&pool, "content", 10, 0, SearchMode::Bm25, FusionConfig::default(), false).await.unwrap();
         assert!(before.total_hits >= 2, "should find pages before reindex");
 
         idx.reindex_all_pages(&pool).await.unwrap();
 
-        let after = idx.search(&pool, "content", 10, 0).await.unwrap();
+        let after = idx.search(&pool, "content", 10, 0, SearchMode::Bm25, FusionConfig::default(), false).await.unwrap();
         assert!(after.total_hits >= 2, "should find pages after reindex");
     }
 
@@ -649,7 +829,7 @@ mod tests {
         let dir1 = dir.join("shards1");
         let idx1 = ShardedIndex::open_or_create(&dir1, 1).unwrap();
         idx1.index_new_pages(&pool1).await.unwrap();
-        let res1 = idx1.search(&pool1, "consistency", 10, 0).await.unwrap();
+        let res1 = idx1.search(&pool1, "consistency", 10, 0, SearchMode::Bm25, FusionConfig::default(), false).await.unwrap();
 
         let pool4 = test_pool().await;
         let urls4 = vec![
@@ -665,7 +845,7 @@ mod tests {
         let dir4 = dir.join("shards4");
         let idx4 = ShardedIndex::open_or_create(&dir4, 4).unwrap();
         idx4.index_new_pages(&pool4).await.unwrap();
-        let res4 = idx4.search(&pool4, "consistency", 10, 0).await.unwrap();
+        let res4 = idx4.search(&pool4, "consistency", 10, 0, SearchMode::Bm25, FusionConfig::default(), false).await.unwrap();
 
         assert_eq!(res1.total_hits, 4, "1-shard should find all 4 pages");
         assert_eq!(res4.total_hits, 4, "4-shard should find all 4 pages");
@@ -681,7 +861,7 @@ mod tests {
         insert_page(&pool, "https://single-shard-test.example", "Single", "testing single shard mode").await;
         idx.index_new_pages(&pool).await.unwrap();
 
-        let response = idx.search(&pool, "single shard", 10, 0).await.unwrap();
+        let response = idx.search(&pool, "single shard", 10, 0, SearchMode::Bm25, FusionConfig::default(), false).await.unwrap();
         assert!(response.total_hits >= 1);
         assert!(!response.hits.is_empty());
         assert!(response.hits[0].url.contains("single-shard-test"));
@@ -695,7 +875,7 @@ mod tests {
         let dir = temp_index_dir();
         let pool = test_pool().await;
         let generator = EmbeddingGenerator::new().unwrap();
-        let idx = ShardedIndex::open_or_create_with_embed(&dir, 2, Some(Mutex::new(generator))).unwrap();
+        let idx = ShardedIndex::open_or_create_with_embed(&dir, 2, Some(Mutex::new(generator)), None).unwrap();
 
         insert_page(&pool, "https://embed-table-test.example", "Embed", "semantic embedding integration test").await;
         idx.index_new_pages(&pool).await.unwrap();
@@ -713,7 +893,7 @@ mod tests {
         let dir = temp_index_dir();
         let pool = test_pool().await;
         let generator = EmbeddingGenerator::new().unwrap();
-        let idx = ShardedIndex::open_or_create_with_embed(&dir, 2, Some(Mutex::new(generator))).unwrap();
+        let idx = ShardedIndex::open_or_create_with_embed(&dir, 2, Some(Mutex::new(generator)), None).unwrap();
 
         insert_page(&pool, "https://embed-dim-test.example", "Dim", "check embedding dimension stored in DB").await;
         idx.index_new_pages(&pool).await.unwrap();
@@ -731,7 +911,7 @@ mod tests {
         let dir = temp_index_dir();
         let pool = test_pool().await;
         let generator = EmbeddingGenerator::new().unwrap();
-        let idx = ShardedIndex::open_or_create_with_embed(&dir, 2, Some(Mutex::new(generator))).unwrap();
+        let idx = ShardedIndex::open_or_create_with_embed(&dir, 2, Some(Mutex::new(generator)), None).unwrap();
 
         insert_page(&pool, "https://embed-model-test.example", "Model", "model name verification test").await;
         idx.index_new_pages(&pool).await.unwrap();
@@ -749,7 +929,7 @@ mod tests {
         let dir = temp_index_dir();
         let pool = test_pool().await;
         let generator = EmbeddingGenerator::new().unwrap();
-        let idx = ShardedIndex::open_or_create_with_embed(&dir, 2, Some(Mutex::new(generator))).unwrap();
+        let idx = ShardedIndex::open_or_create_with_embed(&dir, 2, Some(Mutex::new(generator)), None).unwrap();
 
         insert_page(&pool, "https://embed-reindex-test.example", "Reindex", "verify embeddings cleared after reindex").await;
         idx.index_new_pages(&pool).await.unwrap();

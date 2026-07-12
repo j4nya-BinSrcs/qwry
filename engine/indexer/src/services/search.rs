@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tantivy::collector::{Count, TopDocs};
@@ -7,6 +9,53 @@ use tantivy::snippet::SnippetGenerator;
 use tantivy::TantivyDocument;
 
 use crate::services::index::SearchIndex;
+
+// ── Search mode ───────────────────────────────────────────────
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum SearchMode {
+    #[serde(rename = "bm25")]
+    Bm25,
+    #[serde(rename = "vector")]
+    Vector,
+    #[serde(rename = "hybrid")]
+    Hybrid,
+}
+
+impl Default for SearchMode {
+    fn default() -> Self {
+        Self::Hybrid
+    }
+}
+
+impl FromStr for SearchMode {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "bm25" => Ok(Self::Bm25),
+            "vector" | "semantic" => Ok(Self::Vector),
+            "hybrid" => Ok(Self::Hybrid),
+            _ => Err(format!("unknown search mode: {s} (use bm25, vector, or hybrid)")),
+        }
+    }
+}
+
+// ── Fusion configuration ─────────────────────────────────────
+
+#[derive(Debug, Clone, Copy)]
+pub struct FusionConfig {
+    pub alpha: f32,
+    pub beta: f32,
+    pub rrf_k: f32,
+}
+
+impl Default for FusionConfig {
+    fn default() -> Self {
+        Self { alpha: 0.5, beta: 0.5, rrf_k: 60.0 }
+    }
+}
+
+// ── Response types ────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchHit {
@@ -24,6 +73,8 @@ pub struct SearchResponse {
     pub query: String,
     pub limit: usize,
     pub offset: usize,
+    pub mode: String,
+    pub reranked: bool,
 }
 
 impl SearchIndex {
@@ -87,6 +138,8 @@ impl SearchIndex {
             query: query_str.to_string(),
             limit,
             offset,
+            mode: "bm25".into(),
+            reranked: false,
         })
     }
 }

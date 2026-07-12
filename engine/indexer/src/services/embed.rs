@@ -1,5 +1,5 @@
 use anyhow::Result;
-use fastembed::{EmbeddingModel, TextEmbedding, TextInitOptions};
+use fastembed::{EmbeddingModel, TextEmbedding, TextInitOptions, TextRerank, RerankInitOptions, RerankerModel};
 
 pub struct EmbeddingGenerator {
     model: TextEmbedding,
@@ -29,6 +29,36 @@ impl EmbeddingGenerator {
         let owned: Vec<String> = texts.iter().map(|s| s.to_string()).collect();
         let embeddings = self.model.embed(owned, Some(128))?;
         Ok(embeddings)
+    }
+}
+
+// ── Cross-encoder reranker ──────────────────────────────────
+
+pub struct Reranker {
+    model: TextRerank,
+}
+
+impl Reranker {
+    pub fn new() -> Result<Self> {
+        let model = TextRerank::try_new(
+            RerankInitOptions::new(RerankerModel::BGERerankerBase)
+                .with_show_download_progress(false),
+        )?;
+        Ok(Self { model })
+    }
+
+    /// Score each document by relevance to the query.
+    /// Returns one score per document in the same order.
+    pub fn rerank(&mut self, query: &str, documents: &[String]) -> Result<Vec<f32>> {
+        let doc_refs: Vec<&str> = documents.iter().map(|s| s.as_str()).collect();
+        let results = self.model.rerank(query, &doc_refs, false, Some(32))?;
+        let mut scores = vec![0.0f32; documents.len()];
+        for r in &results {
+            if r.index < scores.len() {
+                scores[r.index] = r.score;
+            }
+        }
+        Ok(scores)
     }
 }
 

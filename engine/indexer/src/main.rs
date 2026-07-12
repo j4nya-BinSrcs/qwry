@@ -4,6 +4,8 @@ use std::sync::Mutex;
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use indexer::services::embed::EmbeddingGenerator;
+use indexer::services::embed::Reranker;
+use indexer::services::search::{FusionConfig, SearchMode};
 use indexer::services::serve;
 use indexer::services::sharded::ShardedIndex;
 use tracing_subscriber::EnvFilter;
@@ -20,6 +22,9 @@ struct Cli {
     #[arg(long)]
     embed: bool,
 
+    #[arg(long)]
+    rerank: bool,
+
     #[command(subcommand)]
     command: Command,
 }
@@ -30,13 +35,21 @@ enum Command {
     Index,
     /// Delete and rebuild the entire index from all crawled pages
     Reindex,
-    /// Search the index with a BM25 query
+    /// Search the index with BM25, vector, or hybrid search
     Search {
         query: String,
         #[arg(long, default_value = "10")]
         limit: usize,
         #[arg(long, default_value = "0")]
         offset: usize,
+        #[arg(long, default_value = "hybrid")]
+        mode: String,
+        #[arg(long)]
+        rerank: bool,
+        #[arg(long, default_value = "0.5")]
+        fusion_alpha: f32,
+        #[arg(long, default_value = "0.5")]
+        fusion_beta: f32,
     },
     /// Start the search API server
     Serve {
@@ -64,7 +77,16 @@ async fn main() -> Result<()> {
         None
     };
 
-    let search_index = ShardedIndex::open_or_create_with_embed(&cli.index_dir, cli.shards, embed_gen)?;
+    let reranker = if cli.rerank {
+        tracing::info!("Initializing reranker model (BGE-reranker-base) ...");
+        let r = Reranker::new().context("Failed to initialize reranker")?;
+        tracing::info!("Reranker model loaded");
+        Some(Mutex::new(r))
+    } else {
+        None
+    };
+
+    let search_index = ShardedIndex::open_or_create_with_embed(&cli.index_dir, cli.shards, embed_gen, reranker)?;
     tracing::info!(path = %cli.index_dir.display(), shards = cli.shards, embed = cli.embed, "Index opened/created");
 
     let db_pool = shared::init_db().await?;
@@ -83,8 +105,10 @@ async fn main() -> Result<()> {
             let count = search_index.reindex_all_pages(&db_pool).await?;
             tracing::info!(%count, "Reindex complete");
         }
-        Command::Search { query, limit, offset } => {
-            let response = search_index.search(&db_pool, query, *limit, *offset).await?;
+        Command::Search { query, limit, offset, mode, rerank, fusion_alpha, fusion_beta } => {
+            let mode = mode.parse::<SearchMode>().unwrap_or(SearchMode::Hybrid);
+            let fusion = FusionConfig { alpha: *fusion_alpha, beta: *fusion_beta, rrf_k: 60.0 };
+            let response = search_index.search(&db_pool, query, *limit, *offset, mode, fusion, *rerank).await?;
             let json = serde_json::to_string_pretty(&response)?;
             println!("{json}");
         }

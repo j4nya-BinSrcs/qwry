@@ -11,6 +11,7 @@ use shared::DbPool;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
+use crate::services::search::{FusionConfig, SearchMode};
 use crate::services::sharded::ShardedIndex;
 
 struct AppState {
@@ -23,6 +24,10 @@ pub struct SearchParams {
     q: String,
     limit: Option<usize>,
     offset: Option<usize>,
+    mode: Option<String>,
+    rerank: Option<bool>,
+    alpha: Option<f32>,
+    beta: Option<f32>,
 }
 
 async fn search_handler(
@@ -31,8 +36,15 @@ async fn search_handler(
 ) -> impl IntoResponse {
     let limit = params.limit.unwrap_or(10).min(100);
     let offset = params.offset.unwrap_or(0);
+    let mode = params.mode.as_deref().unwrap_or("hybrid").parse::<SearchMode>().unwrap_or(SearchMode::Hybrid);
+    let fusion = FusionConfig {
+        alpha: params.alpha.unwrap_or(0.5),
+        beta: params.beta.unwrap_or(0.5),
+        rrf_k: 60.0,
+    };
+    let do_rerank = params.rerank.unwrap_or(false);
 
-    match state.index.search(&state.db, &params.q, limit, offset).await {
+    match state.index.search(&state.db, &params.q, limit, offset, mode, fusion, do_rerank).await {
         Ok(response) => (StatusCode::OK, axum::Json(serde_json::json!(response))),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
