@@ -13,6 +13,11 @@ use tower_http::trace::TraceLayer;
 
 use crate::services::sharded::ShardedIndex;
 
+struct AppState {
+    index: Arc<ShardedIndex>,
+    db: DbPool,
+}
+
 #[derive(Deserialize)]
 pub struct SearchParams {
     q: String,
@@ -21,13 +26,13 @@ pub struct SearchParams {
 }
 
 async fn search_handler(
-    State(index): State<Arc<ShardedIndex>>,
+    State(state): State<Arc<AppState>>,
     Query(params): Query<SearchParams>,
 ) -> impl IntoResponse {
     let limit = params.limit.unwrap_or(10).min(100);
     let offset = params.offset.unwrap_or(0);
 
-    match index.search(&params.q, limit, offset) {
+    match state.index.search(&state.db, &params.q, limit, offset).await {
         Ok(response) => (StatusCode::OK, axum::Json(serde_json::json!(response))),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -42,17 +47,20 @@ async fn health_handler() -> impl IntoResponse {
 
 pub async fn run_server(
     index: ShardedIndex,
-    _db_pool: DbPool,
+    db_pool: DbPool,
     port: u16,
 ) -> Result<()> {
-    let index = Arc::new(index);
+    let state = Arc::new(AppState {
+        index: Arc::new(index),
+        db: db_pool,
+    });
 
     let app = Router::new()
         .route("/health", get(health_handler))
         .route("/search", get(search_handler))
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive())
-        .with_state(index);
+        .with_state(state);
 
     let addr = format!("0.0.0.0:{port}");
     tracing::info!("Listening on {addr}");

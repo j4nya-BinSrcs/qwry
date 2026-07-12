@@ -13,6 +13,8 @@ lightweight = false
 
 [indexer]
 port = 8001
+embed = false
+shards = 1
 
 [index_dir]
 path = "./data/index"

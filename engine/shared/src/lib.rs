@@ -1,8 +1,9 @@
 use anyhow::{Context, Result};
 use chrono::NaiveDateTime;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPoolOptions;
-use sqlx::{PgPool, QueryBuilder};
+use sqlx::{PgPool, QueryBuilder, Row};
 use std::collections::HashSet;
 
 pub type DbPool = PgPool;
@@ -169,10 +170,42 @@ pub async fn get_indexed_page_count(pool: &DbPool) -> Result<i64> {
     Ok(row.0)
 }
 
+pub const INDEX_BATCH_SIZE: usize = 500;
+
 pub async fn get_unindexed_pages(pool: &DbPool) -> Result<Vec<CrawledPage>> {
     let rows = sqlx::query_as::<_, CrawledPage>(
         "SELECT id, url, title, description, content, crawled_at, indexed \
          FROM crawled_pages WHERE indexed = FALSE ORDER BY id",
+    )
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows)
+}
+
+pub async fn get_unindexed_pages_batch(pool: &DbPool, limit: usize) -> Result<Vec<CrawledPage>> {
+    let rows = sqlx::query_as::<_, CrawledPage>(
+        "SELECT id, url, title, description, content, crawled_at, indexed \
+         FROM crawled_pages WHERE indexed = FALSE ORDER BY id LIMIT $1",
+    )
+    .bind(limit as i64)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows)
+}
+
+pub async fn get_indexed_pages_missing_embeddings(pool: &DbPool) -> Result<Vec<CrawledPage>> {
+    let rows = sqlx::query_as::<_, CrawledPage>(
+        r#"
+        SELECT p.id, p.url, p.title, p.description, p.content, p.crawled_at, p.indexed
+        FROM crawled_pages p
+        WHERE p.indexed = TRUE
+          AND NOT EXISTS (
+              SELECT 1 FROM page_embeddings e WHERE e.page_id = p.id
+          )
+        ORDER BY p.id
+        "#,
     )
     .fetch_all(pool)
     .await?;
@@ -203,3 +236,149 @@ pub async fn reset_indexed_flag(pool: &DbPool) -> Result<u64> {
         .await?;
     Ok(result.rows_affected())
 }
+
+// ── Embeddings ────────────────────────────────────────────────
+
+pub async fn ensure_embeddings_table(pool: &DbPool) -> Result<()> {
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS page_embeddings (
+            id           BIGSERIAL PRIMARY KEY,
+            page_id      BIGINT NOT NULL REFERENCES crawled_pages(id) ON DELETE CASCADE,
+            chunk_index  INTEGER NOT NULL DEFAULT 0,
+            model        TEXT NOT NULL DEFAULT 'BGE-small-en-v1.5',
+            dimension    INTEGER NOT NULL DEFAULT 384,
+            embedding    REAL[] NOT NULL,
+            UNIQUE(page_id, chunk_index)
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .context("Failed to create page_embeddings table")?;
+
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_page_embeddings_page_id ON page_embeddings(page_id)")
+        .execute(pool)
+        .await
+        .context("Failed to create page_embeddings index")?;
+
+    Ok(())
+}
+
+pub async fn save_embedding(
+    pool: &DbPool,
+    page_id: i64,
+    chunk_index: u32,
+    model: &str,
+    embedding: &[f32],
+) -> Result<()> {
+    sqlx::query(
+        r#"
+        INSERT INTO page_embeddings (page_id, chunk_index, model, dimension, embedding)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (page_id, chunk_index) DO UPDATE SET
+            embedding = EXCLUDED.embedding,
+            model     = EXCLUDED.model,
+            dimension = EXCLUDED.dimension
+        "#,
+    )
+    .bind(page_id)
+    .bind(chunk_index as i32)
+    .bind(model)
+    .bind(embedding.len() as i32)
+    .bind(embedding)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+pub async fn get_all_embeddings(pool: &DbPool) -> Result<Vec<PageEmbeddingSummary>> {
+    let rows = sqlx::query(
+        r#"
+        SELECT e.page_id, p.url, p.title, e.embedding
+        FROM page_embeddings e
+        JOIN crawled_pages p ON p.id = e.page_id
+        WHERE e.chunk_index = 0
+        ORDER BY e.page_id
+        "#,
+    )
+    .fetch_all(pool)
+    .await?;
+
+    let result = rows
+        .iter()
+        .map(|row| {
+            let page_id: i64 = row.get("page_id");
+            let url: String = row.get("url");
+            let title: Option<String> = row.get("title");
+            let embedding: Vec<f32> = row.get("embedding");
+            PageEmbeddingSummary {
+                page_id,
+                url,
+                title,
+                embedding,
+            }
+        })
+        .collect();
+
+    Ok(result)
+}
+
+pub async fn delete_all_embeddings(pool: &DbPool) -> Result<u64> {
+    let result = sqlx::query("DELETE FROM page_embeddings")
+        .execute(pool)
+        .await?;
+    Ok(result.rows_affected())
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct VectorSearchHit {
+    pub page_id: i64,
+    pub url: String,
+    pub title: Option<String>,
+    /// Cosine similarity in [0, 1], higher = more similar
+    pub similarity: f64,
+}
+
+pub async fn vector_search(
+    pool: &DbPool,
+    query_vec: &[f32],
+    limit: usize,
+) -> Result<Vec<VectorSearchHit>> {
+    let all = get_all_embeddings(pool).await?;
+
+    let mut scored: Vec<(f64, &PageEmbeddingSummary)> = all
+        .par_iter()
+        .map(|entry| {
+            let dot: f32 = query_vec.iter().zip(entry.embedding.iter()).map(|(a, b)| a * b).sum();
+            let norm_a: f32 = query_vec.iter().map(|x| x * x).sum::<f32>().sqrt();
+            let norm_b: f32 = entry.embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
+            let similarity = (dot / (norm_a * norm_b)) as f64;
+            (similarity, entry)
+        })
+        .collect();
+
+    scored.par_sort_unstable_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+
+    let result: Vec<VectorSearchHit> = scored
+        .into_iter()
+        .take(limit)
+        .map(|(similarity, entry)| VectorSearchHit {
+            page_id: entry.page_id,
+            url: entry.url.clone(),
+            title: entry.title.clone(),
+            similarity,
+        })
+        .collect();
+
+    Ok(result)
+}
+
+pub struct PageEmbeddingSummary {
+    pub page_id: i64,
+    pub url: String,
+    pub title: Option<String>,
+    pub embedding: Vec<f32>,
+}
+

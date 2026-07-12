@@ -1,7 +1,9 @@
 use std::path::PathBuf;
+use std::sync::Mutex;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
+use indexer::services::embed::EmbeddingGenerator;
 use indexer::services::serve;
 use indexer::services::sharded::ShardedIndex;
 use tracing_subscriber::EnvFilter;
@@ -14,6 +16,9 @@ struct Cli {
 
     #[arg(long, default_value = "1")]
     shards: usize,
+
+    #[arg(long)]
+    embed: bool,
 
     #[command(subcommand)]
     command: Command,
@@ -45,12 +50,22 @@ async fn main() -> Result<()> {
     dotenvy::dotenv().ok();
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+        .with_writer(std::io::stderr)
         .init();
 
     let cli = Cli::parse();
 
-    let search_index = ShardedIndex::open_or_create(&cli.index_dir, cli.shards)?;
-    tracing::info!(path = %cli.index_dir.display(), shards = cli.shards, "Index opened/created");
+    let embed_gen = if cli.embed {
+        tracing::info!("Initializing embedding model (BGE-small-en-v1.5) ...");
+        let generator = EmbeddingGenerator::new().context("Failed to initialize embedding model")?;
+        tracing::info!(dimension = %generator.dimension(), "Embedding model loaded");
+        Some(Mutex::new(generator))
+    } else {
+        None
+    };
+
+    let search_index = ShardedIndex::open_or_create_with_embed(&cli.index_dir, cli.shards, embed_gen)?;
+    tracing::info!(path = %cli.index_dir.display(), shards = cli.shards, embed = cli.embed, "Index opened/created");
 
     let db_pool = shared::init_db().await?;
 
@@ -69,7 +84,7 @@ async fn main() -> Result<()> {
             tracing::info!(%count, "Reindex complete");
         }
         Command::Search { query, limit, offset } => {
-            let response = search_index.search(query, *limit, *offset)?;
+            let response = search_index.search(&db_pool, query, *limit, *offset).await?;
             let json = serde_json::to_string_pretty(&response)?;
             println!("{json}");
         }

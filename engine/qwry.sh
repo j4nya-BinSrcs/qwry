@@ -16,8 +16,6 @@ get_cfg() {
         return
     fi
 
-    # Find the [section] marker, then look for key = value on
-    # subsequent lines until the next section or EOF.
     local val
     val=$(
         awk -v sec="$section" -v k="$key" '
@@ -35,13 +33,33 @@ get_cfg() {
 }
 
 # ---------------------------------------------------------------
+# Resolve embed mode: explicit user flags take precedence,
+# otherwise fall back to config, then default false.
+# Modifies POSITIONAL so that --embed / --no-embed are consumed.
+# Usage:  resolve_embed POSITIONAL
+#   Sets EMBED to "true" or "false" and removes consumed flags.
+# ---------------------------------------------------------------
+resolve_embed() {
+    local -n arr="$1"
+    local cfg_val
+    cfg_val=$(get_cfg indexer embed false)
+    EMBED="$cfg_val"
+
+    local leftovers=()
+    for arg in "${arr[@]}"; do
+        case "$arg" in
+            --embed)   EMBED="true" ;;
+            --no-embed) EMBED="false" ;;
+            *)         leftovers+=("$arg") ;;
+        esac
+    done
+    arr=("${leftovers[@]}")
+}
+
+# ---------------------------------------------------------------
 # Build crawler args from config + user overrides ($@).
-#
-# The script accepts the same long flags as the crawler binary,
-# so any --flag passed by the user takes precedence over config.
 # ---------------------------------------------------------------
 build_crawl_args() {
-    # Config-based defaults
     local max_depth       concurrency       max_pages
     local politeness_delay_secs  user_agent  external_domains
     local max_retries     retry_base_delay_secs  skip_politeness
@@ -59,7 +77,6 @@ build_crawl_args() {
     batch_size=$(get_cfg crawler batch_db_check_size 100)
     lightweight=$(get_cfg crawler lightweight false)
 
-    # Forward all user flags; --seeds is handled separately.
     printf -- '--max-depth %s --concurrency %s --max-pages %s ' \
         "$max_depth" "$concurrency" "$max_pages"
     printf -- '--politeness-delay-secs %s --user-agent %s ' \
@@ -79,20 +96,43 @@ build_crawl_args() {
     fi
 }
 
+# ---------------------------------------------------------------
+# Build the common indexer prefix flags: --index-dir, --shards,
+# and optionally --embed.
+# ---------------------------------------------------------------
+build_indexer_prefix() {
+    local index_dir shards
+    index_dir=$(get_cfg index_dir path "./data/index")
+    shards=$(get_cfg indexer shards 1)
+    printf -- '--index-dir %s --shards %s ' "$index_dir" "$shards"
+    if [[ "$EMBED" == "true" ]]; then
+        printf -- '--embed '
+    fi
+}
+
 usage() {
     cat <<EOF
 Usage:  $(basename "$0") <command> [options] [--seeds URL...|args]
 
 Commands:
   crawl    --seeds URL...   Crawl pages from the given seed URLs
-  index                      Index unindexed pages into Tantivy
-  reindex                    Rebuild the Tantivy index from scratch
-  search QUERY               Search the index
-  serve                      Start the search API server
-  pipeline --seeds URL...    crawl + index in one shot
+  index    [--embed|--no-embed]
+                            Index unindexed pages into Tantivy
+  reindex  [--embed|--no-embed]
+                            Rebuild the Tantivy index from scratch
+  search   [--embed|--no-embed] QUERY
+                            Search the index (hybrid when --embed)
+  serve    [--embed|--no-embed]
+                            Start the search API server
+  pipeline --seeds URL... [--embed|--no-embed]
+                            crawl + index in one shot
 
-Run 'cargo run --bin crawler -- --help' or 'cargo run --bin indexer -- --help'
-for available flags.  This script reads sensible defaults from qwry.toml.
+Embedding options:
+  --embed                  Enable semantic embeddings (hybrid search)
+  --no-embed               Disable embeddings (BM25 keyword only)
+                           Default: read from qwry.toml ([indexer] embed)
+
+Config file: $CONFIG
 EOF
     exit 0
 }
@@ -101,8 +141,6 @@ CMD="${1:-}"
 [[ -z "$CMD" ]] && usage
 shift
 
-# Dynamically locate the built binaries.
-# Prefer Cargo, then release, then debug.
 find_bin() {
     local name="$1"
     local bin
@@ -111,7 +149,6 @@ find_bin() {
     if [[ -z "$bin" ]]; then
         bin="$QWRY_DIR/target"
     fi
-    # Check release first, then debug
     for dir in "$bin/release" "$bin/debug"; do
         if [[ -x "$dir/$name" ]]; then
             echo "$dir/$name"
@@ -121,6 +158,32 @@ find_bin() {
     echo ""
 }
 
+# ---------------------------------------------------------------
+# Run an indexer subcommand.
+# Usage: run_indexer SUBCOMMAND [extra args...]
+# ---------------------------------------------------------------
+run_indexer() {
+    local subcommand="$1"
+    shift
+
+    local bin
+    bin=$(find_bin indexer)
+    local prefix
+    prefix=$(build_indexer_prefix)
+
+    if [[ -n "$bin" ]]; then
+        # shellcheck disable=SC2086
+        "$bin" $prefix "$subcommand" "$@"
+    else
+        # shellcheck disable=SC2086
+        cargo run --release --manifest-path "$QWRY_DIR/Cargo.toml" --bin indexer -- \
+            $prefix "$subcommand" "$@"
+    fi
+}
+
+# ---------------------------------------------------------------
+# Crawl
+# ---------------------------------------------------------------
 run_crawl() {
     local seeds=()
     local user_args=()
@@ -152,11 +215,10 @@ run_crawl() {
 
     if [[ ${#seeds[@]} -eq 0 && ${#user_args[@]} -eq 0 ]]; then
         echo "ERROR: no seed URLs provided (use --seeds URL...)"
-
         exit 1
     fi
 
-    echo "=== Starting crawl (${#seeds[@]} seed(s)) ==="
+    echo "=== Starting crawl (${#seeds[@]} seed(s)) ===" >&2
 
     local bin
     bin=$(find_bin crawler)
@@ -170,76 +232,72 @@ run_crawl() {
     fi
 }
 
+# ---------------------------------------------------------------
+# Index
+# ---------------------------------------------------------------
 run_index() {
-    local index_dir
-    index_dir=$(get_cfg index_dir path "./data/index")
-    echo "=== Indexing unindexed pages ==="
-    local bin
-    bin=$(find_bin indexer)
-    if [[ -n "$bin" ]]; then
-        "$bin" --index-dir "$index_dir" index "$@"
-    else
-        cargo run --release --manifest-path "$QWRY_DIR/Cargo.toml" --bin indexer -- \
-            --index-dir "$index_dir" index "$@"
-    fi
+    local args=("$@")
+    resolve_embed args
+    echo "=== Indexing unindexed pages${EMBED:+ (embeddings: $EMBED)} ===" >&2
+    run_indexer index "${args[@]}"
 }
 
+# ---------------------------------------------------------------
+# Reindex
+# ---------------------------------------------------------------
 run_reindex() {
-    local index_dir
-    index_dir=$(get_cfg index_dir path "./data/index")
-    echo "=== Rebuilding index from scratch ==="
-    local bin
-    bin=$(find_bin indexer)
-    if [[ -n "$bin" ]]; then
-        "$bin" --index-dir "$index_dir" reindex "$@"
-    else
-        cargo run --release --manifest-path "$QWRY_DIR/Cargo.toml" --bin indexer -- \
-            --index-dir "$index_dir" reindex "$@"
-    fi
+    local args=("$@")
+    resolve_embed args
+    echo "=== Rebuilding index from scratch${EMBED:+ (embeddings: $EMBED)} ==="
+    run_indexer reindex "${args[@]}"
 }
 
+# ---------------------------------------------------------------
+# Search
+# ---------------------------------------------------------------
 run_search() {
     if [[ $# -eq 0 ]]; then
         echo "ERROR: search requires a query string"
         exit 1
     fi
-    local index_dir
-    index_dir=$(get_cfg index_dir path "./data/index")
-    echo "=== Searching: $* ==="
-    local bin
-    bin=$(find_bin indexer)
-    if [[ -n "$bin" ]]; then
-        "$bin" --index-dir "$index_dir" search "$@"
-    else
-        cargo run --release --manifest-path "$QWRY_DIR/Cargo.toml" --bin indexer -- \
-            --index-dir "$index_dir" search "$@"
-    fi
+    local args=("$@")
+    resolve_embed args
+    echo "=== Searching: ${args[*]}${EMBED:+ (embeddings: $EMBED)} ===" >&2
+    run_indexer search "${args[@]}"
 }
 
+# ---------------------------------------------------------------
+# Serve
+# ---------------------------------------------------------------
 run_serve() {
     local port
     port=$(get_cfg indexer port 8001)
-    local index_dir
-    index_dir=$(get_cfg index_dir path "./data/index")
-    echo "=== Starting search API server on port $port ==="
-    local bin
-    bin=$(find_bin indexer)
-    if [[ -n "$bin" ]]; then
-        "$bin" --index-dir "$index_dir" serve --port "$port" "$@"
-    else
-        cargo run --release --manifest-path "$QWRY_DIR/Cargo.toml" --bin indexer -- \
-            --index-dir "$index_dir" serve --port "$port" "$@"
-    fi
+    local args=("$@")
+    resolve_embed args
+    echo "=== Starting search API server on port $port${EMBED:+ (embeddings: $EMBED)} ===" >&2
+    run_indexer serve --port "$port" "${args[@]}"
 }
 
+# ---------------------------------------------------------------
+# Pipeline: crawl + index
+# ---------------------------------------------------------------
 run_pipeline() {
+    local embed_args=()
+    local other_args=()
+    for arg in "$@"; do
+        case "$arg" in
+            --embed|--no-embed) embed_args+=("$arg") ;;
+            *)                  other_args+=("$arg") ;;
+        esac
+    done
+
     # Phase 1: crawl
     echo "========== PIPELINE: CRAWL =========="
-    run_crawl "$@"
+    run_crawl "${other_args[@]}"
 
     # Phase 2: index
     echo "========== PIPELINE: INDEX =========="
-    run_index
+    run_index "${embed_args[@]}"
 
     echo "========== PIPELINE DONE =========="
 }

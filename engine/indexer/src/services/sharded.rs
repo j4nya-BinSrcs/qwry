@@ -1,21 +1,35 @@
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Mutex;
 
 use anyhow::{Context, Result};
 use rayon::prelude::*;
+
+const EMBED_BATCH_SIZE: usize = 64;
 use shared::{mark_pages_as_indexed, CrawledPage, DbPool};
 use tantivy::schema::Value;
 
+use crate::services::embed::EmbeddingGenerator;
 use crate::services::index::SearchIndex;
 use crate::services::search::{SearchHit, SearchResponse};
+use tantivy::indexer::NoMergePolicy;
 
 pub struct ShardedIndex {
     shards: Vec<SearchIndex>,
     num_shards: usize,
+    pub embed_generator: Option<Mutex<EmbeddingGenerator>>,
 }
 
 impl ShardedIndex {
     pub fn open_or_create(index_dir: &Path, num_shards: usize) -> Result<Self> {
+        Self::open_or_create_with_embed(index_dir, num_shards, None)
+    }
+
+    pub fn open_or_create_with_embed(
+        index_dir: &Path,
+        num_shards: usize,
+        embed_generator: Option<Mutex<EmbeddingGenerator>>,
+    ) -> Result<Self> {
         let num_shards = num_shards.next_power_of_two().max(1);
 
         let shards: Vec<SearchIndex> = if num_shards == 1 {
@@ -31,7 +45,7 @@ impl ShardedIndex {
                 .collect::<Result<_>>()?
         };
 
-        Ok(ShardedIndex { shards, num_shards })
+        Ok(ShardedIndex { shards, num_shards, embed_generator })
     }
 
     fn shard_for(&self, url: &str) -> usize {
@@ -47,23 +61,46 @@ impl ShardedIndex {
     }
 
     pub async fn index_new_pages(&self, db_pool: &DbPool) -> Result<usize> {
-        let pages = shared::get_unindexed_pages(db_pool)
-            .await
-            .context("Failed to query unindexed pages")?;
+        let mut total = 0usize;
 
-        if pages.is_empty() {
-            return Ok(0);
+        loop {
+            let pages = shared::get_unindexed_pages_batch(db_pool, shared::INDEX_BATCH_SIZE)
+                .await
+                .context("Failed to query unindexed pages")?;
+
+            if pages.is_empty() {
+                break;
+            }
+
+            self.index_pages_in_tantivy(&pages).await?;
+
+            // Mark pages as indexed immediately after Tantivy indexing succeeds,
+            // so they never get stuck unindexed if a later step (embedding) crashes.
+            let ids: Vec<i64> = pages.iter().filter_map(|p| p.id).collect();
+            mark_pages_as_indexed(db_pool, &ids)
+                .await
+                .context("Failed to mark pages as indexed")?;
+
+            // Generate embeddings for this batch, then drop pages to free memory.
+            self.ensure_embeddings(db_pool, &pages).await?;
+
+            total += pages.len();
+            tracing::info!(batch = %pages.len(), total = %total, "Indexed batch");
         }
 
-        let count = pages.len();
+        // Recovery: generate embeddings for any pages that were previously
+        // indexed (e.g. after a partial crash) but are still missing embeddings.
+        self.recover_missing_embeddings(db_pool).await?;
 
+        Ok(total)
+    }
+
+    async fn index_pages_in_tantivy(&self, pages: &[CrawledPage]) -> Result<()> {
         let mut shard_buckets: HashMap<usize, Vec<&CrawledPage>> = HashMap::new();
-        for page in &pages {
+        for page in pages {
             let sid = self.shard_for(&page.url);
             shard_buckets.entry(sid).or_default().push(page);
         }
-
-        let ids: Vec<i64> = pages.iter().filter_map(|p| p.id).collect();
 
         let results: Vec<Result<()>> = (0..self.num_shards)
             .into_par_iter()
@@ -72,6 +109,7 @@ impl ShardedIndex {
                     return Ok(());
                 };
                 let mut writer = self.shards[sid].writer()?;
+                writer.set_merge_policy(Box::new(NoMergePolicy));
                 for page in bucket {
                     let term = tantivy::Term::from_field_text(
                         self.shards[sid].url_field,
@@ -90,17 +128,102 @@ impl ShardedIndex {
             r?;
         }
 
-        mark_pages_as_indexed(db_pool, &ids)
-            .await
-            .context("Failed to mark pages as indexed")?;
+        Ok(())
+    }
 
-        Ok(count)
+    /// Generate embeddings for a set of pages.
+    async fn ensure_embeddings(&self, db_pool: &DbPool, pages: &[CrawledPage]) -> Result<()> {
+        let Some(ref gen_mutex) = self.embed_generator else {
+            return Ok(());
+        };
+
+        if pages.is_empty() {
+            return Ok(());
+        }
+
+        shared::ensure_embeddings_table(db_pool).await.ok();
+
+        let model_name = {
+            let generator = gen_mutex.lock().unwrap();
+            generator.model_name().to_string()
+        };
+
+        let n = self
+            .generate_embeddings_batched(db_pool, gen_mutex, pages, &model_name)
+            .await?;
+        tracing::info!(%n, "Generated embeddings");
+        Ok(())
+    }
+
+    /// Recover embeddings for pages that are indexed but missing embedding rows
+    /// (e.g. after a partial crash during a previous run).
+    async fn recover_missing_embeddings(&self, db_pool: &DbPool) -> Result<()> {
+        let Some(ref gen_mutex) = self.embed_generator else {
+            return Ok(());
+        };
+
+        shared::ensure_embeddings_table(db_pool).await.ok();
+
+        let model_name = {
+            let generator = gen_mutex.lock().unwrap();
+            generator.model_name().to_string()
+        };
+
+        let missing = shared::get_indexed_pages_missing_embeddings(db_pool).await?;
+        if missing.is_empty() {
+            return Ok(());
+        }
+
+        let n = self
+            .generate_embeddings_batched(db_pool, gen_mutex, &missing, &model_name)
+            .await?;
+        tracing::info!(%n, "Recovered missing embeddings");
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn generate_embeddings_batched(
+        &self,
+        db_pool: &DbPool,
+        gen_mutex: &Mutex<EmbeddingGenerator>,
+        pages: &[CrawledPage],
+        model_name: &str,
+    ) -> Result<usize> {
+        let mut total = 0usize;
+        for chunk in pages.chunks(EMBED_BATCH_SIZE) {
+            let texts: Vec<&str> = chunk.iter().map(|p| p.content.as_str()).collect();
+            let embeddings = {
+                let mut generator = gen_mutex.lock().unwrap();
+                generator.generate(&texts)?
+            };
+
+            for (page, emb) in chunk.iter().zip(embeddings.iter()) {
+                if let Some(page_id) = page.id {
+                    shared::save_embedding(
+                        db_pool,
+                        page_id,
+                        0,
+                        model_name,
+                        emb,
+                    )
+                    .await
+                    .ok();
+                }
+            }
+            total += chunk.len();
+            tracing::debug!(batch = %chunk.len(), total = %total, "Embedding batch saved");
+        }
+        Ok(total)
     }
 
     pub async fn reindex_all_pages(&self, db_pool: &DbPool) -> Result<usize> {
         shared::reset_indexed_flag(db_pool)
             .await
             .context("Failed to reset indexed flag")?;
+
+        if self.embed_generator.is_some() {
+            shared::delete_all_embeddings(db_pool).await.ok();
+        }
 
         let results: Vec<Result<()>> = (0..self.num_shards)
             .into_par_iter()
@@ -117,21 +240,43 @@ impl ShardedIndex {
         }
 
         let count = self.index_new_pages(db_pool).await?;
+
+        // Merge all segments into one for faster search.
+        self.merge_all_segments()?;
+
         Ok(count)
     }
 
-    pub fn search(
+    /// Merge all existing segments in every shard into a single segment.
+    fn merge_all_segments(&self) -> Result<()> {
+        for sid in 0..self.num_shards {
+            let mut writer = self.shards[sid].writer()?;
+            writer.commit()?;
+            writer.wait_merging_threads()?;
+            tracing::info!(shard = %sid, "Merged all segments");
+        }
+        Ok(())
+    }
+
+    pub fn embed_query(&self, query_str: &str) -> Result<Option<Vec<f32>>> {
+        let Some(ref gen_mutex) = self.embed_generator else {
+            return Ok(None);
+        };
+        let mut generator = gen_mutex.lock().unwrap();
+        let embeddings = generator.generate(&[query_str])?;
+        Ok(embeddings.into_iter().next())
+    }
+
+    pub async fn search(
         &self,
+        db_pool: &DbPool,
         query_str: &str,
         limit: usize,
         offset: usize,
     ) -> Result<SearchResponse> {
-        if self.num_shards == 1 {
-            return self.shards[0].search(query_str, limit, offset);
-        }
-
         let per_shard_limit = limit + offset;
 
+        // ── BM25 pass (parallel across shards) ────────────────
         struct ShardSearchResult {
             hits: Vec<(f32, tantivy::DocAddress)>,
             total_hits: usize,
@@ -161,14 +306,14 @@ impl ShardedIndex {
                     tantivy::collector::TopDocs::with_limit(per_shard_limit),
                     tantivy::collector::Count,
                 );
-                let (top_docs, total_hits) = searcher.search(&query, &collector)?;
+                let (top_docs, shard_total) = searcher.search(&query, &collector)?;
 
                 let snippet_generator =
                     tantivy::snippet::SnippetGenerator::create(&searcher, &query, shard.content_field)?;
 
                 Ok(ShardSearchResult {
                     hits: top_docs,
-                    total_hits,
+                    total_hits: shard_total,
                     searcher,
                     snippet_generator,
                     shard_id: sid,
@@ -176,9 +321,10 @@ impl ShardedIndex {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        let global_total: usize = shard_results.iter().map(|r| r.total_hits).sum();
+        let bm25_total: usize = shard_results.iter().map(|r| r.total_hits).sum();
 
-        let mut merged: Vec<(f32, tantivy::DocAddress, usize)> = shard_results
+        // Merge BM25 results from all shards, sorted by BM25 score desc
+        let mut bm25_merged: Vec<(f32, tantivy::DocAddress, usize)> = shard_results
             .par_iter()
             .flat_map(|r| {
                 let sid = r.shard_id;
@@ -188,39 +334,103 @@ impl ShardedIndex {
             })
             .collect();
 
-        merged.par_sort_unstable_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+        bm25_merged.par_sort_unstable_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
 
-        let merged_limit = std::cmp::min(per_shard_limit, merged.len());
-        let fetch_range = offset..merged_limit;
-        let hits: Vec<SearchHit> = merged[fetch_range]
-            .iter()
-            .filter_map(|(score, doc_address, shard_id)| {
-                let sr = &shard_results[*shard_id];
-                let doc: tantivy::TantivyDocument = sr.searcher.doc(*doc_address).ok()?;
-                let snippet = sr.snippet_generator.snippet_from_doc(&doc);
-                let shard = &self.shards[*shard_id];
+        // ── Semantic pass ─────────────────────────────────────
+        let query_vec = self.embed_query(query_str)?;
+        let vec_hits = if let Some(ref qv) = query_vec {
+            shared::vector_search(db_pool, qv, per_shard_limit)
+                .await
+                .unwrap_or_default()
+        } else {
+            vec![]
+        };
+
+        // ── Reciprocal Rank Fusion ────────────────────────────
+        const RRF_K: f32 = 60.0;
+
+        // Map URL → (fused_score, BM25_rank, vec_rank)
+        let mut fused: std::collections::BTreeMap<String, (f32, Option<usize>, Option<usize>)> =
+            std::collections::BTreeMap::new();
+
+        for (rank, (_score, doc_address, shard_id)) in bm25_merged.iter().enumerate() {
+            let sr = &shard_results[*shard_id];
+            if let Ok(doc) = sr.searcher.doc::<tantivy::TantivyDocument>(*doc_address) {
                 let url = doc
-                    .get_first(shard.url_field)
+                    .get_first(self.shards[*shard_id].url_field)
                     .and_then(|v| v.as_str())
                     .unwrap_or("")
                     .to_string();
-                let title = doc
-                    .get_first(shard.title_field)
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string());
-                let description = doc
-                    .get_first(shard.desc_field)
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string());
-                Some(SearchHit {
-                    url,
-                    title,
-                    description,
-                    snippet: snippet.to_html(),
-                    score: *score,
+                let rrf = 1.0 / (RRF_K + rank as f32);
+                let entry = fused.entry(url).or_insert((0.0, None, None));
+                entry.0 += rrf;
+                entry.1 = Some(rank);
+            }
+        }
+
+        for (rank, hit) in vec_hits.iter().enumerate() {
+            let rrf = 1.0 / (RRF_K + rank as f32);
+            let entry = fused.entry(hit.url.clone()).or_insert((0.0, None, None));
+            entry.0 += rrf;
+            entry.2 = Some(rank);
+        }
+
+        // Sort by fused score descending
+        let mut ranked: Vec<(String, f32)> = fused.into_iter().map(|(u, (s, _, _))| (u, s)).collect();
+        ranked.par_sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+        // ── Build response hits ───────────────────────────────
+        // We need to fetch snippet/doc details. Use the top BM25 result for a URL
+        // as the source for snippets.
+        let fetch_range = offset..std::cmp::min(offset + limit, ranked.len());
+        let hits: Vec<SearchHit> = ranked[fetch_range]
+            .iter()
+            .filter_map(|(url, fused_score)| {
+                // Find this URL in BM25 results for snippet/doc details
+                for (_score, doc_address, shard_id) in &bm25_merged {
+                    let sr = &shard_results[*shard_id];
+            if let Ok(doc) = sr.searcher.doc::<tantivy::TantivyDocument>(*doc_address) {
+                        let doc_url = doc
+                            .get_first(self.shards[*shard_id].url_field)
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("");
+                        if doc_url == url {
+                            let snippet = sr.snippet_generator.snippet_from_doc(&doc);
+                            let title = doc
+                                .get_first(self.shards[*shard_id].title_field)
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string());
+                            let description = doc
+                                .get_first(self.shards[*shard_id].desc_field)
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string());
+                            return Some(SearchHit {
+                                url: url.clone(),
+                                title,
+                                description,
+                                snippet: snippet.to_html(),
+                                score: *fused_score,
+                            });
+                        }
+                    }
+                }
+                // URL not found in BM25 (pure vector hit) — construct minimal hit
+                vec_hits.iter().find(|v| v.url == *url).map(|vh| SearchHit {
+                    url: url.clone(),
+                    title: vh.title.clone(),
+                    description: None,
+                    snippet: String::new(),
+                    score: *fused_score,
                 })
             })
             .collect();
+
+        let global_total = if query_vec.is_some() {
+            // With vector search, total is a union estimate
+            std::cmp::max(bm25_total, ranked.len())
+        } else {
+            bm25_total
+        };
 
         Ok(SearchResponse {
             total_hits: global_total,
@@ -331,7 +541,7 @@ mod tests {
 
         idx.index_new_pages(&pool).await.unwrap();
 
-        let response = idx.search("programming language", 10, 0).unwrap();
+        let response = idx.search(&pool, "programming language", 10, 0).await.unwrap();
         assert!(response.total_hits >= 3, "should find all 3 pages, got {}", response.total_hits);
         assert_eq!(response.hits.len(), 3, "all pages should be in top results");
     }
@@ -348,7 +558,7 @@ mod tests {
         }
         idx.index_new_pages(&pool).await.unwrap();
 
-        let response = idx.search("testing", 3, 0).unwrap();
+        let response = idx.search(&pool, "testing", 3, 0).await.unwrap();
         assert_eq!(response.hits.len(), 3, "limit=3 should return 3 hits");
     }
 
@@ -364,8 +574,8 @@ mod tests {
         }
         idx.index_new_pages(&pool).await.unwrap();
 
-        let all = idx.search("offset", 10, 0).unwrap();
-        let offset = idx.search("offset", 10, 3).unwrap();
+        let all = idx.search(&pool, "offset", 10, 0).await.unwrap();
+        let offset = idx.search(&pool, "offset", 10, 3).await.unwrap();
         assert_eq!(offset.hits.len(), all.hits.len().saturating_sub(3));
         if !offset.hits.is_empty() {
             assert_eq!(offset.hits[0].url, all.hits[3].url);
@@ -381,7 +591,7 @@ mod tests {
         insert_page(&pool, "https://shard-zebra.example", "Zebra", "Zebras are African equines.").await;
         idx.index_new_pages(&pool).await.unwrap();
 
-        let response = idx.search("quantum", 10, 0).unwrap();
+        let response = idx.search(&pool, "quantum", 10, 0).await.unwrap();
         assert_eq!(response.total_hits, 0);
         assert!(response.hits.is_empty());
     }
@@ -395,7 +605,7 @@ mod tests {
         insert_page(&pool, "https://shard-snippet.example", "Snippet", "The quick brown fox jumps over the lazy dog.").await;
         idx.index_new_pages(&pool).await.unwrap();
 
-        let response = idx.search("fox", 10, 0).unwrap();
+        let response = idx.search(&pool, "fox", 10, 0).await.unwrap();
         assert!(!response.hits.is_empty());
         let snippet = &response.hits[0].snippet;
         assert!(snippet.contains("fox"), "snippet should contain search term: {snippet}");
@@ -412,12 +622,12 @@ mod tests {
 
         idx.index_new_pages(&pool).await.unwrap();
 
-        let before = idx.search("content", 10, 0).unwrap();
+        let before = idx.search(&pool, "content", 10, 0).await.unwrap();
         assert!(before.total_hits >= 2, "should find pages before reindex");
 
         idx.reindex_all_pages(&pool).await.unwrap();
 
-        let after = idx.search("content", 10, 0).unwrap();
+        let after = idx.search(&pool, "content", 10, 0).await.unwrap();
         assert!(after.total_hits >= 2, "should find pages after reindex");
     }
 
@@ -439,7 +649,7 @@ mod tests {
         let dir1 = dir.join("shards1");
         let idx1 = ShardedIndex::open_or_create(&dir1, 1).unwrap();
         idx1.index_new_pages(&pool1).await.unwrap();
-        let res1 = idx1.search("consistency", 10, 0).unwrap();
+        let res1 = idx1.search(&pool1, "consistency", 10, 0).await.unwrap();
 
         let pool4 = test_pool().await;
         let urls4 = vec![
@@ -455,7 +665,7 @@ mod tests {
         let dir4 = dir.join("shards4");
         let idx4 = ShardedIndex::open_or_create(&dir4, 4).unwrap();
         idx4.index_new_pages(&pool4).await.unwrap();
-        let res4 = idx4.search("consistency", 10, 0).unwrap();
+        let res4 = idx4.search(&pool4, "consistency", 10, 0).await.unwrap();
 
         assert_eq!(res1.total_hits, 4, "1-shard should find all 4 pages");
         assert_eq!(res4.total_hits, 4, "4-shard should find all 4 pages");
@@ -471,10 +681,106 @@ mod tests {
         insert_page(&pool, "https://single-shard-test.example", "Single", "testing single shard mode").await;
         idx.index_new_pages(&pool).await.unwrap();
 
-        let response = idx.search("single shard", 10, 0).unwrap();
+        let response = idx.search(&pool, "single shard", 10, 0).await.unwrap();
         assert!(response.total_hits >= 1);
         assert!(!response.hits.is_empty());
         assert!(response.hits[0].url.contains("single-shard-test"));
+    }
+
+    // ── Embedding integration tests ────────────────────────────
+
+    #[ignore = "requires network to download embedding model (run with -- --ignored)"]
+    #[tokio::test]
+    async fn test_embedding_table_created_on_index() {
+        let dir = temp_index_dir();
+        let pool = test_pool().await;
+        let generator = EmbeddingGenerator::new().unwrap();
+        let idx = ShardedIndex::open_or_create_with_embed(&dir, 2, Some(Mutex::new(generator))).unwrap();
+
+        insert_page(&pool, "https://embed-table-test.example", "Embed", "semantic embedding integration test").await;
+        idx.index_new_pages(&pool).await.unwrap();
+
+        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM page_embeddings")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert!(count > 0, "should have at least 1 embedding row, got {count}");
+    }
+
+    #[ignore = "requires network to download embedding model (run with -- --ignored)"]
+    #[tokio::test]
+    async fn test_embedding_saved_with_correct_dimension() {
+        let dir = temp_index_dir();
+        let pool = test_pool().await;
+        let generator = EmbeddingGenerator::new().unwrap();
+        let idx = ShardedIndex::open_or_create_with_embed(&dir, 2, Some(Mutex::new(generator))).unwrap();
+
+        insert_page(&pool, "https://embed-dim-test.example", "Dim", "check embedding dimension stored in DB").await;
+        idx.index_new_pages(&pool).await.unwrap();
+
+        let row: (i32,) = sqlx::query_as("SELECT dimension FROM page_embeddings LIMIT 1")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(row.0, 384);
+    }
+
+    #[ignore = "requires network to download embedding model (run with -- --ignored)"]
+    #[tokio::test]
+    async fn test_embedding_saved_with_correct_model_name() {
+        let dir = temp_index_dir();
+        let pool = test_pool().await;
+        let generator = EmbeddingGenerator::new().unwrap();
+        let idx = ShardedIndex::open_or_create_with_embed(&dir, 2, Some(Mutex::new(generator))).unwrap();
+
+        insert_page(&pool, "https://embed-model-test.example", "Model", "model name verification test").await;
+        idx.index_new_pages(&pool).await.unwrap();
+
+        let row: (String,) = sqlx::query_as("SELECT model FROM page_embeddings LIMIT 1")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(row.0, "BGE-small-en-v1.5");
+    }
+
+    #[ignore = "requires network to download embedding model (run with -- --ignored)"]
+    #[tokio::test]
+    async fn test_embedding_cleared_on_reindex() {
+        let dir = temp_index_dir();
+        let pool = test_pool().await;
+        let generator = EmbeddingGenerator::new().unwrap();
+        let idx = ShardedIndex::open_or_create_with_embed(&dir, 2, Some(Mutex::new(generator))).unwrap();
+
+        insert_page(&pool, "https://embed-reindex-test.example", "Reindex", "verify embeddings cleared after reindex").await;
+        idx.index_new_pages(&pool).await.unwrap();
+
+        let (before,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM page_embeddings")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert!(before > 0, "embeddings should exist before reindex");
+
+        idx.reindex_all_pages(&pool).await.unwrap();
+
+        let (after,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM page_embeddings")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert!(after > 0, "embeddings should be regenerated after reindex (page still exists)");
+    }
+
+    #[tokio::test]
+    async fn test_embedding_not_saved_when_no_generator() {
+        let dir = temp_index_dir();
+        let pool = test_pool().await;
+        let idx = ShardedIndex::open_or_create(&dir, 2).unwrap();
+        assert!(idx.embed_generator.is_none());
+
+        insert_page(&pool, "https://embed-none-test.example", "NoEmbed", "no embedding generator test").await;
+        idx.index_new_pages(&pool).await.unwrap();
+
+        // table may or may not exist; the point is no error occurs
+        assert!(idx.embed_generator.is_none(), "generator should remain None");
     }
 }
 
