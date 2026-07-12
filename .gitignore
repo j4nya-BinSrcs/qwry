@@ -40,3 +40,8 @@ engine/data/test-index/
 engine/data/index/
 
 tmp/
+
+# Fastembed / ONNX model weights cache
+.fastembed_cache/
+engine/.fastembed_cache/
+engine/indexer/.fastembed_cache/
