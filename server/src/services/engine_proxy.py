@@ -16,14 +16,31 @@ class EngineClient:
         self._client = http_client
         self._backend = backend
 
-    async def search(self, q: str, page: int = 1, page_size: int = 10) -> SearchResponse:
+    async def search(
+        self,
+        q: str,
+        page: int = 1,
+        page_size: int = 10,
+        mode: str | None = None,
+        rerank: bool | None = None,
+        alpha: float | None = None,
+        beta: float | None = None,
+    ) -> SearchResponse:
         url = f"{self._backend.base_url}/search"
         offset = (page - 1) * page_size
-        params: dict[str, str | int] = {
+        params: dict[str, str | int | float] = {
             "q": q,
             "limit": page_size,
             "offset": offset,
         }
+        if mode is not None:
+            params["mode"] = mode
+        if rerank is not None:
+            params["rerank"] = str(rerank).lower()
+        if alpha is not None:
+            params["alpha"] = alpha
+        if beta is not None:
+            params["beta"] = beta
 
         for attempt in range(1, _RETRY_ATTEMPTS + 1):
             logger.debug("Engine request", extra={"url": url, "params": params, "attempt": attempt})

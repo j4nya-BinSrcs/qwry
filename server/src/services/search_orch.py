@@ -28,6 +28,10 @@ class SearchOrchestrator:
         page_size: int = 10,
         provider: str | None = None,
         categories: str | None = None,
+        mode: str | None = None,
+        rerank: bool | None = None,
+        alpha: float | None = None,
+        beta: float | None = None,
     ) -> SearchResponse:
         resolved = provider or settings.default_search_provider
         cache_key_parts = (q, str(page), str(page_size), resolved, categories or "")
@@ -41,7 +45,7 @@ class SearchOrchestrator:
         if resolved == "searxng":
             result = await self._searxng.search(q, page, page_size, categories=categories)
         elif resolved == "engine":
-            result = await self._engine.search(q, page, page_size)
+            result = await self._engine.search(q, page, page_size, mode=mode, rerank=rerank, alpha=alpha, beta=beta)
         elif resolved in ("hybrid", "all"):
             result = await self._search_hybrid(q, page, page_size, categories=categories)
         else:

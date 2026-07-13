@@ -70,14 +70,22 @@ async def search(
     page_size: int = Query(10, ge=1, le=100, description="Results per page"),
     provider: str | None = Query(None, description="Search provider override"),
     categories: str | None = Query(None, description="SearXNG categories (comma-separated)"),
+    mode: str | None = Query(None, description="Engine search mode (bm25/vector/hybrid)"),
+    rerank: bool | None = Query(None, description="Enable reranking in engine"),
+    alpha: float | None = Query(None, ge=0.0, le=1.0, description="Hybrid fusion alpha (engine)"),
+    beta: float | None = Query(None, ge=0.0, le=1.0, description="Hybrid fusion beta (engine)"),
     x_session_id: str | None = Header(None, alias="X-Session-Id"),
 ):
     orchestrator = request.app.state.orchestrator
     logger.info(
         "Search request",
-        extra={"query": q, "page": page, "page_size": page_size, "provider": provider, "categories": categories},
+        extra={
+            "query": q, "page": page, "page_size": page_size, "provider": provider,
+            "categories": categories, "mode": mode, "rerank": rerank,
+            "alpha": alpha, "beta": beta,
+        },
     )
-    result = await orchestrator.search(q, page, page_size, provider, categories)
+    result = await orchestrator.search(q, page, page_size, provider, categories, mode=mode, rerank=rerank, alpha=alpha, beta=beta)
 
     session_id = get_session_id(request)
     maker = request.app.state.db

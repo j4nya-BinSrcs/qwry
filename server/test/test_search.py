@@ -57,8 +57,25 @@ def test_search_pagination(monkeypatch, client):
     assert resp.status_code == 200
     mock.assert_called_once()
     args, kwargs = mock.call_args
-    q, page, page_size, provider = args
-    assert q == "hello"
-    assert page == 2
-    assert page_size == 5
-    assert provider == "engine"
+    assert len(args) >= 4
+    assert args[0] == "hello"
+    assert args[1] == 2
+    assert args[2] == 5
+    assert args[3] == "engine"
+
+
+def test_search_engine_params(monkeypatch, client):
+    mock = AsyncMock(return_value=make_search_response("hello", provider="engine"))
+    monkeypatch.setattr(SearchOrchestrator, "search", mock)
+
+    resp = client.get(
+        "/api/search",
+        params={"q": "hello", "provider": "engine", "mode": "hybrid", "rerank": "true", "alpha": 0.7, "beta": 0.3},
+    )
+    assert resp.status_code == 200
+    mock.assert_called_once()
+    _, kwargs = mock.call_args
+    assert kwargs.get("mode") == "hybrid"
+    assert kwargs.get("rerank") is True
+    assert kwargs.get("alpha") == 0.7
+    assert kwargs.get("beta") == 0.3

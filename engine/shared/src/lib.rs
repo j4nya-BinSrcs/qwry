@@ -170,6 +170,13 @@ pub async fn get_indexed_page_count(pool: &DbPool) -> Result<i64> {
     Ok(row.0)
 }
 
+pub async fn get_embedding_count(pool: &DbPool) -> Result<i64> {
+    let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM page_embeddings")
+        .fetch_one(pool)
+        .await?;
+    Ok(row.0)
+}
+
 pub const INDEX_BATCH_SIZE: usize = 500;
 
 pub async fn get_unindexed_pages(pool: &DbPool) -> Result<Vec<CrawledPage>> {

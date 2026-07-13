@@ -67,6 +67,28 @@ impl ShardedIndex {
         (hash as usize) & (self.num_shards - 1)
     }
 
+    pub fn num_shards(&self) -> usize {
+        self.num_shards
+    }
+
+    pub fn per_shard_doc_counts(&self) -> Vec<u64> {
+        self.shards.iter().map(|s| s.reader.searcher().num_docs()).collect()
+    }
+
+    pub fn embedding_model_name(&self) -> &str {
+        match &self.embed_generator {
+            Some(_) => "BGE-small-en-v1.5",
+            None => "none",
+        }
+    }
+
+    pub fn reranker_model_name(&self) -> &str {
+        match &self.reranker {
+            Some(_) => "BGE-reranker-base",
+            None => "none",
+        }
+    }
+
     pub fn writer(&self, shard_id: usize) -> Result<tantivy::IndexWriter> {
         self.shards[shard_id].writer()
     }
