@@ -35,7 +35,7 @@
 * [ ] Search page (search happens via Sources panel — no dedicated search page)
 * [x] Search suggestions (debounced dropdown in TopBar via `/api/suggest`)
 * [ ] Recent searches
-* [ ] Search history
+* [x] Search history
 * [ ] Instant search
 * [ ] Query correction
 * [x] Empty state (shown when no query / no results)
@@ -45,10 +45,10 @@
 
 * [x] Website card (`DraggableResultCard` in SourcesPanel)
 * [x] Domain favicon (Google favicons API)
-* [ ] Reading time
+* [x] Reading time
 * [x] Metadata (hostname, source badge, category badge, relevance)
 * [x] Open externally
-* [ ] Copy URL
+* [x] Copy URL
 * [ ] Quick preview
 * [x] Trust indicator (source badge "engine" / "searxng")
 * [x] Save to workspace (Plus button + drag-and-drop)
@@ -95,9 +95,9 @@
 
 * [x] Reader mode (ReaderService + /api/read + ReaderModal overlay)
 * [x] Clean article extraction (extract_text with HTMLParser)
-* [ ] Reading progress
-* [ ] Highlight text
-* [ ] Notes
+* [x] Reading progress
+* [x] Highlight text
+* [x] Notes
 * [ ] Bookmark position
 * [x] Estimated reading time (~200 wpm calculation)
 * [x] Source metadata (hostname, char count, reading time)
@@ -123,14 +123,14 @@
 * [ ] Compare specifications
 * [ ] Similarities
 * [ ] Differences
-* [ ] Source citations
+* [x] Source citations
 
 ## Workspace AI
 
-* [ ] Chat with workspace
-* [ ] Ask questions about saved items
-* [ ] Source-grounded responses
-* [ ] Suggested follow-up searches
+* [x] Chat with workspace
+* [x] Ask questions about saved items
+* [x] Source-grounded responses
+* [x] Suggested follow-up searches
 * [ ] Detect conflicting information
 
 ---
@@ -167,6 +167,13 @@
 * [ ] Additional modes
 * [ ] Mode-specific ranking
 * [ ] Mode-specific source selection
+
+### Engine search modes (backend complete, no frontend UI)
+* [x] BM25 mode
+* [x] Vector (semantic) mode
+* [x] Hybrid (RRF fusion) mode
+* [x] Cross-encoder reranking (optional)
+* [ ] Frontend controls (mode selector, rerank toggle, alpha/beta sliders)
 
 ---
 
@@ -221,6 +228,11 @@
 * [x] Snippet generation
 * [x] Highlighting
 * [x] Ranking pipeline
+* [x] Hybrid search (BM25 + vector fusion with alpha/beta)
+* [x] Cross-encoder reranking (BGE-reranker-base)
+* [x] Embedding generation (BGE-small-en-v1.5)
+* [x] Sharded index (N-way Tantivy shards)
+* [x] Index status endpoint (`GET /status`)
 
 ---
 
@@ -231,7 +243,7 @@
 * [ ] Domain scoring
 * [ ] Freshness scoring
 * [ ] Personal ranking
-* [ ] Hybrid ranking algorithm
+* [x] Hybrid ranking algorithm (RRF fusion)
 
 ---
 
@@ -247,11 +259,11 @@
 
 # Phase 11 — Local Profiles
 
-* [ ] User profile
+* [x] User profile
 * [x] Multiple workspaces (per session)
-* [ ] Preferences
-* [ ] Theme
-* [ ] Local storage
+* [x] Preferences
+* [x] Theme
+* [x] Local storage
 * [ ] Import/Export profile
 
 ---
