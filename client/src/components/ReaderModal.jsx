@@ -224,7 +224,7 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
                 {expanded ? data.content : (data.content.length > 5000 ? data.content.slice(0, 5000) + "..." : data.content)}
               </div>
               {!expanded && data.content.length > 5000 && (
-                <div className="sticky bottom-0 pt-12 pb-2 bg-gradient-to-t from-white via-white/95 to-transparent">
+                <div className="sticky bottom-0 pt-4 pb-2 bg-white border-t border-border mt-2">
                   <button
                     onClick={() => setExpanded(true)}
                     className="block mx-auto text-xs px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-800 transition-colors"
