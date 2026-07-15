@@ -4,7 +4,6 @@ import TopBar from "../components/TopBar";
 import SourcesPanel from "../panels/SourcesPanel";
 import ContextPanel from "../panels/ContextPanel";
 import DiscoveryPanel from "../panels/DiscoveryPanel";
-import FilterSidebar from "../panels/FilterSidebar";
 import { useUIStore } from "../stores/uiStore";
 
 const PANEL_DEFAULTS = { sources: 22, context: 52, discovery: 26 };
@@ -15,19 +14,9 @@ function renderPanel(id) {
   switch (id) {
     case "sources":
       return (
-        <PanelGroup direction="horizontal" className="h-full">
-          <Panel defaultSize={18} minSize={14} maxSize={26}>
-            <div className="h-full bg-white border-r border-border">
-              <FilterSidebar />
-            </div>
-          </Panel>
-          <PanelResizeHandle />
-          <Panel defaultSize={82} minSize={74}>
-            <div className="h-full bg-white">
-              <SourcesPanel />
-            </div>
-          </Panel>
-        </PanelGroup>
+        <div className="h-full bg-white">
+          <SourcesPanel />
+        </div>
       );
     case "context":
       return (

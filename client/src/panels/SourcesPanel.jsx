@@ -1,4 +1,4 @@
-import { ExternalLink, GripVertical, Plus, BookOpen, Sparkles } from "lucide-react";
+import { ExternalLink, GripVertical, Plus, BookOpen, Sparkles, Search, Newspaper, Youtube, MessageCircle, Image, Code, Globe } from "lucide-react";
 import { useCallback } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { useSearchStore } from "../stores/searchStore";
@@ -6,16 +6,16 @@ import { useWorkspaceStore } from "../stores/workspaceStore";
 import { useSessionStore } from "../stores/sessionStore";
 import { useUIStore } from "../stores/uiStore";
 
-const CATEGORY_FILTERS = [
-  { id: "all", label: "All" },
-  { id: "research", label: "Research" },
-  { id: "articles", label: "Articles" },
-  { id: "discussions", label: "Discussions" },
-  { id: "videos", label: "Videos" },
-  { id: "news", label: "News" },
-  { id: "shopping", label: "Shopping" },
-  { id: "official", label: "Official" },
-  { id: "code", label: "Code" },
+const FILTERS = [
+  { id: "all", label: "All", icon: Search },
+  { id: "research", label: "Research", icon: BookOpen },
+  { id: "articles", label: "Articles", icon: Globe },
+  { id: "discussions", label: "Discussions", icon: MessageCircle },
+  { id: "videos", label: "Videos", icon: Youtube },
+  { id: "shopping", label: "Shopping", icon: Image },
+  { id: "news", label: "News", icon: Newspaper },
+  { id: "official", label: "Official", icon: Globe },
+  { id: "code", label: "Code", icon: Code },
 ];
 
 function Favicon({ domain }) {
@@ -230,6 +230,7 @@ export default function SourcesPanel() {
   const loading = useSearchStore((s) => s.loading);
   const error = useSearchStore((s) => s.error);
   const activeFilter = useSearchStore((s) => s.activeFilter);
+  const setActiveFilter = useSearchStore((s) => s.setActiveFilter);
   const filtered = results.filter((r) => matchFilter(r, activeFilter));
 
   return (
@@ -242,36 +243,62 @@ export default function SourcesPanel() {
           <span className="text-xs text-dim">{filtered.length} results</span>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          {loading && (
-            <div className="flex items-center justify-center py-12">
-              <div className="size-4 border-2 border-text border-t-transparent rounded-full animate-spin" />
+        <div className="flex-1 flex min-h-0">
+          {/* Filter sidebar */}
+          <div className="shrink-0 w-fit flex flex-col items-center gap-3 py-3 px-1.5 border-r border-border">
+            {FILTERS.map((f) => {
+              const isActive = activeFilter === f.id;
+              const Icon = f.icon;
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => setActiveFilter(f.id)}
+                  className={`flex flex-col items-center gap-0.5 p-1.5 rounded-lg transition-colors ${
+                    isActive
+                      ? "bg-black text-white"
+                      : "text-text hover:bg-hover"
+                  }`}
+                  title={f.label}
+                >
+                  <Icon size={14} />
+                  <span className="text-[7px] leading-tight font-medium">{f.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Results */}
+          <div className="flex-1 overflow-y-auto">
+            {loading && (
+              <div className="flex items-center justify-center py-12">
+                <div className="size-4 border-2 border-text border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            {error && (
+              <div className="px-4 py-3 text-sm text-text bg-hover rounded-md mx-2 mt-2">
+                {error}
+              </div>
+            )}
+            {!loading && !error && results.length === 0 && query && (
+              <div className="px-4 py-12 text-center text-sm text-muted">
+                No results found
+              </div>
+            )}
+            {!loading && !error && results.length === 0 && !query && (
+              <div className="px-4 py-12 text-center text-sm text-muted">
+                Search the web to see results here
+              </div>
+            )}
+            {!loading && !error && results.length > 0 && filtered.length === 0 && (
+              <div className="px-4 py-12 text-center text-sm text-muted">
+                No results match the selected filter
+              </div>
+            )}
+            <div className="space-y-0.5 px-1">
+              {filtered.map((result, i) => (
+                <DraggableResultCard key={`${result.url}-${i}`} result={result} />
+              ))}
             </div>
-          )}
-          {error && (
-            <div className="px-4 py-3 text-sm text-text bg-hover rounded-md mx-2 mt-2">
-              {error}
-            </div>
-          )}
-          {!loading && !error && results.length === 0 && query && (
-            <div className="px-4 py-12 text-center text-sm text-muted">
-              No results found
-            </div>
-          )}
-          {!loading && !error && results.length === 0 && !query && (
-            <div className="px-4 py-12 text-center text-sm text-muted">
-              Search the web to see results here
-            </div>
-          )}
-          {!loading && !error && results.length > 0 && filtered.length === 0 && (
-            <div className="px-4 py-12 text-center text-sm text-muted">
-              No results match the selected filter
-            </div>
-          )}
-          <div className="space-y-0.5 px-1">
-            {filtered.map((result, i) => (
-              <DraggableResultCard key={`${result.url}-${i}`} result={result} />
-            ))}
           </div>
         </div>
       </div>
