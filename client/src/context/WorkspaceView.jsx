@@ -74,7 +74,7 @@ function WorkspaceItemCard({ item }) {
             <ExternalLink size={13} />
           </button>
           <button onClick={(e) => { e.stopPropagation(); deleteItem(sessionId, item.id); }}
-            className="p-1.5 rounded text-dim hover:text-red-400 hover:bg-red-500/10 transition-all"
+            className="p-1.5 rounded text-dim hover:text-text hover:bg-hover transition-all"
           >
             <Trash2 size={13} />
           </button>

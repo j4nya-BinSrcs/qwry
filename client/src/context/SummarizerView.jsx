@@ -152,7 +152,7 @@ export default function SummarizerView() {
                 )}
                 <button
                   onClick={(e) => { e.stopPropagation(); removeSummary(s.id, s.url); }}
-                  className="p-1 rounded text-dim hover:text-red-400 hover:bg-red-500/10 transition-all"
+                  className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
                   title="Remove"
                 >
                   <X size={11} />
