@@ -1,12 +1,5 @@
 import { create } from "zustand";
 import { searchQuery } from "../api/search";
-import { useUIStore } from "./uiStore";
-
-export const providers = [
-  { value: null, label: "Meta" },
-  { value: "engine", label: "Engine" },
-  { value: "searxng", label: "SearXNG" },
-];
 
 export const useSearchStore = create((set, get) => ({
   query: "",
@@ -18,18 +11,13 @@ export const useSearchStore = create((set, get) => ({
   loading: false,
   error: null,
   page: 1,
-  provider: null,
-  setQuery: (query) => set({ query }),
-  setProvider: (provider) => set({ provider }),
-  search: async (q, page = 1, provider) => {
-    useUIStore.getState().setContextMode("search-assist");
-    const resolvedProvider = provider ?? get().provider;
-    set({ loading: true, error: null, query: q, page, provider: resolvedProvider });
+  search: async (q, page = 1) => {
+    set({ loading: true, error: null, query: q, page });
     try {
       const [mainData, imageData, videoData] = await Promise.all([
-        searchQuery(q, page, 20, resolvedProvider),
-        searchQuery(q, 1, 12, resolvedProvider, "images").catch(() => null),
-        searchQuery(q, 1, 12, resolvedProvider, "videos").catch(() => null),
+        searchQuery(q, page, 20),
+        searchQuery(q, 1, 12, null, "images").catch(() => null),
+        searchQuery(q, 1, 12, null, "videos").catch(() => null),
       ]);
       set({
         results: mainData.results || [],

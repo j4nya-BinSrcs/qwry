@@ -2,37 +2,23 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --color-surface: #0d1117;
-  --color-panel: rgba(22, 27, 34, 0.6);
-  --color-elevated: rgba(30, 36, 44, 0.8);
-  --color-hover: rgba(48, 54, 61, 0.5);
-  --color-border: rgba(255, 255, 255, 0.1);
-  --color-accent: #a855f7;
-  --color-accent-hover: #c084fc;
-  --color-text: #e6edf3;
-  --color-muted: #8b949e;
-  --color-dim: #5a5a62;
+  --color-surface: #ffffff;
+  --color-panel: #ffffff;
+  --color-elevated: #ffffff;
+  --color-hover: #f5f5f5;
+  --color-border: #e5e5e5;
+  --color-text: #000000;
+  --color-muted: #6b6b6b;
+  --color-dim: #9ca3af;
   --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-}
-
-[data-theme="light"] {
-  --color-surface: #f0f4f8;
-  --color-panel: rgba(255, 255, 255, 0.75);
-  --color-elevated: rgba(255, 255, 255, 0.9);
-  --color-hover: rgba(0, 0, 0, 0.05);
-  --color-border: rgba(0, 0, 0, 0.1);
-  --color-accent: #7c3aed;
-  --color-accent-hover: #6d28d9;
-  --color-text: #1a202c;
-  --color-muted: #4a5568;
-  --color-dim: #718096;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-border) transparent;
+  scrollbar-color: #d4d4d4 transparent;
 }
 
 ::-webkit-scrollbar {
@@ -45,12 +31,8 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(128, 128, 128, 0.4);
+  background: #d4d4d4;
   border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(128, 128, 128, 0.6);
 }
 
 html, body, #root {
@@ -63,55 +45,48 @@ html, body, #root {
 }
 
 body {
-  background-color: var(--color-surface);
-  color: var(--color-text);
-  transition: background-color 0.3s, color 0.3s;
-}
-
-body[data-theme="dark"] {
-  background-image:
-    radial-gradient(circle at 15% 50%, rgba(168, 85, 247, 0.06), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(192, 132, 252, 0.04), transparent 25%);
-  background-attachment: fixed;
-}
-
-body[data-theme="light"] {
-  background-image:
-    radial-gradient(circle at 15% 50%, rgba(124, 58, 237, 0.08), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.06), transparent 25%);
-  background-attachment: fixed;
+  background-color: #ffffff;
+  color: #000000;
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--color-accent) 40%, transparent);
+  background: #d4d4d4;
 }
 
 ::placeholder {
-  color: var(--color-muted);
-  opacity: 0.7;
+  color: #9ca3af;
 }
 
 input, button {
-  color: var(--color-text);
+  color: #000000;
   font-family: inherit;
 }
 
-[data-panel-group-direction="horizontal"] > [data-panel-resize-handle] {
-  width: 3px;
-  background: transparent;
-  transition: background 0.15s;
+.decorated-corner {
   position: relative;
-}
-[data-panel-group-direction="horizontal"] > [data-panel-resize-handle]:hover,
-[data-panel-group-direction="horizontal"] > [data-panel-resize-handle][data-resize-handle-active] {
-  background: var(--color-accent);
+  overflow: hidden;
 }
 
-.drag-overlay {
-  opacity: 0.85;
-  transform: scale(1.02);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid var(--color-border);
+.decorated-corner::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  border-top: 3px solid #000;
+  border-left: 3px solid #000;
+  border-top-left-radius: 4px;
+}
+
+.decorated-corner::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  border-top: 3px solid #000;
+  border-right: 3px solid #000;
+  border-top-right-radius: 4px;
 }
