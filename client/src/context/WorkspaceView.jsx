@@ -39,7 +39,7 @@ function WorkspaceItemCard({ item }) {
       ref={setNodeRef}
       style={style}
       onClick={() => setExpanded(!expanded)}
-      className="group bg-elevated border border-border rounded-md transition-all hover:border-border/80 cursor-pointer"
+      className="group bg-white border border-border rounded-md transition-all hover:border-text cursor-pointer"
     >
       <div className="flex items-start gap-3 px-3 py-2.5">
         <button {...attributes} {...listeners}
@@ -58,12 +58,12 @@ function WorkspaceItemCard({ item }) {
         </div>
         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={(e) => { e.stopPropagation(); openReader(item.url, item.title, item.media_url); }}
-            className="p-1.5 rounded text-dim hover:text-accent hover:bg-accent/10 transition-all" title="Reader"
+            className="p-1.5 rounded text-dim hover:text-text hover:bg-hover transition-all" title="Reader"
           >
             <Book size={13} />
           </button>
           <button onClick={(e) => { e.stopPropagation(); summarizeItem(sessionId, item.id); }} disabled={isSummarizing}
-            className="p-1.5 rounded text-dim hover:text-accent-hover hover:bg-accent/10 transition-all"
+            className="p-1.5 rounded text-dim hover:text-text hover:bg-hover transition-all"
             title={hasSummary ? "Re-summarize" : "Summarize"}
           >
             {isSummarizing ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
@@ -92,7 +92,7 @@ function WorkspaceItemCard({ item }) {
           )}
           {hasSummary && (
             <div className="mt-1.5 space-y-1">
-              <div className="flex items-center gap-1.5 text-xs text-accent">
+              <div className="flex items-center gap-1.5 text-xs text-text">
                 <Sparkles size={11} />
                 <span className="font-medium">Summary</span>
                 <span className="text-dim font-normal">
@@ -141,19 +141,19 @@ function WorkspaceHeader({ workspace, sessionId, onChatClick }) {
           <div className="relative">
             <button
               onClick={() => setShowWsMenu(!showWsMenu)}
-              className="flex items-center gap-2 text-sm font-semibold text-text hover:text-accent transition-colors"
+              className="flex items-center gap-2 text-sm font-semibold text-text hover:text-muted transition-colors"
             >
               <span className="truncate max-w-28">{workspace?.name || "Workspace"}</span>
               <span className="text-xs text-dim">{workspace?.item_count ?? 0}</span>
             </button>
             {showWsMenu && (
-              <div className="absolute top-full left-0 mt-1 w-48 rounded bg-elevated border border-border shadow-xl backdrop-blur-xl overflow-hidden z-10">
+              <div className="absolute top-full left-0 mt-1 w-48 rounded bg-white border border-border overflow-hidden z-10">
                 <div className="px-3 py-1.5 text-[10px] text-muted font-medium border-b border-border">Workspaces</div>
                 {workspaces.map((ws) => (
                   <button key={ws.id}
                     onClick={() => { setActive(ws.id); setShowWsMenu(false); }}
                     className={`w-full px-3 py-1.5 text-left text-xs transition-colors flex items-center justify-between ${
-                      ws.id === activeId ? "bg-accent/10 text-accent" : "text-text hover:bg-hover"
+                      ws.id === activeId ? "bg-hover text-text font-medium" : "text-text hover:bg-hover"
                     }`}
                   >
                     <span className="truncate">{ws.name}</span>
@@ -165,7 +165,7 @@ function WorkspaceHeader({ workspace, sessionId, onChatClick }) {
                     if (name) await createWorkspace(sessionId, name);
                     setShowWsMenu(false);
                   }}
-                  className="w-full px-3 py-1.5 text-left text-xs text-accent hover:bg-hover transition-colors border-t border-border"
+                  className="w-full px-3 py-1.5 text-left text-xs text-text hover:bg-hover transition-colors border-t border-border"
                 >
                   + New Workspace
                 </button>
@@ -186,9 +186,9 @@ function WorkspaceHeader({ workspace, sessionId, onChatClick }) {
               onChange={(e) => setNameInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") saveEdit(e); if (e.key === "Escape") setEditing(false); }}
               autoFocus
-              className="flex-1 bg-hover border border-border rounded px-2 py-0.5 text-xs text-text outline-none focus:border-accent/30"
+              className="flex-1 bg-hover border border-border rounded px-2 py-0.5 text-xs text-text outline-none focus:border-text"
             />
-            <button onClick={saveEdit} className="p-0.5 rounded text-dim hover:text-accent"><Check size={12} /></button>
+            <button onClick={saveEdit} className="p-0.5 rounded text-dim hover:text-text"><Check size={12} /></button>
             <button onClick={() => setEditing(false)} className="p-0.5 rounded text-dim hover:text-text"><X size={12} /></button>
           </div>
         )}
@@ -196,7 +196,7 @@ function WorkspaceHeader({ workspace, sessionId, onChatClick }) {
           <span className="text-[10px] text-muted">{workspace?.item_count ?? 0} items</span>
           {workspace && workspace.item_count > 0 && (
             <button onClick={(e) => { e.stopPropagation(); onChatClick(); }}
-              className="flex items-center gap-1 text-[10px] text-accent hover:text-accent-hover transition-colors"
+              className="flex items-center gap-1 text-[10px] text-text hover:text-muted transition-colors"
             >
               <MessageCircle size={10} />
               Chat
@@ -233,7 +233,7 @@ export default function WorkspaceView() {
   return (
     <div className="h-full flex flex-col">
       {/* Coming soon banner */}
-      <div className="shrink-0 px-3 py-1.5 bg-accent/5 border-b border-accent/10 flex items-center gap-1.5 text-[10px] text-accent">
+      <div className="shrink-0 px-3 py-1.5 bg-hover border-b border-border flex items-center gap-1.5 text-[10px] text-text">
         <Construction size={11} />
         <span>Canvas & Station views — coming soon</span>
       </div>
@@ -242,20 +242,20 @@ export default function WorkspaceView() {
 
       <div ref={setNodeRef}
         className={`flex-1 overflow-y-auto transition-all ${
-          isOver ? "bg-accent/5 border-2 border-dashed border-accent/30" : ""
+          isOver ? "bg-hover border-2 border-dashed border-border" : ""
         }`}
       >
         {loading && items.length === 0 && (
           <div className="flex items-center justify-center py-16">
-            <div className="size-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+            <div className="size-5 border-2 border-text border-t-transparent rounded-full animate-spin" />
           </div>
         )}
         {error && (
-          <div className="px-3 py-2 m-3 text-xs text-red-400 bg-red-500/5 rounded">{error}</div>
+          <div className="px-3 py-2 m-3 text-xs text-text bg-hover border border-border rounded">{error}</div>
         )}
         {!loading && items.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-            <div className="size-8 rounded bg-elevated border border-border flex items-center justify-center mb-3">
+            <div className="size-8 rounded bg-white border border-border flex items-center justify-center mb-3">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-dim">
                 <path d="M12 5v14M5 12h14" />
               </svg>
@@ -268,7 +268,7 @@ export default function WorkspaceView() {
                   const name = prompt("Workspace name:");
                   if (name) createWorkspace(sessionId, name);
                 }}
-                className="mt-3 text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-accent-hover transition-colors"
+                className="mt-3 text-xs px-3 py-1.5 rounded bg-black text-white hover:bg-gray-800 transition-colors"
               >
                 Create Workspace
               </button>

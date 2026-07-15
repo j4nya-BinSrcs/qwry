@@ -98,8 +98,8 @@ export default function ReaderView() {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center px-8">
-          <div className="size-8 rounded bg-accent/10 border border-accent/20 flex items-center justify-center mx-auto mb-3">
-            <BookOpen size={16} className="text-accent" />
+          <div className="size-8 rounded bg-hover border border-border flex items-center justify-center mx-auto mb-3">
+            <BookOpen size={16} className="text-text" />
           </div>
           <p className="text-sm text-muted">Select a result to read</p>
         </div>
@@ -121,7 +121,7 @@ export default function ReaderView() {
           const mins = data ? Math.round((data.reading_time_seconds || 0) / 60) : 0;
 
           return (
-            <div key={r.id} className="rounded bg-elevated border border-border overflow-hidden">
+            <div key={r.id} className="rounded bg-white border border-border overflow-hidden">
               <div
                 className="flex items-center gap-2 px-3 py-2 border-b border-border cursor-pointer hover:bg-hover transition-colors"
                 onClick={() => toggleRead(r.id)}
@@ -130,7 +130,7 @@ export default function ReaderView() {
                   <div className="text-xs font-medium text-text truncate">{r.title || hostname}</div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <a href={r.url} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-[10px] text-accent hover:text-accent-hover"
+                      className="flex items-center gap-1 text-[10px] text-text hover:text-muted"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <ExternalLink size={10} />
@@ -149,7 +149,7 @@ export default function ReaderView() {
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); removeRead(r.id, r.url); }}
-                  className="p-1 rounded text-dim hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
+                  className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all shrink-0"
                   title="Remove"
                 >
                   <X size={11} />
@@ -160,25 +160,25 @@ export default function ReaderView() {
               {openId === r.id && (
                 <div className="px-3 py-2">
                   {r.loading && (
-                    <div className="flex items-center justify-center py-8"><Loader2 size={18} className="animate-spin text-accent" /></div>
+                    <div className="flex items-center justify-center py-8"><Loader2 size={18} className="animate-spin text-text" /></div>
                   )}
 
                   {r.error && (
                     <div className="py-4 text-center space-y-2">
-                      <p className="text-xs text-red-400">Unable to load this page.</p>
+                      <p className="text-xs text-text">Unable to load this page.</p>
                       <p className="text-[10px] text-muted">{r.error}</p>
                       <a href={r.url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-accent-hover transition-colors"
+                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-black text-white hover:bg-gray-800 transition-colors"
                       ><ExternalLink size={11} /> Open in browser</a>
                     </div>
                   )}
 
                   {!r.loading && !r.error && data?.success === false && (
                     <div className="py-4 text-center space-y-2">
-                      <p className="text-xs text-muted">This page could not be read automatically.</p>
+                      <p className="text-xs text-muted">Could not read this page automatically.</p>
                       <p className="text-[10px] text-dim">{data.error}</p>
                       <a href={r.url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-accent-hover transition-colors"
+                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-black text-white hover:bg-gray-800 transition-colors"
                       ><ExternalLink size={11} /> Open in browser</a>
                     </div>
                   )}
@@ -224,8 +224,8 @@ export default function ReaderView() {
                       <div className="py-4 text-center space-y-2">
                         <p className="text-xs text-muted">No readable content was found on this page.</p>
                         <a href={r.url} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-accent-hover transition-colors"
-                        ><ExternalLink size={11} /> Open in browser</a>
+                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-black text-white hover:bg-gray-800 transition-colors"
+                      ><ExternalLink size={11} /> Open in browser</a>
                       </div>
                     )
                   )}
@@ -234,7 +234,7 @@ export default function ReaderView() {
                     <div className="py-4 text-center space-y-2">
                       <p className="text-xs text-muted">This content type could not be displayed.</p>
                       <a href={r.url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-accent-hover transition-colors"
+                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-black text-white hover:bg-gray-800 transition-colors"
                       ><ExternalLink size={11} /> Open in browser</a>
                     </div>
                   )}

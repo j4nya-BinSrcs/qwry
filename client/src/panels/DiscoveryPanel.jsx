@@ -69,7 +69,7 @@ function DraggableImageCard({ result }) {
     <div ref={setNodeRef} style={style}
       className={`group flex-shrink-0 w-32 cursor-default ${isDragging ? "opacity-50" : ""}`}
     >
-      <div className="relative rounded overflow-hidden bg-hover border border-border hover:border-accent/30 transition-all">
+      <div className="relative rounded overflow-hidden bg-hover border border-border hover:border-text transition-all">
         <div className="aspect-square">
           {imgSrc ? (
             <img
@@ -136,7 +136,7 @@ function DraggableVideoCard({ result }) {
     <div ref={setNodeRef} style={style}
       className={`group flex-shrink-0 w-56 cursor-default ${isDragging ? "opacity-50" : ""}`}
     >
-      <div className="relative rounded overflow-hidden bg-hover border border-border hover:border-accent/30 transition-all">
+      <div className="relative rounded overflow-hidden bg-hover border border-border hover:border-text transition-all">
         <div className="aspect-video">
           {imgSrc ? (
             <img
@@ -203,7 +203,7 @@ function DraggableNewsCard({ result }) {
 
   return (
     <div ref={setNodeRef} style={style}
-      className={`group flex-shrink-0 w-72 rounded border border-border hover:border-accent/30 transition-all cursor-default ${isDragging ? "opacity-50" : "hover:bg-hover"}`}
+      className={`group flex-shrink-0 w-72 rounded border border-border hover:border-text transition-all cursor-default ${isDragging ? "opacity-50" : "hover:bg-hover"}`}
     >
       <div className="p-2.5">
         <div className="flex items-start gap-2.5">
@@ -236,17 +236,17 @@ function DraggableNewsCard({ result }) {
         </div>
         <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
           <button onClick={(e) => { e.stopPropagation(); openReader(result.url, result.title, result.img_src); }}
-            className="p-1 rounded text-dim hover:text-accent hover:bg-accent/10 transition-all" title="Reader"
+            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all" title="Reader"
           >
             <BookOpen size={11} />
           </button>
           <button onClick={(e) => { e.stopPropagation(); openSummarizer(result.url, result.title); }}
-            className="p-1 rounded text-dim hover:text-accent-hover hover:bg-accent/10 transition-all" title="Summarize"
+            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all" title="Summarize"
           >
             <Sparkles size={11} />
           </button>
           <button onClick={handleSave} disabled={!activeWsId}
-            className="p-1 rounded text-dim hover:text-accent hover:bg-accent/10 transition-all disabled:opacity-30" title="Save"
+            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all disabled:opacity-30" title="Save"
           >
             {saved ? <Check size={11} /> : <Plus size={11} />}
           </button>
@@ -285,7 +285,7 @@ function DraggableShoppingCard({ result }) {
     <div ref={setNodeRef} style={style}
       className={`group flex-shrink-0 w-36 cursor-default ${isDragging ? "opacity-50" : ""}`}
     >
-      <div className="rounded border border-border overflow-hidden hover:border-accent/30 transition-all">
+      <div className="rounded border border-border overflow-hidden hover:border-text transition-all">
         <div className="aspect-square bg-hover relative">
           {imgSrc ? (
             <img src={`/api/image-proxy?url=${encodeURIComponent(imgSrc)}`}
@@ -308,7 +308,7 @@ function DraggableShoppingCard({ result }) {
         </div>
         <div className="p-1.5">
           <div className="text-[10px] text-text line-clamp-2 leading-snug font-medium">{result.title}</div>
-          <div className="text-[10px] text-accent font-semibold mt-0.5">{result.engine || result.source || "—"}</div>
+          <div className="text-[10px] text-text font-semibold mt-0.5">{result.engine || result.source || "—"}</div>
         </div>
       </div>
     </div>
@@ -363,7 +363,7 @@ export default function DiscoveryPanel() {
               onClick={() => setActiveFilter(f.id)}
               className={`shrink-0 px-2.5 py-1 text-xs rounded-md transition-colors ${
                 activeFilter === f.id
-                  ? "bg-accent/10 text-accent font-medium"
+                  ? "bg-black text-white font-medium"
                   : "text-muted hover:text-text hover:bg-hover"
               }`}
             >

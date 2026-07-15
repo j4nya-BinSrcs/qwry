@@ -110,8 +110,8 @@ export default function SummarizerView() {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center px-8">
-          <div className="size-8 rounded bg-accent/10 border border-accent/20 flex items-center justify-center mx-auto mb-3">
-            <Sparkles size={16} className="text-accent" />
+          <div className="size-8 rounded bg-hover border border-border flex items-center justify-center mx-auto mb-3">
+            <Sparkles size={16} className="text-text" />
           </div>
           <p className="text-sm text-muted">Select a result to summarize</p>
         </div>
@@ -128,7 +128,7 @@ export default function SummarizerView() {
 
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {summaries.map((s) => (
-          <div key={s.id} className="rounded bg-elevated border border-border overflow-hidden">
+          <div key={s.id} className="rounded bg-white border border-border overflow-hidden">
             <div
               className="flex items-center gap-2 px-3 py-2 border-b border-border cursor-pointer hover:bg-hover transition-colors"
               onClick={() => toggleSummary(s.id)}
@@ -136,7 +136,7 @@ export default function SummarizerView() {
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-medium text-text truncate">{s.title || new URL(s.url).hostname}</div>
                 <a href={s.url} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[10px] text-accent hover:text-accent-hover mt-0.5"
+                  className="flex items-center gap-1 text-[10px] text-text hover:text-muted mt-0.5"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <ExternalLink size={10} />
@@ -164,7 +164,7 @@ export default function SummarizerView() {
               <div className="px-3 py-2">
                 {s.loading && (
                   <div className="flex items-center gap-1.5 text-xs text-muted">
-                    <Loader2 size={12} className="animate-spin text-accent" />
+                    <Loader2 size={12} className="animate-spin text-text" />
                     Summarizing...
                   </div>
                 )}
@@ -173,7 +173,7 @@ export default function SummarizerView() {
                     <p className="text-xs text-muted">Could not generate a summary for this page.</p>
                     <p className="text-[10px] text-dim">{s.error}</p>
                     <a href={s.url} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-white hover:bg-accent-hover transition-colors"
+                      className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-black text-white hover:bg-gray-800 transition-colors"
                     ><ExternalLink size={11} /> Open in browser</a>
                   </div>
                 )}
