@@ -19,8 +19,10 @@ export const useSearchStore = create((set, get) => ({
   error: null,
   page: 1,
   provider: null,
+  activeFilter: "all",
   setQuery: (query) => set({ query }),
   setProvider: (provider) => set({ provider }),
+  setActiveFilter: (filter) => set({ activeFilter: filter }),
   search: async (q, page = 1, provider) => {
     useUIStore.getState().setContextMode("search-assist");
     const resolvedProvider = provider ?? get().provider;
