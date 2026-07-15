@@ -1,13 +1,14 @@
-import { Search, Sparkles } from "lucide-react";
+import { Search, Settings } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchStore } from "../stores/searchStore";
 import { fetchSuggestions } from "../api/search";
 import SettingsPopup from "./SettingsPopup";
 
-export default function TopBar({ toggleTheme, theme }) {
+export default function TopBar() {
   const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const inputRef = useRef(null);
 
   const search = useSearchStore((s) => s.search);
@@ -49,23 +50,23 @@ export default function TopBar({ toggleTheme, theme }) {
   };
 
   return (
-    <div className="relative z-50 flex items-center gap-3 px-4 py-2.5 bg-panel/80 backdrop-blur-xl border-b border-border">
+    <div className="relative z-50 flex items-center gap-4 px-4 py-3 bg-white border-b border-border">
       {/* Logo */}
       <div className="flex items-center gap-2 shrink-0">
-        <div className="size-6 rounded-sm bg-accent flex items-center justify-center">
-          <Sparkles size={14} className="text-white" />
+        <div className="size-6 rounded bg-black flex items-center justify-center">
+          <span className="text-white text-[10px] font-bold">Q</span>
         </div>
         <span className="text-sm font-semibold tracking-tight text-text">
           QWRY
         </span>
       </div>
 
-      {/* Search */}
-      <div className="relative flex-1 max-w-2xl">
+      {/* Search bar - positioned to overlap Sources/Center boundary */}
+      <div className="relative flex-1 max-w-xl">
         <div className="relative">
           <Search
-            size={15}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-dim"
+            size={16}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-text"
           />
           <input
             ref={inputRef}
@@ -75,12 +76,12 @@ export default function TopBar({ toggleTheme, theme }) {
             onKeyDown={(e) => e.key === "Enter" && handleSearch(input)}
             onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
             onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-            placeholder={query || "Search the web..."}
-            className="w-full h-9 pl-9 pr-3 rounded-full bg-hover border border-border text-sm text-text placeholder:text-dim outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30 transition-all"
+            placeholder="Cofftset"
+            className="w-full h-11 pl-11 pr-4 rounded-full bg-white border border-border text-text text-sm placeholder:text-dim outline-none focus:border-text transition-colors"
           />
         </div>
         {showSuggestions && (
-          <div className="absolute top-full left-0 right-0 mt-1 rounded-lg bg-elevated border border-border shadow-xl backdrop-blur-xl overflow-hidden">
+          <div className="absolute top-full left-0 right-0 mt-1.5 rounded-lg bg-white border border-border overflow-hidden">
             {suggestions.map((s, i) => (
               <button
                 key={i}
@@ -98,12 +99,15 @@ export default function TopBar({ toggleTheme, theme }) {
       <div className="flex-1" />
 
       {/* Profile */}
-      <div className="size-7 rounded-full bg-accent/20 border border-accent/30 flex items-center justify-center text-xs font-semibold text-accent shrink-0">
+      <div className="size-7 rounded-full border border-border flex items-center justify-center text-xs font-semibold text-text shrink-0">
         U
       </div>
 
       {/* Settings */}
-      <SettingsPopup toggleTheme={toggleTheme} theme={theme} />
+      <SettingsPopup
+        open={settingsOpen}
+        onToggle={() => setSettingsOpen(!settingsOpen)}
+      />
     </div>
   );
 }
