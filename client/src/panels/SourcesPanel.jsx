@@ -235,7 +235,7 @@ export default function SourcesPanel() {
 
   return (
     <div className="h-full flex flex-col p-3">
-      <div className="flex-1 rounded-xl border border-border bg-white overflow-hidden flex flex-col">
+      <div className="flex-1 rounded-xl border border-border bg-panel overflow-hidden flex flex-col">
         <div className="shrink-0 px-4 py-3 border-b border-border flex items-center justify-between">
           <h2 className="text-xs font-semibold text-text uppercase tracking-wider">
             Sources
@@ -255,7 +255,7 @@ export default function SourcesPanel() {
                   onClick={() => setActiveFilter(f.id)}
                   className={`flex flex-col items-center gap-0.5 p-1.5 rounded-lg transition-colors ${
                     isActive
-                      ? "bg-black text-[#ffffff]"
+                      ? "bg-text text-surface"
                       : "text-text hover:bg-hover"
                   }`}
                   title={f.label}

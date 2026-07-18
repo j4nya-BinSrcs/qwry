@@ -36,7 +36,7 @@ export default function ContextPanel() {
             >
               {m.label}
               {contextMode === m.id && (
-                <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-black" />
+                <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-text" />
               )}
             </button>
           ))}

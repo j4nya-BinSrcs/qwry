@@ -58,10 +58,10 @@ export default function ChatModal({ workspaceId, workspaceName, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-12 pb-8" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/60" />
+      <div className="absolute inset-0 bg-text/60" />
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-2xl max-h-[calc(100vh-6rem)] mx-4 bg-white border border-border rounded-xl overflow-hidden flex flex-col"
+        className="relative w-full max-w-2xl max-h-[calc(100vh-6rem)] mx-4 bg-elevated border border-border rounded-xl overflow-hidden flex flex-col"
       >
         {/* Header */}
         <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-border">
@@ -85,8 +85,8 @@ export default function ChatModal({ workspaceId, workspaceName, onClose }) {
               <div
                 className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm ${
                   msg.role === "user"
-                    ? "bg-black text-white"
-                    : "bg-white border border-border text-text"
+                    ? "bg-text text-surface"
+                    : "bg-elevated border border-border text-text"
                 }`}
               >
                 <p className="whitespace-pre-line leading-relaxed">{msg.content}</p>
@@ -112,7 +112,7 @@ export default function ChatModal({ workspaceId, workspaceName, onClose }) {
           ))}
           {loading && (
             <div className="flex justify-start">
-              <div className="bg-white border border-border rounded-xl px-4 py-2.5 flex items-center gap-2 text-sm text-muted">
+              <div className="bg-elevated border border-border rounded-xl px-4 py-2.5 flex items-center gap-2 text-sm text-muted">
                 <Loader2 size={12} className="animate-spin" />
                 Thinking...
               </div>
@@ -135,7 +135,7 @@ export default function ChatModal({ workspaceId, workspaceName, onClose }) {
             <button
               onClick={handleSend}
               disabled={!input.trim() || loading}
-              className="shrink-0 p-2 rounded-lg bg-black text-white hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="shrink-0 p-2 rounded-lg bg-text text-surface hover:bg-text/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Send size={14} />
             </button>

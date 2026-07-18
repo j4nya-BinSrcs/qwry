@@ -100,22 +100,22 @@ function DraggableImageCard({ result }) {
           )}
         </div>
         {/* Hover actions overlay */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
-          <button {...listeners} className="p-1.5 rounded bg-black/50 text-white hover:bg-black/70 transition-colors cursor-grab active:cursor-grabbing">
+        <div className="absolute inset-0 bg-text/0 group-hover:bg-text/30 transition-all flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
+          <button {...listeners} className="p-1.5 rounded bg-text/50 text-surface hover:bg-text/70 transition-colors cursor-grab active:cursor-grabbing">
             <GripVertical size={13} />
           </button>
           <button onClick={(e) => { e.stopPropagation(); openReader(result.url, result.title, imgSrc); }}
-            className="p-1.5 rounded bg-black/50 text-white hover:bg-black/70 transition-colors" title="Reader"
+            className="p-1.5 rounded bg-text/50 text-surface hover:bg-text/70 transition-colors" title="Reader"
           >
             <BookOpen size={13} />
           </button>
           <button onClick={handleSave} disabled={!activeWsId}
-            className="p-1.5 rounded bg-black/50 text-white hover:bg-black/70 transition-colors disabled:opacity-30" title="Save"
+            className="p-1.5 rounded bg-text/50 text-surface hover:bg-text/70 transition-colors disabled:opacity-30" title="Save"
           >
             {saved ? <Check size={13} /> : <Plus size={13} />}
           </button>
           <button onClick={() => window.open(result.url, "_blank")}
-            className="p-1.5 rounded bg-black/50 text-white hover:bg-black/70 transition-colors" title="Open"
+            className="p-1.5 rounded bg-text/50 text-surface hover:bg-text/70 transition-colors" title="Open"
           >
             <ExternalLink size={13} />
           </button>
@@ -166,25 +166,25 @@ function DraggableVideoCard({ result }) {
             <div className="w-full h-full flex items-center justify-center text-dim text-[10px]">No thumbnail</div>
           )}
         </div>
-        <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/70 text-[10px] text-white font-medium">
+        <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-text/70 text-[10px] text-surface font-medium">
           {result.published_date || result.engine || "Video"}
         </div>
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
-          <button {...listeners} className="p-1.5 rounded bg-black/50 text-white hover:bg-black/70 transition-colors cursor-grab active:cursor-grabbing">
+        <div className="absolute inset-0 bg-text/0 group-hover:bg-text/30 transition-all flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
+          <button {...listeners} className="p-1.5 rounded bg-text/50 text-surface hover:bg-text/70 transition-colors cursor-grab active:cursor-grabbing">
             <GripVertical size={13} />
           </button>
           <button onClick={(e) => { e.stopPropagation(); openReader(result.url, result.title, imgSrc); }}
-            className="p-1.5 rounded bg-black/50 text-white hover:bg-black/70 transition-colors" title="Reader"
+            className="p-1.5 rounded bg-text/50 text-surface hover:bg-text/70 transition-colors" title="Reader"
           >
             <BookOpen size={13} />
           </button>
           <button onClick={handleSave} disabled={!activeWsId}
-            className="p-1.5 rounded bg-black/50 text-white hover:bg-black/70 transition-colors disabled:opacity-30" title="Save"
+            className="p-1.5 rounded bg-text/50 text-surface hover:bg-text/70 transition-colors disabled:opacity-30" title="Save"
           >
             {saved ? <Check size={13} /> : <Plus size={13} />}
           </button>
           <button onClick={() => window.open(result.url, "_blank")}
-            className="p-1.5 rounded bg-black/50 text-white hover:bg-black/70 transition-colors" title="Open"
+            className="p-1.5 rounded bg-text/50 text-surface hover:bg-text/70 transition-colors" title="Open"
           >
             <ExternalLink size={13} />
           </button>
@@ -313,12 +313,12 @@ function DraggableShoppingCard({ result }) {
           ) : (
             <div className="w-full h-full flex items-center justify-center text-dim text-[10px]">No image</div>
           )}
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
-            <button {...listeners} className="p-1 rounded bg-black/50 text-white hover:bg-black/70 transition-colors cursor-grab active:cursor-grabbing">
+          <div className="absolute inset-0 bg-text/0 group-hover:bg-text/30 transition-all flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
+            <button {...listeners} className="p-1 rounded bg-text/50 text-surface hover:bg-text/70 transition-colors cursor-grab active:cursor-grabbing">
               <GripVertical size={12} />
             </button>
             <button onClick={handleSave} disabled={!activeWsId}
-              className="p-1 rounded bg-black/50 text-white hover:bg-black/70 transition-colors disabled:opacity-30" title="Save"
+              className="p-1 rounded bg-text/50 text-surface hover:bg-text/70 transition-colors disabled:opacity-30" title="Save"
             >
               {saved ? <Check size={12} /> : <Plus size={12} />}
             </button>
@@ -381,7 +381,7 @@ export default function DiscoveryPanel() {
               onClick={() => setActiveFilter(f.id)}
               className={`shrink-0 px-2.5 py-1 text-xs rounded-md transition-colors ${
                 activeFilter === f.id
-                  ? "bg-black text-[#ffffff] font-medium"
+                  ? "bg-text text-surface font-medium"
                   : "text-muted hover:text-text hover:bg-hover"
               }`}
             >

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --color-surface: #ffffff;
@@ -15,27 +17,35 @@
   --radius-lg: 12px;
 }
 
+.dark {
+  --color-surface: #111111;
+  --color-panel: #1a1a1a;
+  --color-elevated: #222222;
+  --color-hover: #2a2a2a;
+  --color-border: #333333;
+  --color-text: #f0f0f0;
+  --color-muted: #999999;
+  --color-dim: #666666;
+}
+
 * {
   scrollbar-width: thin;
-  scrollbar-color: #e5e5e5 transparent;
+  scrollbar-color: var(--color-border) transparent;
 }
 
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #e5e5e5;
+  background: var(--color-border);
   border-radius: 10px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: #cccccc;
+  background: var(--color-muted);
 }
 
 html, body, #root {
@@ -49,15 +59,15 @@ html, body, #root {
 }
 
 body {
-  background-color: #ffffff;
+  background-color: var(--color-surface);
 }
 
 ::selection {
-  background: #e5e5e5;
+  background: var(--color-border);
 }
 
 ::placeholder {
-  color: #999999;
+  color: var(--color-dim);
 }
 
 [data-panel-group-direction="horizontal"] > [data-panel-resize-handle] {
@@ -69,12 +79,12 @@ body {
 
 [data-panel-group-direction="horizontal"] > [data-panel-resize-handle]:hover,
 [data-panel-group-direction="horizontal"] > [data-panel-resize-handle][data-resize-handle-active] {
-  background: #000000;
+  background: var(--color-text);
 }
 
 .drag-overlay {
   opacity: 0.85;
   transform: scale(1.02);
-  border: 1px solid #e5e5e5;
-  background: #ffffff;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
 }

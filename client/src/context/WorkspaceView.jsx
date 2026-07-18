@@ -81,7 +81,7 @@ function SourceItemCard({ item }) {
     <div ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : undefined }}
       onClick={() => setExpanded(!expanded)}
-      className="group bg-white border border-border rounded-md transition-all hover:border-text/40 cursor-pointer"
+      className="group bg-panel border border-border rounded-md transition-all hover:border-text/40 cursor-pointer"
     >
       <div className="flex items-start gap-3 px-3 py-2.5">
         <button {...attributes} {...listeners}
@@ -171,7 +171,7 @@ function WorkspaceHeader({ workspace, sessionId, onChatClick }) {
               <span className="text-xs text-dim">{workspace?.item_count ?? 0}</span>
             </button>
             {showWsMenu && (
-              <div className="absolute top-full left-0 mt-1 w-48 rounded bg-white border border-border shadow-xl overflow-hidden z-10">
+              <div className="absolute top-full left-0 mt-1 w-48 rounded bg-elevated border border-border shadow-xl overflow-hidden z-10">
                 <div className="px-3 py-1.5 text-[10px] text-muted font-medium border-b border-border">Workspaces</div>
                 {workspaces.map((ws) => (
                   <button key={ws.id}

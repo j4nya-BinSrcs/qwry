@@ -121,7 +121,7 @@ export default function ReaderView() {
           const mins = data ? Math.round((data.reading_time_seconds || 0) / 60) : 0;
 
           return (
-            <div key={r.id} className="rounded bg-white border border-border overflow-hidden">
+            <div key={r.id} className="rounded bg-panel border border-border overflow-hidden">
               <div
                 className="flex items-center gap-2 px-3 py-2 border-b border-border cursor-pointer hover:bg-hover transition-colors"
                 onClick={() => toggleRead(r.id)}
@@ -168,7 +168,7 @@ export default function ReaderView() {
                       <p className="text-xs text-text">Unable to load this page.</p>
                       <p className="text-[10px] text-muted">{r.error}</p>
                       <a href={r.url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-black text-white hover:bg-gray-800 transition-colors"
+                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-text text-surface hover:bg-text/80 transition-colors"
                       ><ExternalLink size={11} /> Open in browser</a>
                     </div>
                   )}
@@ -178,7 +178,7 @@ export default function ReaderView() {
                       <p className="text-xs text-muted">Could not read this page automatically.</p>
                       <p className="text-[10px] text-dim">{data.error}</p>
                       <a href={r.url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-black text-white hover:bg-gray-800 transition-colors"
+                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-text text-surface hover:bg-text/80 transition-colors"
                       ><ExternalLink size={11} /> Open in browser</a>
                     </div>
                   )}
@@ -200,13 +200,13 @@ export default function ReaderView() {
                     <div className="space-y-3">
                       {data.media_url && (
                         <a href={r.url} target="_blank" rel="noopener noreferrer">
-                          <div className="relative rounded overflow-hidden bg-black aspect-video flex items-center justify-center group cursor-pointer">
+                          <div className="relative rounded overflow-hidden bg-text aspect-video flex items-center justify-center group cursor-pointer">
                             <img src={`/api/image-proxy?url=${encodeURIComponent(data.media_url)}`} alt=""
                               className="w-full h-full object-cover"
                               onError={(e) => { e.target.style.display = "none"; }} />
                             <div className="absolute inset-0 flex items-center justify-center">
-                              <div className="size-12 rounded-full bg-black/60 flex items-center justify-center group-hover:bg-black/80 transition-colors">
-                                <Play size={22} className="text-white ml-0.5" />
+                              <div className="size-12 rounded-full bg-text/60 flex items-center justify-center group-hover:bg-text/80 transition-colors">
+                                <Play size={22} className="text-surface ml-0.5" />
                               </div>
                             </div>
                           </div>
@@ -224,7 +224,7 @@ export default function ReaderView() {
                       <div className="py-4 text-center space-y-2">
                         <p className="text-xs text-muted">No readable content was found on this page.</p>
                         <a href={r.url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-black text-white hover:bg-gray-800 transition-colors"
+                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-text text-surface hover:bg-text/80 transition-colors"
                       ><ExternalLink size={11} /> Open in browser</a>
                       </div>
                     )
@@ -234,7 +234,7 @@ export default function ReaderView() {
                     <div className="py-4 text-center space-y-2">
                       <p className="text-xs text-muted">This content type could not be displayed.</p>
                       <a href={r.url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-black text-white hover:bg-gray-800 transition-colors"
+                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-text text-surface hover:bg-text/80 transition-colors"
                       ><ExternalLink size={11} /> Open in browser</a>
                     </div>
                   )}
