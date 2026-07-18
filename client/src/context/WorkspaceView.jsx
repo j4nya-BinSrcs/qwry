@@ -39,7 +39,7 @@ function WorkspaceItemCard({ item }) {
       ref={setNodeRef}
       style={style}
       onClick={() => setExpanded(!expanded)}
-      className="group bg-white border border-border rounded-md transition-all hover:border-text cursor-pointer"
+      className="group bg-panel border border-border rounded-md transition-all hover:border-text cursor-pointer"
     >
       <div className="flex items-start gap-3 px-3 py-2.5">
         <button {...attributes} {...listeners}
@@ -147,7 +147,7 @@ function WorkspaceHeader({ workspace, sessionId, onChatClick }) {
               <span className="text-xs text-dim">{workspace?.item_count ?? 0}</span>
             </button>
             {showWsMenu && (
-              <div className="absolute top-full left-0 mt-1 w-48 rounded bg-white border border-border overflow-hidden z-10">
+              <div className="absolute top-full left-0 mt-1 w-48 rounded bg-elevated border border-border overflow-hidden z-10">
                 <div className="px-3 py-1.5 text-[10px] text-muted font-medium border-b border-border">Workspaces</div>
                 {workspaces.map((ws) => (
                   <button key={ws.id}
@@ -255,7 +255,7 @@ export default function WorkspaceView() {
         )}
         {!loading && items.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-            <div className="size-8 rounded bg-white border border-border flex items-center justify-center mb-3">
+            <div className="size-8 rounded bg-panel border border-border flex items-center justify-center mb-3">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-dim">
                 <path d="M12 5v14M5 12h14" />
               </svg>
@@ -268,7 +268,7 @@ export default function WorkspaceView() {
                   const name = prompt("Workspace name:");
                   if (name) createWorkspace(sessionId, name);
                 }}
-                className="mt-3 text-xs px-3 py-1.5 rounded bg-black text-white hover:bg-gray-800 transition-colors"
+                className="mt-3 text-xs px-3 py-1.5 rounded bg-text text-surface hover:bg-text/80 transition-colors"
               >
                 Create Workspace
               </button>

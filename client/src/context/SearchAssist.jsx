@@ -129,7 +129,7 @@ export default function SearchAssist() {
     <div className="h-full overflow-y-auto p-3 space-y-3">
       {/* Short overview loading */}
       {loadingShort && !shortOverview && (
-        <div className="flex items-center gap-2 px-3 py-2.5 rounded border border-border bg-white text-xs text-muted">
+        <div className="flex items-center gap-2 px-3 py-2.5 rounded border border-border bg-panel text-xs text-muted">
           <Loader2 size={12} className="animate-spin" />
           Generating overview...
         </div>
@@ -137,14 +137,14 @@ export default function SearchAssist() {
 
       {/* Error */}
       {error && !shortOverview && (
-        <div className="px-3 py-2.5 text-xs text-muted rounded border border-border bg-white">
+        <div className="px-3 py-2.5 text-xs text-muted rounded border border-border bg-panel">
           AI overview unavailable. {error.includes("404") ? "The AI service is not configured." : error}
         </div>
       )}
 
       {/* Overview card */}
       {hasContent && (
-        <div className="relative rounded-xl border border-border bg-white">
+        <div className="relative rounded-xl border border-border bg-panel">
           <div className="flex items-center gap-1.5 px-4 py-3 border-b border-border">
             <Sparkles size={13} className="text-text shrink-0" />
             <span className="text-xs font-semibold text-text">AI Overview</span>
@@ -229,7 +229,7 @@ export default function SearchAssist() {
             <button
               key={i}
               onClick={() => search(s)}
-              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border border-border bg-white hover:bg-hover transition-colors text-left"
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border border-border bg-panel hover:bg-hover transition-colors text-left"
             >
               <Search size={14} className="text-dim shrink-0" />
               <span className="text-sm text-text flex-1 truncate">{s}</span>
@@ -238,7 +238,7 @@ export default function SearchAssist() {
           )) : (
             <>
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border border-border bg-white text-left opacity-40">
+                <div key={i} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border border-border bg-panel text-left opacity-40">
                   <Search size={14} className="text-dim shrink-0" />
                   <span className="text-sm text-muted flex-1 truncate">Search related to your query</span>
                   <ChevronRight size={14} className="text-dim shrink-0" />

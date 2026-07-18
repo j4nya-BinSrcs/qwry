@@ -48,10 +48,10 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
       className="fixed inset-0 z-50 flex items-start justify-center pt-12 pb-8"
       onClick={onClose}
     >
-      <div className="absolute inset-0 bg-black/60" />
+      <div className="absolute inset-0 bg-text/60" />
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-3xl max-h-[calc(100vh-6rem)] mx-4 bg-white border border-border rounded-xl overflow-hidden flex flex-col"
+        className="relative w-full max-w-3xl max-h-[calc(100vh-6rem)] mx-4 bg-elevated border border-border rounded-xl overflow-hidden flex flex-col"
       >
         {/* Header */}
         <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-border">
@@ -119,7 +119,7 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-800 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-text text-surface hover:bg-text/80 transition-colors"
               >
                 <ExternalLink size={12} />
                 Open in browser instead
@@ -134,7 +134,7 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-800 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-text text-surface hover:bg-text/80 transition-colors"
               >
                 <ExternalLink size={12} />
                 Open in browser instead
@@ -168,7 +168,7 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-800 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-text text-surface hover:bg-text/80 transition-colors"
               >
                 <ExternalLink size={12} />
                 Open in browser instead
@@ -181,7 +181,7 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
             <div className="space-y-4">
               {data.media_url && (
                 <a href={url} target="_blank" rel="noopener noreferrer">
-                  <div className="relative rounded-lg overflow-hidden bg-black aspect-video flex items-center justify-center group cursor-pointer">
+                  <div className="relative rounded-lg overflow-hidden bg-text aspect-video flex items-center justify-center group cursor-pointer">
                     <img
                       src={`/api/image-proxy?url=${encodeURIComponent(data.media_url)}`}
                       alt={data.title || "Video thumbnail"}
@@ -191,8 +191,8 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
                       }}
                     />
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="size-14 rounded-full bg-black/60 flex items-center justify-center group-hover:bg-black/80 transition-colors">
-                        <Play size={24} className="text-white ml-1" />
+                      <div className="size-14 rounded-full bg-text/60 flex items-center justify-center group-hover:bg-text/80 transition-colors">
+                        <Play size={24} className="text-surface ml-1" />
                       </div>
                     </div>
                   </div>
@@ -209,7 +209,7 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-800 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-text text-surface hover:bg-text/80 transition-colors"
               >
                 <Play size={12} />
                 Watch on YouTube
@@ -224,10 +224,10 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
                 {expanded ? data.content : (data.content.length > 5000 ? data.content.slice(0, 5000) + "..." : data.content)}
               </div>
               {!expanded && data.content.length > 5000 && (
-                <div className="sticky bottom-0 pt-4 pb-2 bg-white border-t border-border mt-2">
+                <div className="sticky bottom-0 pt-4 pb-2 bg-elevated border-t border-border mt-2">
                   <button
                     onClick={() => setExpanded(true)}
-                    className="block mx-auto text-xs px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-800 transition-colors"
+                    className="block mx-auto text-xs px-4 py-2 rounded-lg bg-text text-surface hover:bg-text/80 transition-colors"
                   >
                     Show all ({data.content.length.toLocaleString()} chars)
                   </button>

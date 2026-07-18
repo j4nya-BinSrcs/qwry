@@ -128,7 +128,7 @@ export default function SummarizerView() {
 
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {summaries.map((s) => (
-          <div key={s.id} className="rounded bg-white border border-border overflow-hidden">
+          <div key={s.id} className="rounded bg-panel border border-border overflow-hidden">
             <div
               className="flex items-center gap-2 px-3 py-2 border-b border-border cursor-pointer hover:bg-hover transition-colors"
               onClick={() => toggleSummary(s.id)}
@@ -173,7 +173,7 @@ export default function SummarizerView() {
                     <p className="text-xs text-muted">Could not generate a summary for this page.</p>
                     <p className="text-[10px] text-dim">{s.error}</p>
                     <a href={s.url} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-black text-white hover:bg-gray-800 transition-colors"
+                      className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-text text-surface hover:bg-text/80 transition-colors"
                     ><ExternalLink size={11} /> Open in browser</a>
                   </div>
                 )}

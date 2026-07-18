@@ -19,8 +19,23 @@ function savePanelOrder(order) {
   } catch {}
 }
 
+function loadTheme() {
+  try {
+    const stored = localStorage.getItem("qwry_theme");
+    if (stored === "dark" || stored === "light") return stored;
+  } catch {}
+  return "light";
+}
+
+function saveTheme(theme) {
+  try {
+    localStorage.setItem("qwry_theme", theme);
+  } catch {}
+}
+
 export const useUIStore = create((set, get) => ({
   panelOrder: loadPanelOrder(),
+  theme: loadTheme(),
   expandedPanel: null,
   contextMode: "search-assist",
   readerUrl: null,
@@ -59,4 +74,12 @@ export const useUIStore = create((set, get) => ({
       summarizeTitle: title || null,
       summarizeVersion: state.summarizeVersion + 1,
     })),
+
+  toggleTheme: () =>
+    set((state) => {
+      const next = state.theme === "light" ? "dark" : "light";
+      saveTheme(next);
+      document.documentElement.classList.toggle("dark", next === "dark");
+      return { theme: next };
+    }),
 }));

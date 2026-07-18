@@ -25,7 +25,7 @@ export default function MarkdownRenderer({ children }) {
               {children}
             </code>
           ) : (
-            <pre className="p-3 my-2 rounded bg-white border border-border text-xs font-mono overflow-x-auto">
+            <pre className="p-3 my-2 rounded bg-panel border border-border text-xs font-mono overflow-x-auto">
               <code className="text-text" {...props}>
                 {children}
               </code>

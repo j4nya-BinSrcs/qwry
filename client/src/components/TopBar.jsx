@@ -1,6 +1,7 @@
-import { Search, Settings } from "lucide-react";
+import { Search, Settings, Sun, Moon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchStore } from "../stores/searchStore";
+import { useUIStore } from "../stores/uiStore";
 import { fetchSuggestions } from "../api/search";
 import SettingsPopup from "./SettingsPopup";
 
@@ -12,6 +13,8 @@ export default function TopBar() {
   const submittedRef = useRef(false);
   const inputRef = useRef(null);
 
+  const theme = useUIStore((s) => s.theme);
+  const toggleTheme = useUIStore((s) => s.toggleTheme);
   const search = useSearchStore((s) => s.search);
 
   const dismissSuggestions = useCallback(() => {
@@ -82,11 +85,11 @@ export default function TopBar() {
   }, []);
 
   return (
-    <div className="relative z-50 flex items-center gap-4 px-4 py-3 bg-white border-b border-border">
+    <div className="relative z-50 flex items-center gap-4 px-4 py-3 bg-surface border-b border-border">
       {/* Logo */}
       <div className="flex items-center gap-2 shrink-0">
-        <div className="size-6 rounded bg-black flex items-center justify-center">
-          <span className="text-white text-[10px] font-bold">Q</span>
+        <div className="size-6 rounded bg-text flex items-center justify-center">
+          <span className="text-surface text-[10px] font-bold">Q</span>
         </div>
         <span className="text-sm font-semibold tracking-tight text-text">
           QWRY
@@ -109,11 +112,11 @@ export default function TopBar() {
             onFocus={handleFocus}
             onBlur={handleBlur}
             placeholder="Cofftset"
-            className="w-full h-11 pl-11 pr-4 rounded-full bg-white border border-border text-text text-sm placeholder:text-dim outline-none focus:border-text transition-colors"
+            className="w-full h-11 pl-11 pr-4 rounded-full bg-elevated border border-border text-text text-sm placeholder:text-dim outline-none focus:border-text transition-colors"
           />
         </div>
         {showSuggestions && (
-          <div className="absolute top-full left-0 right-0 mt-1.5 rounded-lg bg-white border border-border overflow-hidden">
+          <div className="absolute top-full left-0 right-0 mt-1.5 rounded-lg bg-elevated border border-border overflow-hidden">
             {suggestions.map((s, i) => (
               <button
                 key={i}
@@ -129,6 +132,15 @@ export default function TopBar() {
 
       {/* Spacer */}
       <div className="flex-1" />
+
+      {/* Theme toggle */}
+      <button
+        onClick={toggleTheme}
+        className="flex items-center justify-center size-7 rounded text-dim hover:text-text hover:bg-hover transition-colors"
+        title={theme === "dark" ? "Light mode" : "Dark mode"}
+      >
+        {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+      </button>
 
       {/* Profile */}
       <div className="size-7 rounded-full border border-border flex items-center justify-center text-xs font-semibold text-text shrink-0">

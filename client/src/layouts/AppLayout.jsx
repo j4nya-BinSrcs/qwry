@@ -14,19 +14,19 @@ function renderPanel(id) {
   switch (id) {
     case "sources":
       return (
-        <div className="h-full bg-white">
+        <div className="h-full bg-surface">
           <SourcesPanel />
         </div>
       );
     case "context":
       return (
-        <div className="h-full bg-white">
+        <div className="h-full bg-surface">
           <ContextPanel />
         </div>
       );
     case "discovery":
       return (
-        <div className="h-full bg-white border-l border-border">
+        <div className="h-full bg-surface border-l border-border">
           <DiscoveryPanel />
         </div>
       );

@@ -10,7 +10,7 @@ export default function InfoBoxCard({ infobox }) {
 
   return (
     <div className="px-3 pb-2">
-      <div className="rounded-lg bg-white border border-border overflow-hidden">
+      <div className="rounded-lg bg-panel border border-border overflow-hidden">
         {imgSrc && (
           <div className="relative w-full aspect-video bg-hover overflow-hidden">
             <img
