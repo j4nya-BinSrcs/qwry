@@ -7,7 +7,7 @@ import SummarizerView from "../context/SummarizerView";
 
 const MODES = [
   { id: "search-assist", label: "Search Assist" },
-  { id: "workspaces", label: "Workspaces" },
+  { id: "workspaces", label: "Station" },
   { id: "reader", label: "Reader" },
   { id: "summarizer", label: "Summarizer" },
 ];
