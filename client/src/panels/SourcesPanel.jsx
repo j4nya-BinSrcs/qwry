@@ -255,7 +255,7 @@ export default function SourcesPanel() {
                   onClick={() => setActiveFilter(f.id)}
                   className={`flex flex-col items-center gap-0.5 p-1.5 rounded-lg transition-colors ${
                     isActive
-                      ? "bg-black text-white"
+                      ? "bg-black text-[#ffffff]"
                       : "text-text hover:bg-hover"
                   }`}
                   title={f.label}

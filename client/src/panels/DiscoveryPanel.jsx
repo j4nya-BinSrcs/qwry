@@ -381,7 +381,7 @@ export default function DiscoveryPanel() {
               onClick={() => setActiveFilter(f.id)}
               className={`shrink-0 px-2.5 py-1 text-xs rounded-md transition-colors ${
                 activeFilter === f.id
-                  ? "bg-black text-white font-medium"
+                  ? "bg-black text-[#ffffff] font-medium"
                   : "text-muted hover:text-text hover:bg-hover"
               }`}
             >

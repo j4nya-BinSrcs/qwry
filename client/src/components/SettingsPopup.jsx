@@ -113,7 +113,7 @@ export default function SettingsPopup({ open, onToggle }) {
                   }}
                   className={`w-full px-2 py-1.5 text-left text-xs transition-colors rounded ${
                     provider === p.value
-                      ? "bg-black text-white"
+                      ? "bg-black text-[#ffffff]"
                       : "text-text hover:bg-hover"
                   }`}
                 >

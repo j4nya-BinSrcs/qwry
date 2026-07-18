@@ -145,11 +145,6 @@ export default function SearchAssist() {
       {/* Overview card */}
       {hasContent && (
         <div className="relative rounded-xl border border-border bg-white">
-          <div className="absolute bottom-0 left-0 size-6 rounded-tr-2xl bg-white z-10" />
-          <div className="absolute bottom-0 left-0 size-7 rounded-tr-2xl bg-black z-0" />
-          <div className="absolute bottom-0 right-0 size-6 rounded-tl-2xl bg-white z-10" />
-          <div className="absolute bottom-0 right-0 size-7 rounded-tl-2xl bg-black z-0" />
-
           <div className="flex items-center gap-1.5 px-4 py-3 border-b border-border">
             <Sparkles size={13} className="text-text shrink-0" />
             <span className="text-xs font-semibold text-text">AI Overview</span>

@@ -9,24 +9,31 @@ export default function TopBar() {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const submittedRef = useRef(false);
   const inputRef = useRef(null);
 
   const search = useSearchStore((s) => s.search);
-  const query = useSearchStore((s) => s.query);
+
+  const dismissSuggestions = useCallback(() => {
+    setShowSuggestions(false);
+    setSuggestions([]);
+  }, []);
 
   const handleSearch = useCallback(
     (q) => {
       if (!q?.trim()) return;
       search(q.trim());
-      setShowSuggestions(false);
+      submittedRef.current = true;
+      dismissSuggestions();
     },
-    [search]
+    [search, dismissSuggestions]
   );
 
   const handleInput = useCallback(
     (e) => {
       const val = e.target.value;
       setInput(val);
+      submittedRef.current = false;
       if (val.length < 2) {
         setSuggestions([]);
         setShowSuggestions(false);
@@ -36,7 +43,7 @@ export default function TopBar() {
       const id = setTimeout(async () => {
         const s = await fetchSuggestions(val);
         setSuggestions(s);
-        setShowSuggestions(s.length > 0);
+        if (!submittedRef.current) setShowSuggestions(s.length > 0);
       }, 200);
       if (inputRef.current) inputRef.current._debounce = id;
     },
@@ -45,9 +52,34 @@ export default function TopBar() {
 
   const handleSuggestionClick = (s) => {
     setInput(s);
-    setShowSuggestions(false);
+    submittedRef.current = true;
+    dismissSuggestions();
     handleSearch(s);
   };
+
+  const handleKeyDown = useCallback(
+    (e) => {
+      if (e.key === "Enter") {
+        handleSearch(input);
+      }
+      if (e.key === "Escape") {
+        dismissSuggestions();
+        inputRef.current?.blur();
+      }
+    },
+    [handleSearch, input, dismissSuggestions]
+  );
+
+  const handleFocus = useCallback(() => {
+    if (submittedRef.current) return;
+    if (suggestions.length > 0) setShowSuggestions(true);
+  }, [suggestions]);
+
+  const handleBlur = useCallback(() => {
+    setTimeout(() => {
+      if (!submittedRef.current) setShowSuggestions(false);
+    }, 200);
+  }, []);
 
   return (
     <div className="relative z-50 flex items-center gap-4 px-4 py-3 bg-white border-b border-border">
@@ -73,9 +105,9 @@ export default function TopBar() {
             type="text"
             value={input}
             onChange={handleInput}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch(input)}
-            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+            onKeyDown={handleKeyDown}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             placeholder="Cofftset"
             className="w-full h-11 pl-11 pr-4 rounded-full bg-white border border-border text-text text-sm placeholder:text-dim outline-none focus:border-text transition-colors"
           />
