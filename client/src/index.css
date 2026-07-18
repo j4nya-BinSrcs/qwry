@@ -50,7 +50,6 @@ html, body, #root {
 
 body {
   background-color: #ffffff;
-  color: #000000;
 }
 
 ::selection {
@@ -59,11 +58,6 @@ body {
 
 ::placeholder {
   color: #999999;
-}
-
-input, button {
-  color: #000000;
-  font-family: inherit;
 }
 
 [data-panel-group-direction="horizontal"] > [data-panel-resize-handle] {
