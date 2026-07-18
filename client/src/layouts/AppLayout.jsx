@@ -6,7 +6,7 @@ import ContextPanel from "../panels/ContextPanel";
 import DiscoveryPanel from "../panels/DiscoveryPanel";
 import { useUIStore } from "../stores/uiStore";
 
-const PANEL_DEFAULTS = { sources: 22, context: 52, discovery: 26 };
+const PANEL_DEFAULTS = { sources: 30, context: 40, discovery: 30 };
 const PANEL_MINS = { sources: 12, context: 20, discovery: 12 };
 const PANEL_MAXS = { sources: 40, context: 70, discovery: 40 };
 

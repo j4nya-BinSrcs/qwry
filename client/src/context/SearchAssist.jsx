@@ -145,10 +145,10 @@ export default function SearchAssist() {
       {/* Overview card */}
       {hasContent && (
         <div className="relative rounded-xl border border-border bg-white">
-          <div className="absolute -top-[1px] -left-[1px] size-6 rounded-br-2xl bg-white z-10" />
-          <div className="absolute -top-[1px] -left-[1px] size-7 rounded-br-2xl bg-black z-0" />
-          <div className="absolute -top-[1px] -right-[1px] size-6 rounded-bl-2xl bg-white z-10" />
-          <div className="absolute -top-[1px] -right-[1px] size-7 rounded-bl-2xl bg-black z-0" />
+          <div className="absolute bottom-0 left-0 size-6 rounded-tr-2xl bg-white z-10" />
+          <div className="absolute bottom-0 left-0 size-7 rounded-tr-2xl bg-black z-0" />
+          <div className="absolute bottom-0 right-0 size-6 rounded-tl-2xl bg-white z-10" />
+          <div className="absolute bottom-0 right-0 size-7 rounded-tl-2xl bg-black z-0" />
 
           <div className="flex items-center gap-1.5 px-4 py-3 border-b border-border">
             <Sparkles size={13} className="text-text shrink-0" />
@@ -225,26 +225,34 @@ export default function SearchAssist() {
       )}
 
       {/* Related Searches — stacked cards */}
-      {suggestions.length > 0 && (
-        <div>
-          <div className="text-xs font-semibold text-muted uppercase tracking-wider mb-2 px-1">
-            Related Searches
-          </div>
-          <div className="space-y-1">
-            {suggestions.slice(0, 6).map((s, i) => (
-              <button
-                key={i}
-                onClick={() => search(s)}
-                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border border-border bg-white hover:bg-hover transition-colors text-left"
-              >
-                <Search size={14} className="text-dim shrink-0" />
-                <span className="text-sm text-text flex-1 truncate">{s}</span>
-                <ChevronRight size={14} className="text-dim shrink-0" />
-              </button>
-            ))}
-          </div>
+      <div>
+        <div className="text-xs font-semibold text-muted uppercase tracking-wider mb-2 px-1">
+          Related Searches
         </div>
-      )}
+        <div className="space-y-1">
+          {suggestions.length > 0 ? suggestions.slice(0, 6).map((s, i) => (
+            <button
+              key={i}
+              onClick={() => search(s)}
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border border-border bg-white hover:bg-hover transition-colors text-left"
+            >
+              <Search size={14} className="text-dim shrink-0" />
+              <span className="text-sm text-text flex-1 truncate">{s}</span>
+              <ChevronRight size={14} className="text-dim shrink-0" />
+            </button>
+          )) : (
+            <>
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border border-border bg-white text-left opacity-40">
+                  <Search size={14} className="text-dim shrink-0" />
+                  <span className="text-sm text-muted flex-1 truncate">Search related to your query</span>
+                  <ChevronRight size={14} className="text-dim shrink-0" />
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

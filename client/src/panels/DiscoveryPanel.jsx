@@ -44,6 +44,24 @@ function HorizontalScroll({ children }) {
   );
 }
 
+function MultiRowScroll({ children, rows = 3 }) {
+  const scrollRef = useRef(null);
+  const items = Array.isArray(children) ? children : [children];
+  const cols = Math.ceil(items.length / rows);
+  const grid = Array.from({ length: cols }, (_, c) =>
+    items.slice(c * rows, c * rows + rows)
+  );
+  return (
+    <div ref={scrollRef} className="overflow-x-auto scrollbar-none">
+      <div className="grid grid-flow-col gap-3 px-3 pb-3" style={{ gridTemplateRows: `repeat(${rows}, auto)` }}>
+        {grid.flat().map((child, i) => (
+          <div key={i} className="contents">{child}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function DraggableImageCard({ result }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `discover-img-${result.url}`,
@@ -395,11 +413,11 @@ export default function DiscoveryPanel() {
             {(showAll || activeFilter === "images") && imageResults.length > 0 && (
               <div className="border-t border-border">
                 <SectionHeader title="Images" icon={Image} count={imageResults.length}>
-                  <HorizontalScroll>
+                  <MultiRowScroll rows={3}>
                     {imageResults.map((r, i) => (
                       <DraggableImageCard key={`img-${r.url}-${i}`} result={r} />
                     ))}
-                  </HorizontalScroll>
+                  </MultiRowScroll>
                 </SectionHeader>
               </div>
             )}
@@ -407,11 +425,11 @@ export default function DiscoveryPanel() {
             {(showAll || activeFilter === "videos") && videoResults.length > 0 && (
               <div className="border-t border-border">
                 <SectionHeader title="Videos" icon={Youtube} count={videoResults.length}>
-                  <HorizontalScroll>
+                  <MultiRowScroll rows={3}>
                     {videoResults.map((r, i) => (
                       <DraggableVideoCard key={`vid-${r.url}-${i}`} result={r} />
                     ))}
-                  </HorizontalScroll>
+                  </MultiRowScroll>
                 </SectionHeader>
               </div>
             )}
