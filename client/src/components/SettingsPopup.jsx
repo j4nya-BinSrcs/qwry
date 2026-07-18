@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { Settings, Sun, Moon, User, Copy, Check } from "lucide-react";
+import { Settings, User, Copy, Check } from "lucide-react";
 import { getProfile, updateProfile } from "../api/profile";
 import { useSearchStore, providers } from "../stores/searchStore";
 import { useSessionStore } from "../stores/sessionStore";
 
-export default function SettingsPopup({ toggleTheme, theme }) {
-  const [open, setOpen] = useState(false);
+export default function SettingsPopup({ open, onToggle }) {
   const [profile, setProfile] = useState(null);
   const [username, setUsername] = useState("");
   const [editing, setEditing] = useState(false);
@@ -30,7 +29,7 @@ export default function SettingsPopup({ toggleTheme, theme }) {
   }, [open, loadProfile]);
 
   const handleSaveUsername = async () => {
-    const p = await updateProfile({ username: username.trim() || null, theme, search_provider: provider });
+    const p = await updateProfile({ username: username.trim() || null, search_provider: provider });
     if (p) setProfile(p);
     setEditing(false);
   };
@@ -44,16 +43,16 @@ export default function SettingsPopup({ toggleTheme, theme }) {
   return (
     <div className="relative shrink-0">
       <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center justify-center size-7 rounded-md bg-hover border border-border text-dim hover:text-text hover:bg-hover/80 transition-colors"
+        onClick={onToggle}
+        className="flex items-center justify-center size-7 rounded border border-border text-text hover:bg-hover transition-colors"
         title="Settings"
       >
         <Settings size={14} />
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute top-full right-0 mt-1 w-64 rounded-lg bg-elevated border border-border shadow-xl backdrop-blur-xl overflow-hidden z-50">
+          <div className="fixed inset-0 z-40" onClick={onToggle} />
+          <div className="absolute top-full right-0 mt-1 w-64 rounded-lg bg-white border border-border overflow-hidden z-50">
             <div className="px-3 py-2 text-xs text-muted font-medium border-b border-border">
               Settings
             </div>
@@ -71,13 +70,13 @@ export default function SettingsPopup({ toggleTheme, theme }) {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Your name"
-                    className="flex-1 px-2 py-1 text-xs rounded bg-hover border border-border text-text outline-none focus:border-accent"
+                    className="flex-1 px-2 py-1 text-xs rounded bg-hover border border-border text-text outline-none focus:border-text"
                     autoFocus
                     onKeyDown={(e) => { if (e.key === "Enter") handleSaveUsername(); if (e.key === "Escape") setEditing(false); }}
                   />
                   <button
                     onClick={handleSaveUsername}
-                    className="px-2 py-1 text-[10px] rounded bg-accent text-white hover:bg-accent-hover transition-colors"
+                    className="px-2 py-1 text-[10px] rounded bg-black text-white hover:bg-gray-800 transition-colors"
                   >
                     Save
                   </button>
@@ -87,7 +86,7 @@ export default function SettingsPopup({ toggleTheme, theme }) {
                   <span className="text-xs text-text">{profile?.username || "Anonymous"}</span>
                   <button
                     onClick={() => setEditing(true)}
-                    className="text-[10px] text-accent hover:text-accent-hover transition-colors"
+                    className="text-[10px] text-text hover:text-muted transition-colors"
                   >
                     Edit
                   </button>
@@ -99,18 +98,6 @@ export default function SettingsPopup({ toggleTheme, theme }) {
               >
                 {copied ? <Check size={10} /> : <Copy size={10} />}
                 {copied ? "Copied!" : `Session: ${sessionId.slice(0, 8)}...`}
-              </button>
-            </div>
-
-            {/* Theme */}
-            <div className="px-3 py-2 border-b border-border">
-              <div className="text-xs text-muted mb-1.5">Theme</div>
-              <button
-                onClick={() => { toggleTheme(); setOpen(false); }}
-                className="flex items-center gap-2 w-full px-2 py-1.5 rounded text-xs text-text hover:bg-hover transition-colors"
-              >
-                {theme === "dark" ? <Sun size={13} /> : <Moon size={13} />}
-                {theme === "dark" ? "Light Mode" : "Dark Mode"}
               </button>
             </div>
 
@@ -126,7 +113,7 @@ export default function SettingsPopup({ toggleTheme, theme }) {
                   }}
                   className={`w-full px-2 py-1.5 text-left text-xs transition-colors rounded ${
                     provider === p.value
-                      ? "bg-accent/10 text-accent"
+                      ? "bg-black text-[#ffffff]"
                       : "text-text hover:bg-hover"
                   }`}
                 >

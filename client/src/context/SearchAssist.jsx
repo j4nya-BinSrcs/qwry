@@ -1,4 +1,4 @@
-import { FileText, Loader2, Sparkles, BookOpen, ChevronDown, ChevronRight } from "lucide-react";
+import { FileText, Loader2, Sparkles, BookOpen, ChevronRight, Search } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchOverview, llmGenerate } from "../api/llm";
 import { useContentStore } from "../stores/contentStore";
@@ -17,7 +17,6 @@ export default function SearchAssist() {
   const storeOverviews = useContentStore((s) => s.overviews);
   const setOverviewInStore = useContentStore((s) => s.setOverview);
 
-  const [relatedOpen, setRelatedOpen] = useState(false);
   const [shortOverview, setShortOverview] = useState(null);
   const [elaborateExtension, setElaborateExtension] = useState(null);
   const [studyExtension, setStudyExtension] = useState(null);
@@ -27,7 +26,6 @@ export default function SearchAssist() {
   const [error, setError] = useState(null);
   const prevQueryRef = useRef("");
 
-  // Generate short overview on query change
   useEffect(() => {
     if (!query || query === prevQueryRef.current) return;
     prevQueryRef.current = query;
@@ -116,8 +114,8 @@ export default function SearchAssist() {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center px-8">
-          <div className="size-8 rounded bg-accent/10 border border-accent/20 flex items-center justify-center mx-auto mb-3">
-            <Sparkles size={16} className="text-accent" />
+          <div className="size-8 rounded border border-border flex items-center justify-center mx-auto mb-3">
+            <Sparkles size={16} className="text-text" />
           </div>
           <p className="text-sm text-muted">Search the web to see an AI-powered overview here</p>
         </div>
@@ -128,53 +126,54 @@ export default function SearchAssist() {
   const hasContent = shortOverview || elaborateExtension || studyExtension;
 
   return (
-    <div className="h-full overflow-y-auto p-3">
+    <div className="h-full overflow-y-auto p-3 space-y-3">
       {/* Short overview loading */}
       {loadingShort && !shortOverview && (
-        <div className="flex items-center gap-2 px-3 py-2.5 rounded bg-accent/5 border border-accent/10 text-xs text-muted">
-          <Loader2 size={12} className="animate-spin text-accent" />
+        <div className="flex items-center gap-2 px-3 py-2.5 rounded border border-border bg-white text-xs text-muted">
+          <Loader2 size={12} className="animate-spin" />
           Generating overview...
         </div>
       )}
 
       {/* Error */}
       {error && !shortOverview && (
-        <div className="px-3 py-2.5 text-xs text-muted rounded bg-hover border border-border">
+        <div className="px-3 py-2.5 text-xs text-muted rounded border border-border bg-white">
           AI overview unavailable. {error.includes("404") ? "The AI service is not configured." : error}
         </div>
       )}
 
-      {/* Overview section */}
+      {/* Overview card */}
       {hasContent && (
-        <div className="rounded bg-accent/5 border border-accent/10">
-          <div className="flex items-center gap-1.5 px-3 py-2 border-b border-accent/10">
-            <Sparkles size={12} className="text-accent shrink-0" />
-            <span className="text-xs font-semibold text-accent">AI Overview</span>
+        <div className="relative rounded-xl border border-border bg-white">
+          <div className="flex items-center gap-1.5 px-4 py-3 border-b border-border">
+            <Sparkles size={13} className="text-text shrink-0" />
+            <span className="text-xs font-semibold text-text">AI Overview</span>
           </div>
-          <div className="px-3 py-2.5 space-y-2 text-sm text-text leading-relaxed">
+
+          <div className="px-4 py-3 space-y-2 text-sm text-text leading-relaxed">
             {shortOverview && <div>{shortOverview}</div>}
 
             {elaborateExtension && (
               <>
-                <hr className="border-accent/10" />
+                <hr className="border-border" />
                 <MarkdownRenderer>{elaborateExtension}</MarkdownRenderer>
               </>
             )}
 
             {studyExtension && (
               <>
-                <hr className="border-accent/10" />
+                <hr className="border-border" />
                 <MarkdownRenderer>{studyExtension}</MarkdownRenderer>
               </>
             )}
           </div>
 
           {shortOverview && (
-            <div className="flex items-center gap-2 px-3 py-2 border-t border-accent/10">
+            <div className="flex items-center gap-2 px-4 py-3 border-t border-border">
               <button
                 onClick={handleElaborate}
                 disabled={loadingElaborate || !!elaborateExtension}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] text-accent hover:bg-accent/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] text-text border border-border hover:bg-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {loadingElaborate ? (
                   <Loader2 size={11} className="animate-spin" />
@@ -186,7 +185,7 @@ export default function SearchAssist() {
               <button
                 onClick={handleStudy}
                 disabled={loadingStudy || !!studyExtension}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] text-accent hover:bg-accent/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] text-text border border-border hover:bg-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {loadingStudy ? (
                   <Loader2 size={11} className="animate-spin" />
@@ -213,36 +212,41 @@ export default function SearchAssist() {
               .catch((err) => setError(err.message))
               .finally(() => setLoadingShort(false));
           }}
-          className="flex items-center gap-1.5 text-xs text-accent hover:text-accent-hover transition-colors px-1"
+          className="flex items-center gap-1.5 text-xs text-text hover:text-muted transition-colors px-1"
         >
           <Sparkles size={12} />
           Generate AI overview
         </button>
       )}
 
-      {/* Related Searches — always visible */}
-      <div className="mt-3 rounded border border-border overflow-hidden">
-        <button
-          onClick={() => setRelatedOpen(!relatedOpen)}
-          className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-muted uppercase tracking-wider hover:text-text transition-colors"
-        >
-          {relatedOpen ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-          <span>Related Searches</span>
-          <span className="text-dim font-normal">{suggestions.length}</span>
-        </button>
-        {relatedOpen && suggestions.length > 0 && (
-          <div className="px-3 pb-2 flex flex-wrap gap-1.5">
-            {suggestions.map((s, i) => (
-              <button
-                key={i}
-                onClick={() => search(s)}
-                className="px-2.5 py-1 text-[10px] rounded-full bg-hover text-muted border border-border hover:text-text hover:border-accent/30 transition-colors"
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        )}
+      {/* Related Searches — stacked cards */}
+      <div>
+        <div className="text-xs font-semibold text-muted uppercase tracking-wider mb-2 px-1">
+          Related Searches
+        </div>
+        <div className="space-y-1">
+          {suggestions.length > 0 ? suggestions.slice(0, 6).map((s, i) => (
+            <button
+              key={i}
+              onClick={() => search(s)}
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border border-border bg-white hover:bg-hover transition-colors text-left"
+            >
+              <Search size={14} className="text-dim shrink-0" />
+              <span className="text-sm text-text flex-1 truncate">{s}</span>
+              <ChevronRight size={14} className="text-dim shrink-0" />
+            </button>
+          )) : (
+            <>
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border border-border bg-white text-left opacity-40">
+                  <Search size={14} className="text-dim shrink-0" />
+                  <span className="text-sm text-muted flex-1 truncate">Search related to your query</span>
+                  <ChevronRight size={14} className="text-dim shrink-0" />
+                </div>
+              ))}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

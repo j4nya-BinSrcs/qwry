@@ -58,10 +58,10 @@ export default function ChatModal({ workspaceId, workspaceName, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-12 pb-8" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/60" />
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-2xl max-h-[calc(100vh-6rem)] mx-4 bg-surface border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col"
+        className="relative w-full max-w-2xl max-h-[calc(100vh-6rem)] mx-4 bg-white border border-border rounded-xl overflow-hidden flex flex-col"
       >
         {/* Header */}
         <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-border">
@@ -85,8 +85,8 @@ export default function ChatModal({ workspaceId, workspaceName, onClose }) {
               <div
                 className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm ${
                   msg.role === "user"
-                    ? "bg-accent text-white"
-                    : "bg-elevated border border-border text-text"
+                    ? "bg-black text-white"
+                    : "bg-white border border-border text-text"
                 }`}
               >
                 <p className="whitespace-pre-line leading-relaxed">{msg.content}</p>
@@ -99,7 +99,7 @@ export default function ChatModal({ workspaceId, workspaceName, onClose }) {
                         href={s.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 text-[11px] text-accent hover:text-accent-hover"
+                        className="flex items-center gap-1.5 text-[11px] text-text hover:text-muted"
                       >
                         <ExternalLink size={10} />
                         <span className="truncate">{s.title || s.url}</span>
@@ -112,7 +112,7 @@ export default function ChatModal({ workspaceId, workspaceName, onClose }) {
           ))}
           {loading && (
             <div className="flex justify-start">
-              <div className="bg-elevated border border-border rounded-xl px-4 py-2.5 flex items-center gap-2 text-sm text-muted">
+              <div className="bg-white border border-border rounded-xl px-4 py-2.5 flex items-center gap-2 text-sm text-muted">
                 <Loader2 size={12} className="animate-spin" />
                 Thinking...
               </div>
@@ -130,12 +130,12 @@ export default function ChatModal({ workspaceId, workspaceName, onClose }) {
               onKeyDown={handleKeyDown}
               placeholder="Ask a question about your saved items..."
               rows={1}
-              className="flex-1 bg-hover border border-border rounded-lg px-3 py-2 text-sm text-text placeholder-dim outline-none focus:border-accent/30 resize-none"
+              className="flex-1 bg-hover border border-border rounded-lg px-3 py-2 text-sm text-text placeholder-dim outline-none focus:border-text resize-none"
             />
             <button
               onClick={handleSend}
               disabled={!input.trim() || loading}
-              className="shrink-0 p-2 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="shrink-0 p-2 rounded-lg bg-black text-white hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Send size={14} />
             </button>

@@ -48,10 +48,10 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
       className="fixed inset-0 z-50 flex items-start justify-center pt-12 pb-8"
       onClick={onClose}
     >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/60" />
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-3xl max-h-[calc(100vh-6rem)] mx-4 bg-surface border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col"
+        className="relative w-full max-w-3xl max-h-[calc(100vh-6rem)] mx-4 bg-white border border-border rounded-xl overflow-hidden flex flex-col"
       >
         {/* Header */}
         <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-border">
@@ -65,7 +65,7 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
                   href={data?.url || url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover"
+                  className="flex items-center gap-1 text-xs text-text hover:text-muted"
                 >
                   <ExternalLink size={11} />
                   {hostname}
@@ -108,18 +108,18 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
         <div className="flex-1 overflow-y-auto p-5">
           {loading && (
             <div className="flex items-center justify-center py-20">
-              <Loader2 size={20} className="animate-spin text-accent" />
+              <Loader2 size={20} className="animate-spin text-text" />
             </div>
           )}
 
           {error && (
             <div className="py-10 text-center space-y-4">
-              <p className="text-sm text-red-400">{error}</p>
+              <p className="text-sm text-text">{error}</p>
               <a
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-800 transition-colors"
               >
                 <ExternalLink size={12} />
                 Open in browser instead
@@ -134,7 +134,7 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-800 transition-colors"
               >
                 <ExternalLink size={12} />
                 Open in browser instead
@@ -168,11 +168,11 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors"
-                >
-                  <ExternalLink size={12} />
-                  Open original
-                </a>
+                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-800 transition-colors"
+              >
+                <ExternalLink size={12} />
+                Open in browser instead
+              </a>
               </div>
             </div>
           )}
@@ -209,11 +209,11 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors"
-                >
-                  <Play size={12} />
-                  Watch on YouTube
-                </a>
+                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-800 transition-colors"
+              >
+                <Play size={12} />
+                Watch on YouTube
+              </a>
               </div>
             </div>
           )}
@@ -224,10 +224,10 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
                 {expanded ? data.content : (data.content.length > 5000 ? data.content.slice(0, 5000) + "..." : data.content)}
               </div>
               {!expanded && data.content.length > 5000 && (
-                <div className="sticky bottom-0 pt-12 pb-2 bg-gradient-to-t from-surface via-surface/95 to-transparent">
+                <div className="sticky bottom-0 pt-4 pb-2 bg-white border-t border-border mt-2">
                   <button
                     onClick={() => setExpanded(true)}
-                    className="block mx-auto text-xs px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors"
+                    className="block mx-auto text-xs px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-800 transition-colors"
                   >
                     Show all ({data.content.length.toLocaleString()} chars)
                   </button>

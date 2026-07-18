@@ -6,7 +6,7 @@ import ContextPanel from "../panels/ContextPanel";
 import DiscoveryPanel from "../panels/DiscoveryPanel";
 import { useUIStore } from "../stores/uiStore";
 
-const PANEL_DEFAULTS = { sources: 22, context: 52, discovery: 26 };
+const PANEL_DEFAULTS = { sources: 30, context: 40, discovery: 30 };
 const PANEL_MINS = { sources: 12, context: 20, discovery: 12 };
 const PANEL_MAXS = { sources: 40, context: 70, discovery: 40 };
 
@@ -14,32 +14,32 @@ function renderPanel(id) {
   switch (id) {
     case "sources":
       return (
-        <div className="h-full bg-panel backdrop-blur-xl border-r border-border">
+        <div className="h-full bg-white">
           <SourcesPanel />
         </div>
       );
     case "context":
       return (
-        <div className="h-full bg-panel backdrop-blur-xl">
+        <div className="h-full bg-white">
           <ContextPanel />
         </div>
       );
     case "discovery":
       return (
-        <div className="h-full bg-panel backdrop-blur-xl border-l border-border">
+        <div className="h-full bg-white border-l border-border">
           <DiscoveryPanel />
         </div>
       );
   }
 }
 
-export default function AppLayout({ toggleTheme, theme }) {
+export default function AppLayout() {
   const panelOrder = useUIStore((s) => s.panelOrder);
   const expandedPanel = useUIStore((s) => s.expandedPanel);
 
   return (
     <div className="h-full flex flex-col">
-      <TopBar toggleTheme={toggleTheme} theme={theme} />
+      <TopBar />
       <div className="flex-1 min-h-0">
         {expandedPanel ? (
           <PanelGroup direction="horizontal">

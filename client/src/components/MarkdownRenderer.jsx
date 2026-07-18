@@ -19,13 +19,13 @@ export default function MarkdownRenderer({ children }) {
           const isInline = !className;
           return isInline ? (
             <code
-              className="px-1 py-0.5 rounded bg-hover text-[11px] text-accent font-mono"
+              className="px-1 py-0.5 rounded bg-hover text-[11px] text-text font-mono"
               {...props}
             >
               {children}
             </code>
           ) : (
-            <pre className="p-3 my-2 rounded bg-surface border border-border text-xs font-mono overflow-x-auto">
+            <pre className="p-3 my-2 rounded bg-white border border-border text-xs font-mono overflow-x-auto">
               <code className="text-text" {...props}>
                 {children}
               </code>
@@ -35,7 +35,7 @@ export default function MarkdownRenderer({ children }) {
         a: ({ href, children }) => (
           <a
             href={href}
-            className="text-accent hover:underline"
+            className="text-text hover:underline"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -67,7 +67,7 @@ export default function MarkdownRenderer({ children }) {
           <li className="leading-relaxed">{children}</li>
         ),
         blockquote: ({ children }) => (
-          <blockquote className="border-l-2 border-accent/30 pl-3 my-2 italic text-muted text-xs">
+          <blockquote className="border-l-2 border-border pl-3 my-2 italic text-muted text-xs">
             {children}
           </blockquote>
         ),

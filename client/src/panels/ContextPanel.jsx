@@ -30,13 +30,13 @@ export default function ContextPanel() {
               onClick={() => setContextMode(m.id)}
               className={`px-3 py-2 text-xs font-medium transition-colors relative ${
                 contextMode === m.id
-                  ? "text-accent"
+                  ? "text-text"
                   : "text-muted hover:text-text"
               }`}
             >
               {m.label}
               {contextMode === m.id && (
-                <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-accent rounded-full" />
+                <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-black" />
               )}
             </button>
           ))}

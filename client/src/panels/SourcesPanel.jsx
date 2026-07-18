@@ -1,50 +1,22 @@
-import { ExternalLink, GripVertical, Maximize2, Minimize2, Plus, BookOpen, Sparkles } from "lucide-react";
-import { useCallback, useState } from "react";
+import { ExternalLink, GripVertical, Plus, BookOpen, Sparkles, Search, Newspaper, Youtube, MessageCircle, Image, Code, Globe } from "lucide-react";
+import { useCallback } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { useSearchStore } from "../stores/searchStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import { useSessionStore } from "../stores/sessionStore";
 import { useUIStore } from "../stores/uiStore";
 
-const CATEGORY_FILTERS = [
-  { id: "all", label: "All", tip: "Everything" },
-  { id: "research", label: "Research", tip: "Papers, documentation, encyclopedias, universities" },
-  { id: "articles", label: "Articles", tip: "Blogs, tutorials, opinion pieces, long-form content" },
-  { id: "discussions", label: "Discussions", tip: "Reddit, Stack Overflow, Quora, forums" },
-  { id: "videos", label: "Videos", tip: "YouTube, Vimeo, Twitch" },
-  { id: "news", label: "News", tip: "News outlets and current events" },
-  { id: "shopping", label: "Shopping", tip: "Marketplaces and product pages" },
-  { id: "official", label: "Official", tip: "Company websites, official documentation, standards" },
-  { id: "code", label: "Code", tip: "GitHub, GitLab, package registries, developer docs" },
+const FILTERS = [
+  { id: "all", label: "All", icon: Search },
+  { id: "research", label: "Research", icon: BookOpen },
+  { id: "articles", label: "Articles", icon: Globe },
+  { id: "discussions", label: "Discussions", icon: MessageCircle },
+  { id: "videos", label: "Videos", icon: Youtube },
+  { id: "shopping", label: "Shopping", icon: Image },
+  { id: "news", label: "News", icon: Newspaper },
+  { id: "official", label: "Official", icon: Globe },
+  { id: "code", label: "Code", icon: Code },
 ];
-
-function FilterButton({ filter, active, onClick }) {
-  const [showTip, setShowTip] = useState(false);
-
-  return (
-    <div
-      className="relative"
-      onMouseEnter={() => setShowTip(true)}
-      onMouseLeave={() => setShowTip(false)}
-    >
-      <button
-        onClick={onClick}
-        className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
-          active
-            ? "bg-accent/10 text-accent font-medium"
-            : "text-muted hover:text-text hover:bg-hover"
-        }`}
-      >
-        {filter.label}
-      </button>
-      {showTip && filter.tip && (
-        <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 z-50 px-2.5 py-1.5 rounded bg-elevated border border-border shadow-lg backdrop-blur-xl text-[10px] text-muted whitespace-nowrap">
-          {filter.tip}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function Favicon({ domain }) {
   return (
@@ -107,7 +79,7 @@ function DraggableResultCard({ result }) {
       className={`group relative flex items-start gap-2.5 px-3 py-2.5 rounded-md transition-all cursor-default ${
         isDragging
           ? "opacity-50"
-          : "hover:bg-hover border border-transparent hover:border-border hover:-translate-y-0.5"
+          : "hover:bg-hover border border-transparent hover:border-border"
       }`}
     >
       <button
@@ -134,7 +106,7 @@ function DraggableResultCard({ result }) {
             {result.title}
           </span>
           {result.category && result.category !== "general" && (
-            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-accent/10 text-accent shrink-0">
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-hover text-text shrink-0">
               {result.category}
             </span>
           )}
@@ -144,13 +116,7 @@ function DraggableResultCard({ result }) {
             {new URL(result.url).hostname}
           </span>
           {result.source && (
-            <span
-              className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
-                result.source === "engine"
-                  ? "bg-amber-500/10 text-amber-400"
-                  : "bg-sky-500/10 text-sky-400"
-              }`}
-            >
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-hover text-text">
               {result.source}
             </span>
           )}
@@ -170,14 +136,14 @@ function DraggableResultCard({ result }) {
       <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={handleReader}
-          className="p-1 rounded text-dim hover:text-accent hover:bg-accent/10 transition-all"
+          className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
           title="Reader view"
         >
           <BookOpen size={13} />
         </button>
         <button
           onClick={handleSummarizer}
-          className="p-1 rounded text-dim hover:text-accent-hover hover:bg-accent/10 transition-all"
+          className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
           title="Summarize"
         >
           <Sparkles size={13} />
@@ -191,7 +157,7 @@ function DraggableResultCard({ result }) {
         </button>
         <button
           onClick={handleAdd}
-          className="p-1 rounded text-dim hover:text-accent hover:bg-accent/10 transition-all"
+          className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
           title="Add to workspace"
         >
           <Plus size={13} />
@@ -263,73 +229,77 @@ export default function SourcesPanel() {
   const results = useSearchStore((s) => s.results);
   const loading = useSearchStore((s) => s.loading);
   const error = useSearchStore((s) => s.error);
-  const [activeFilter, setActiveFilter] = useState("all");
-  const expandedPanel = useUIStore((s) => s.expandedPanel);
-  const toggleExpand = useUIStore((s) => s.toggleExpand);
-  const isExpanded = expandedPanel === "sources";
+  const activeFilter = useSearchStore((s) => s.activeFilter);
+  const setActiveFilter = useSearchStore((s) => s.setActiveFilter);
   const filtered = results.filter((r) => matchFilter(r, activeFilter));
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="shrink-0 px-3 py-2 border-b border-border">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-xs font-semibold text-muted uppercase tracking-wider">
+    <div className="h-full flex flex-col p-3">
+      <div className="flex-1 rounded-xl border border-border bg-white overflow-hidden flex flex-col">
+        <div className="shrink-0 px-4 py-3 border-b border-border flex items-center justify-between">
+          <h2 className="text-xs font-semibold text-text uppercase tracking-wider">
             Sources
           </h2>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-dim">{filtered.length} results</span>
-            <button
-              onClick={() => toggleExpand("sources")}
-              className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors"
-              title={isExpanded ? "Collapse" : "Expand"}
-            >
-              {isExpanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-            </button>
-          </div>
+          <span className="text-xs text-dim">{filtered.length} results</span>
         </div>
-        {/* Category filter nav */}
-        <div className="flex gap-1 flex-wrap">
-          {CATEGORY_FILTERS.map((f) => (
-            <FilterButton
-              key={f.id}
-              filter={f}
-              active={activeFilter === f.id}
-              onClick={() => setActiveFilter(f.id)}
-            />
-          ))}
-        </div>
-      </div>
 
-      <div className="flex-1 overflow-y-auto py-1">
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="size-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        <div className="flex-1 flex min-h-0">
+          {/* Filter sidebar */}
+          <div className="shrink-0 w-fit flex flex-col items-center gap-3 py-3 px-1.5 border-r border-border">
+            {FILTERS.map((f) => {
+              const isActive = activeFilter === f.id;
+              const Icon = f.icon;
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => setActiveFilter(f.id)}
+                  className={`flex flex-col items-center gap-0.5 p-1.5 rounded-lg transition-colors ${
+                    isActive
+                      ? "bg-black text-[#ffffff]"
+                      : "text-text hover:bg-hover"
+                  }`}
+                  title={f.label}
+                >
+                  <Icon size={14} />
+                  <span className="text-[7px] leading-tight font-medium">{f.label}</span>
+                </button>
+              );
+            })}
           </div>
-        )}
-        {error && (
-          <div className="px-4 py-3 text-sm text-red-400 bg-red-500/5 rounded-md mx-2">
-            {error}
+
+          {/* Results */}
+          <div className="flex-1 overflow-y-auto">
+            {loading && (
+              <div className="flex items-center justify-center py-12">
+                <div className="size-4 border-2 border-text border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            {error && (
+              <div className="px-4 py-3 text-sm text-text bg-hover rounded-md mx-2 mt-2">
+                {error}
+              </div>
+            )}
+            {!loading && !error && results.length === 0 && query && (
+              <div className="px-4 py-12 text-center text-sm text-muted">
+                No results found
+              </div>
+            )}
+            {!loading && !error && results.length === 0 && !query && (
+              <div className="px-4 py-12 text-center text-sm text-muted">
+                Search the web to see results here
+              </div>
+            )}
+            {!loading && !error && results.length > 0 && filtered.length === 0 && (
+              <div className="px-4 py-12 text-center text-sm text-muted">
+                No results match the selected filter
+              </div>
+            )}
+            <div className="space-y-0.5 px-1">
+              {filtered.map((result, i) => (
+                <DraggableResultCard key={`${result.url}-${i}`} result={result} />
+              ))}
+            </div>
           </div>
-        )}
-        {!loading && !error && results.length === 0 && query && (
-          <div className="px-4 py-12 text-center text-sm text-muted">
-            No results found
-          </div>
-        )}
-        {!loading && !error && results.length === 0 && !query && (
-          <div className="px-4 py-12 text-center text-sm text-muted">
-            Search the web to see results here
-          </div>
-        )}
-        {!loading && !error && results.length > 0 && filtered.length === 0 && (
-          <div className="px-4 py-12 text-center text-sm text-muted">
-            No results match the selected filter
-          </div>
-        )}
-        <div className="space-y-0.5 px-1">
-          {filtered.map((result, i) => (
-            <DraggableResultCard key={`${result.url}-${i}`} result={result} />
-          ))}
         </div>
       </div>
     </div>

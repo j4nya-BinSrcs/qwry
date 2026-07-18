@@ -1,37 +1,18 @@
 import { DndContext, DragOverlay } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import AppLayout from "./layouts/AppLayout";
 import { useSessionStore } from "./stores/sessionStore";
 import { useWorkspaceStore } from "./stores/workspaceStore";
 
-function getInitialTheme() {
-  try {
-    const stored = localStorage.getItem("qwry_theme");
-    if (stored === "light" || stored === "dark") return stored;
-  } catch {}
-  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-}
-
 export default function App() {
   const [activeDrag, setActiveDrag] = useState(null);
-  const [theme, setTheme] = useState(getInitialTheme);
   const sessionId = useSessionStore((s) => s.sessionId);
   const addItem = useWorkspaceStore((s) => s.addItem);
   const reorderItem = useWorkspaceStore((s) => s.reorderItem);
   const items = useWorkspaceStore((s) => s.items);
   const setItems = useWorkspaceStore((s) => s.setItems);
   const activeWsId = useWorkspaceStore((s) => s.activeWorkspaceId);
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    document.body.setAttribute("data-theme", theme);
-    try { localStorage.setItem("qwry_theme", theme); } catch {}
-  }, [theme]);
-
-  const toggleTheme = useCallback(() => {
-    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
-  }, []);
 
   const handleDragStart = useCallback((event) => {
     setActiveDrag(event.active);
@@ -78,10 +59,10 @@ export default function App() {
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <AppLayout toggleTheme={toggleTheme} theme={theme} />
+      <AppLayout />
       <DragOverlay>
         {activeDrag ? (
-          <div className="drag-overlay bg-elevated border border-border rounded-lg px-4 py-3 shadow-2xl max-w-64">
+          <div className="drag-overlay border border-border rounded-lg px-4 py-3 max-w-64">
             <div className="text-sm font-medium text-text truncate">
               {activeDrag.data?.current?.result?.title || "Dragging..."}
             </div>

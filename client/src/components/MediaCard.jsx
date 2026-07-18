@@ -77,20 +77,20 @@ export default function MediaCard({ result, compact }) {
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={(e) => { e.stopPropagation(); openReader(result.url, result.title, imgSrc); }}
-            className="p-1 rounded text-dim hover:text-accent hover:bg-accent/10 transition-all"
+            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
             title="Reader"
           >
             <BookOpen size={11} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); openSummarizer(result.url, result.title); }}
-            className="p-1 rounded text-dim hover:text-accent-hover hover:bg-accent/10 transition-all"
+            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
             title="Summarize"
           >
             <Sparkles size={11} />
           </button>
           <button onClick={handleSave} disabled={!activeWsId}
-            className="p-1 rounded text-dim hover:text-accent hover:bg-accent/10 transition-all disabled:opacity-30"
+            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all disabled:opacity-30"
             title={activeWsId ? "Save to workspace" : "No active workspace"}
           >
             {saved ? <Check size={11} /> : <Plus size={11} />}
@@ -153,20 +153,20 @@ export default function MediaCard({ result, compact }) {
       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={(e) => { e.stopPropagation(); openReader(result.url, result.title, imgSrc); }}
-          className="p-1 rounded text-dim hover:text-accent hover:bg-accent/10 transition-all"
-          title="Reader"
-        >
-          <BookOpen size={12} />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); openSummarizer(result.url, result.title); }}
-          className="p-1 rounded text-dim hover:text-accent-hover hover:bg-accent/10 transition-all"
-          title="Summarize"
-        >
-          <Sparkles size={12} />
-        </button>
-        <button onClick={handleSave} disabled={!activeWsId}
-          className="p-1 rounded text-dim hover:text-accent hover:bg-accent/10 transition-all disabled:opacity-30"
+            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
+            title="Reader"
+          >
+            <BookOpen size={12} />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); openSummarizer(result.url, result.title); }}
+            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
+            title="Summarize"
+          >
+            <Sparkles size={12} />
+          </button>
+          <button onClick={handleSave} disabled={!activeWsId}
+            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all disabled:opacity-30"
           title={activeWsId ? "Save to workspace" : "No active workspace"}
         >
           {saved ? <Check size={12} /> : <Plus size={12} />}
