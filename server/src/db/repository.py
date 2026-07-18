@@ -9,7 +9,17 @@ from server.src.db.models import (
     SummaryListItem,
     User,
     Workspace,
+    WorkspaceComparison,
+    WorkspaceHighlight,
+    WorkspaceImage,
     WorkspaceItem,
+    WorkspaceNote,
+    WorkspacePin,
+    WorkspaceRead,
+    WorkspaceTag,
+    WorkspaceTagging,
+    WorkspaceTimelineEvent,
+    WorkspaceVideo,
 )
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -368,3 +378,307 @@ class OverviewRepo:
             .where(LLMOverview.session_id == session_id, LLMOverview.query == query)
         )
         return result.scalar_one_or_none()
+
+
+# ── Workspace Station Repos ─────────────────────────────────────────────
+
+
+class WorkspaceStationRepoBase:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def _list_by_workspace(self, model: type, ws_id: UUID, order_by: object | None = None) -> list:
+        stmt = select(model).where(model.workspace_id == ws_id)
+        if order_by is not None:
+            stmt = stmt.order_by(order_by)
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def _get_by(self, model: type, entry_id: UUID) -> object | None:
+        return await self._session.get(model, entry_id)
+
+    async def _delete(self, model: type, entry_id: UUID) -> bool:
+        obj = await self._session.get(model, entry_id)
+        if not obj:
+            return False
+        await self._session.delete(obj)
+        await self._session.commit()
+        return True
+
+
+class WorkspaceReadRepo(WorkspaceStationRepoBase):
+    async def list_by_workspace(self, ws_id: UUID) -> list[WorkspaceRead]:
+        return await self._list_by_workspace(WorkspaceRead, ws_id)
+
+    async def get_by_id(self, entry_id: UUID) -> WorkspaceRead | None:
+        return await self._get_by(WorkspaceRead, entry_id)
+
+    async def create(self, ws_id: UUID, item_id: UUID, status: str = "unread") -> WorkspaceRead:
+        obj = WorkspaceRead(workspace_id=ws_id, item_id=item_id, status=status)
+        self._session.add(obj)
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+    async def update_status(self, entry_id: UUID, status: str) -> WorkspaceRead | None:
+        obj = await self.get_by_id(entry_id)
+        if not obj:
+            return None
+        obj.status = status
+        if status == "reading" and obj.started_at is None:
+            obj.started_at = func.now()
+        elif status == "completed" and obj.completed_at is None:
+            obj.completed_at = func.now()
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+    async def delete(self, entry_id: UUID) -> bool:
+        return await self._delete(WorkspaceRead, entry_id)
+
+
+class WorkspaceHighlightRepo(WorkspaceStationRepoBase):
+    async def list_by_workspace(self, ws_id: UUID) -> list[WorkspaceHighlight]:
+        return await self._list_by_workspace(WorkspaceHighlight, ws_id)
+
+    async def get_by_id(self, entry_id: UUID) -> WorkspaceHighlight | None:
+        return await self._get_by(WorkspaceHighlight, entry_id)
+
+    async def create(self, ws_id: UUID, item_id: UUID, text: str, color: str | None = None,
+                     note: str | None = None, page_url: str | None = None) -> WorkspaceHighlight:
+        obj = WorkspaceHighlight(workspace_id=ws_id, item_id=item_id, text=text,
+                                 color=color, note=note, page_url=page_url)
+        self._session.add(obj)
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+    async def delete(self, entry_id: UUID) -> bool:
+        return await self._delete(WorkspaceHighlight, entry_id)
+
+
+class WorkspaceNoteRepo(WorkspaceStationRepoBase):
+    async def list_by_workspace(self, ws_id: UUID) -> list[WorkspaceNote]:
+        return await self._list_by_workspace(WorkspaceNote, ws_id)
+
+    async def get_by_id(self, entry_id: UUID) -> WorkspaceNote | None:
+        return await self._get_by(WorkspaceNote, entry_id)
+
+    async def create(self, ws_id: UUID, title: str, content: str = "") -> WorkspaceNote:
+        obj = WorkspaceNote(workspace_id=ws_id, title=title, content=content)
+        self._session.add(obj)
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+    async def update(self, entry_id: UUID, title: str | None = None,
+                     content: str | None = None) -> WorkspaceNote | None:
+        obj = await self.get_by_id(entry_id)
+        if not obj:
+            return None
+        if title is not None:
+            obj.title = title
+        if content is not None:
+            obj.content = content
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+    async def delete(self, entry_id: UUID) -> bool:
+        return await self._delete(WorkspaceNote, entry_id)
+
+
+class WorkspacePinRepo(WorkspaceStationRepoBase):
+    async def list_by_workspace(self, ws_id: UUID) -> list[WorkspacePin]:
+        return await self._list_by_workspace(WorkspacePin, ws_id, WorkspacePin.order_index)
+
+    async def get_by_id(self, entry_id: UUID) -> WorkspacePin | None:
+        return await self._get_by(WorkspacePin, entry_id)
+
+    async def create(self, ws_id: UUID, pinnable_type: str, pinnable_id: UUID) -> WorkspacePin:
+        result = await self._session.execute(
+            select(func.count()).select_from(WorkspacePin).where(WorkspacePin.workspace_id == ws_id),
+        )
+        next_index = (result.scalar() or 0) + 1
+        obj = WorkspacePin(workspace_id=ws_id, pinnable_type=pinnable_type,
+                           pinnable_id=pinnable_id, order_index=next_index)
+        self._session.add(obj)
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+    async def reorder(self, ws_id: UUID, pin_ids: list[UUID]) -> list[WorkspacePin]:
+        pins = {p.id: p for p in await self.list_by_workspace(ws_id)}
+        for idx, pin_id in enumerate(pin_ids, start=1):
+            if pin_id in pins:
+                pins[pin_id].order_index = idx
+        await self._session.commit()
+        return await self.list_by_workspace(ws_id)
+
+    async def delete(self, entry_id: UUID) -> bool:
+        return await self._delete(WorkspacePin, entry_id)
+
+
+class WorkspaceImageRepo(WorkspaceStationRepoBase):
+    async def list_by_workspace(self, ws_id: UUID) -> list[WorkspaceImage]:
+        return await self._list_by_workspace(WorkspaceImage, ws_id)
+
+    async def get_by_id(self, entry_id: UUID) -> WorkspaceImage | None:
+        return await self._get_by(WorkspaceImage, entry_id)
+
+    async def create(self, ws_id: UUID, url: str, item_id: UUID | None = None,
+                     caption: str | None = None, resolution_w: int | None = None,
+                     resolution_h: int | None = None, license: str | None = None) -> WorkspaceImage:
+        obj = WorkspaceImage(workspace_id=ws_id, item_id=item_id, url=url, caption=caption,
+                             resolution_w=resolution_w, resolution_h=resolution_h, license=license)
+        self._session.add(obj)
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+    async def delete(self, entry_id: UUID) -> bool:
+        return await self._delete(WorkspaceImage, entry_id)
+
+
+class WorkspaceVideoRepo(WorkspaceStationRepoBase):
+    async def list_by_workspace(self, ws_id: UUID) -> list[WorkspaceVideo]:
+        return await self._list_by_workspace(WorkspaceVideo, ws_id)
+
+    async def get_by_id(self, entry_id: UUID) -> WorkspaceVideo | None:
+        return await self._get_by(WorkspaceVideo, entry_id)
+
+    async def create(self, ws_id: UUID, url: str, item_id: UUID | None = None,
+                     title: str | None = None, thumbnail: str | None = None,
+                     duration_secs: int | None = None, creator: str | None = None,
+                     platform: str | None = None, transcript: str | None = None,
+                     summary: str | None = None) -> WorkspaceVideo:
+        obj = WorkspaceVideo(workspace_id=ws_id, item_id=item_id, url=url, title=title,
+                             thumbnail=thumbnail, duration_secs=duration_secs,
+                             creator=creator, platform=platform, transcript=transcript,
+                             summary=summary)
+        self._session.add(obj)
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+    async def update(self, entry_id: UUID, **kwargs: object) -> WorkspaceVideo | None:
+        obj = await self.get_by_id(entry_id)
+        if not obj:
+            return None
+        for key, value in kwargs.items():
+            if value is not None and hasattr(obj, key):
+                setattr(obj, key, value)
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+    async def delete(self, entry_id: UUID) -> bool:
+        return await self._delete(WorkspaceVideo, entry_id)
+
+
+class WorkspaceComparisonRepo(WorkspaceStationRepoBase):
+    async def list_by_workspace(self, ws_id: UUID) -> list[WorkspaceComparison]:
+        return await self._list_by_workspace(WorkspaceComparison, ws_id)
+
+    async def get_by_id(self, entry_id: UUID) -> WorkspaceComparison | None:
+        return await self._get_by(WorkspaceComparison, entry_id)
+
+    async def create(self, ws_id: UUID, title: str, data: dict | None = None) -> WorkspaceComparison:
+        obj = WorkspaceComparison(workspace_id=ws_id, title=title, data=data)
+        self._session.add(obj)
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+    async def update(self, entry_id: UUID, title: str | None = None,
+                     data: dict | None = None) -> WorkspaceComparison | None:
+        obj = await self.get_by_id(entry_id)
+        if not obj:
+            return None
+        if title is not None:
+            obj.title = title
+        if data is not None:
+            obj.data = data
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+    async def delete(self, entry_id: UUID) -> bool:
+        return await self._delete(WorkspaceComparison, entry_id)
+
+
+class WorkspaceTimelineRepo(WorkspaceStationRepoBase):
+    async def list_by_workspace(self, ws_id: UUID, limit: int = 200) -> list[WorkspaceTimelineEvent]:
+        result = await self._session.execute(
+            select(WorkspaceTimelineEvent)
+            .where(WorkspaceTimelineEvent.workspace_id == ws_id)
+            .order_by(WorkspaceTimelineEvent.created_at.desc())
+            .limit(limit),
+        )
+        return list(result.scalars().all())
+
+    async def create(self, ws_id: UUID, action_type: str, object_type: str,
+                     object_id: UUID, event_metadata: dict | None = None) -> WorkspaceTimelineEvent:
+        obj = WorkspaceTimelineEvent(workspace_id=ws_id, action_type=action_type,
+                                     object_type=object_type, object_id=object_id, event_metadata=event_metadata)
+        self._session.add(obj)
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+
+class WorkspaceTagRepo(WorkspaceStationRepoBase):
+    async def list_by_workspace(self, ws_id: UUID) -> list[WorkspaceTag]:
+        return await self._list_by_workspace(WorkspaceTag, ws_id)
+
+    async def get_by_id(self, entry_id: UUID) -> WorkspaceTag | None:
+        return await self._get_by(WorkspaceTag, entry_id)
+
+    async def create(self, ws_id: UUID, name: str, color: str | None = None) -> WorkspaceTag:
+        obj = WorkspaceTag(workspace_id=ws_id, name=name, color=color)
+        self._session.add(obj)
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+    async def delete(self, entry_id: UUID) -> bool:
+        return await self._delete(WorkspaceTag, entry_id)
+
+
+class WorkspaceTaggingRepo(WorkspaceStationRepoBase):
+    async def list_by_object(self, tag_id: UUID) -> list[WorkspaceTagging]:
+        result = await self._session.execute(
+            select(WorkspaceTagging).where(WorkspaceTagging.tag_id == tag_id),
+        )
+        return list(result.scalars().all())
+
+    async def list_by_taggable(self, taggable_type: str, taggable_id: UUID) -> list[WorkspaceTagging]:
+        result = await self._session.execute(
+            select(WorkspaceTagging).where(
+                WorkspaceTagging.taggable_type == taggable_type,
+                WorkspaceTagging.taggable_id == taggable_id,
+            ),
+        )
+        return list(result.scalars().all())
+
+    async def assign(self, tag_id: UUID, taggable_type: str, taggable_id: UUID) -> WorkspaceTagging:
+        obj = WorkspaceTagging(tag_id=tag_id, taggable_type=taggable_type, taggable_id=taggable_id)
+        self._session.add(obj)
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+    async def unassign(self, tag_id: UUID, taggable_type: str, taggable_id: UUID) -> bool:
+        result = await self._session.execute(
+            select(WorkspaceTagging).where(
+                WorkspaceTagging.tag_id == tag_id,
+                WorkspaceTagging.taggable_type == taggable_type,
+                WorkspaceTagging.taggable_id == taggable_id,
+            ),
+        )
+        obj = result.scalar_one_or_none()
+        if not obj:
+            return False
+        await self._session.delete(obj)
+        await self._session.commit()
+        return True

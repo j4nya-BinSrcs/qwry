@@ -23,12 +23,38 @@ from server.src.api.schemas import (
     SummarizeResponse,
     SummaryListEntry,
     SystemStats,
+    WorkspaceComparisonCreate,
+    WorkspaceComparisonResponse,
+    WorkspaceComparisonUpdate,
     WorkspaceCreateRequest,
+    WorkspaceHighlightCreate,
+    WorkspaceHighlightResponse,
+    WorkspaceImageCreate,
+    WorkspaceImageResponse,
     WorkspaceItemCreateRequest,
     WorkspaceItemResponse,
     WorkspaceItemUpdateRequest,
+    WorkspaceNoteCreate,
+    WorkspaceNoteResponse,
+    WorkspaceNoteUpdate,
+    WorkspacePinCreate,
+    WorkspacePinReorder,
+    WorkspacePinResponse,
+    WorkspaceReadCreate,
+    WorkspaceReadResponse,
+    WorkspaceReadUpdate,
     WorkspaceResponse,
+    WorkspaceSearchQuery,
+    WorkspaceSearchResult,
+    WorkspaceStatsResponse,
+    WorkspaceTagAssign,
+    WorkspaceTagCreate,
+    WorkspaceTagResponse,
+    WorkspaceTimelineEventResponse,
     WorkspaceUpdateRequest,
+    WorkspaceVideoCreate,
+    WorkspaceVideoResponse,
+    WorkspaceVideoUpdate,
 )
 from server.src.core.config import settings
 from server.src.core.registry import EndpointRegistry
@@ -747,3 +773,408 @@ async def history_activity(
         svc = ProfileService(db)
         entries = await svc.get_activity_log(session_id)
         return [ActivityLogItem(id=e.id, action_type=e.action_type, details=e.details, created_at=e.created_at) for e in entries]
+
+
+# ── Workspace Station ────────────────────────────────────────────────────
+
+
+def _with_db(fn):
+    async def wrapper(request: Request, *args, **kwargs):
+        maker = request.app.state.db
+        async with maker() as db:
+            return await fn(db, request, *args, **kwargs)
+
+    wrapper.__name__ = fn.__name__
+    return wrapper
+
+
+async def station_reads_list(request: Request, ws_id: UUID, x_session_id: str | None = Header(None, alias="X-Session-Id")):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import list_reads
+    maker = request.app.state.db
+    async with maker() as db:
+        return await list_reads(db, session_id, ws_id)
+
+
+async def station_reads_create(
+    request: Request, ws_id: UUID, body: WorkspaceReadCreate,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import create_read
+    maker = request.app.state.db
+    async with maker() as db:
+        return await create_read(db, session_id, ws_id, body.item_id, body.status)
+
+
+async def station_reads_update(
+    request: Request, entry_id: UUID, body: WorkspaceReadUpdate,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import update_read_status
+    maker = request.app.state.db
+    async with maker() as db:
+        return await update_read_status(db, session_id, entry_id, body.status)
+
+
+async def station_reads_delete(
+    request: Request, entry_id: UUID,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import delete_read
+    maker = request.app.state.db
+    async with maker() as db:
+        ok = await delete_read(db, session_id, entry_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Read entry not found")
+    return {"status": "deleted"}
+
+
+async def station_highlights_list(request: Request, ws_id: UUID, x_session_id: str | None = Header(None, alias="X-Session-Id")):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import list_highlights
+    maker = request.app.state.db
+    async with maker() as db:
+        return await list_highlights(db, session_id, ws_id)
+
+
+async def station_highlights_create(
+    request: Request, ws_id: UUID, body: WorkspaceHighlightCreate,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import create_highlight
+    maker = request.app.state.db
+    async with maker() as db:
+        return await create_highlight(db, session_id, ws_id, body.item_id, body.text, body.color, body.note, body.page_url)
+
+
+async def station_highlights_delete(
+    request: Request, entry_id: UUID,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import delete_highlight
+    maker = request.app.state.db
+    async with maker() as db:
+        ok = await delete_highlight(db, session_id, entry_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Highlight not found")
+    return {"status": "deleted"}
+
+
+async def station_notes_list(request: Request, ws_id: UUID, x_session_id: str | None = Header(None, alias="X-Session-Id")):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import list_notes
+    maker = request.app.state.db
+    async with maker() as db:
+        return await list_notes(db, session_id, ws_id)
+
+
+async def station_notes_create(
+    request: Request, ws_id: UUID, body: WorkspaceNoteCreate,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import create_note
+    maker = request.app.state.db
+    async with maker() as db:
+        return await create_note(db, session_id, ws_id, body.title, body.content)
+
+
+async def station_notes_update(
+    request: Request, entry_id: UUID, body: WorkspaceNoteUpdate,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import update_note
+    maker = request.app.state.db
+    async with maker() as db:
+        return await update_note(db, session_id, entry_id, body.title, body.content)
+
+
+async def station_notes_delete(
+    request: Request, entry_id: UUID,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import delete_note
+    maker = request.app.state.db
+    async with maker() as db:
+        ok = await delete_note(db, session_id, entry_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Note not found")
+    return {"status": "deleted"}
+
+
+async def station_pins_list(request: Request, ws_id: UUID, x_session_id: str | None = Header(None, alias="X-Session-Id")):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import list_pins
+    maker = request.app.state.db
+    async with maker() as db:
+        return await list_pins(db, session_id, ws_id)
+
+
+async def station_pins_create(
+    request: Request, ws_id: UUID, body: WorkspacePinCreate,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import create_pin
+    maker = request.app.state.db
+    async with maker() as db:
+        return await create_pin(db, session_id, ws_id, body.pinnable_type, body.pinnable_id)
+
+
+async def station_pins_reorder(
+    request: Request, ws_id: UUID, body: WorkspacePinReorder,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import reorder_pins
+    maker = request.app.state.db
+    async with maker() as db:
+        return await reorder_pins(db, session_id, ws_id, body.pin_ids)
+
+
+async def station_pins_delete(
+    request: Request, entry_id: UUID,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import delete_pin
+    maker = request.app.state.db
+    async with maker() as db:
+        ok = await delete_pin(db, session_id, entry_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Pin not found")
+    return {"status": "deleted"}
+
+
+async def station_images_list(request: Request, ws_id: UUID, x_session_id: str | None = Header(None, alias="X-Session-Id")):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import list_images
+    maker = request.app.state.db
+    async with maker() as db:
+        return await list_images(db, session_id, ws_id)
+
+
+async def station_images_create(
+    request: Request, ws_id: UUID, body: WorkspaceImageCreate,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import create_image
+    maker = request.app.state.db
+    async with maker() as db:
+        return await create_image(db, session_id, ws_id, body.url, body.item_id, body.caption, body.resolution_w, body.resolution_h, body.license)
+
+
+async def station_images_delete(
+    request: Request, entry_id: UUID,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import delete_image
+    maker = request.app.state.db
+    async with maker() as db:
+        ok = await delete_image(db, session_id, entry_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Image not found")
+    return {"status": "deleted"}
+
+
+async def station_videos_list(request: Request, ws_id: UUID, x_session_id: str | None = Header(None, alias="X-Session-Id")):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import list_videos
+    maker = request.app.state.db
+    async with maker() as db:
+        return await list_videos(db, session_id, ws_id)
+
+
+async def station_videos_create(
+    request: Request, ws_id: UUID, body: WorkspaceVideoCreate,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import create_video
+    maker = request.app.state.db
+    async with maker() as db:
+        return await create_video(db, session_id, ws_id, body.url, body.item_id, body.title, body.thumbnail, body.duration_secs, body.creator, body.platform, body.transcript, body.summary)
+
+
+async def station_videos_update(
+    request: Request, entry_id: UUID, body: WorkspaceVideoUpdate,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import update_video
+    maker = request.app.state.db
+    async with maker() as db:
+        return await update_video(db, session_id, entry_id, **body.model_dump(exclude_none=True))
+
+
+async def station_videos_delete(
+    request: Request, entry_id: UUID,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import delete_video
+    maker = request.app.state.db
+    async with maker() as db:
+        ok = await delete_video(db, session_id, entry_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Video not found")
+    return {"status": "deleted"}
+
+
+async def station_comparisons_list(request: Request, ws_id: UUID, x_session_id: str | None = Header(None, alias="X-Session-Id")):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import list_comparisons
+    maker = request.app.state.db
+    async with maker() as db:
+        return await list_comparisons(db, session_id, ws_id)
+
+
+async def station_comparisons_create(
+    request: Request, ws_id: UUID, body: WorkspaceComparisonCreate,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import create_comparison
+    maker = request.app.state.db
+    async with maker() as db:
+        return await create_comparison(db, session_id, ws_id, body.title, body.data)
+
+
+async def station_comparisons_update(
+    request: Request, entry_id: UUID, body: WorkspaceComparisonUpdate,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import update_comparison
+    maker = request.app.state.db
+    async with maker() as db:
+        return await update_comparison(db, session_id, entry_id, body.title, body.data)
+
+
+async def station_comparisons_delete(
+    request: Request, entry_id: UUID,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import delete_comparison
+    maker = request.app.state.db
+    async with maker() as db:
+        ok = await delete_comparison(db, session_id, entry_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Comparison not found")
+    return {"status": "deleted"}
+
+
+async def station_timeline_list(
+    request: Request, ws_id: UUID,
+    limit: int = Query(200, ge=1, le=1000),
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import list_timeline
+    maker = request.app.state.db
+    async with maker() as db:
+        return await list_timeline(db, session_id, ws_id, limit)
+
+
+async def station_tags_list(request: Request, ws_id: UUID, x_session_id: str | None = Header(None, alias="X-Session-Id")):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import list_tags
+    maker = request.app.state.db
+    async with maker() as db:
+        return await list_tags(db, session_id, ws_id)
+
+
+async def station_tags_create(
+    request: Request, ws_id: UUID, body: WorkspaceTagCreate,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import create_tag
+    maker = request.app.state.db
+    async with maker() as db:
+        return await create_tag(db, session_id, ws_id, body.name, body.color)
+
+
+async def station_tags_delete(
+    request: Request, entry_id: UUID,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import delete_tag
+    maker = request.app.state.db
+    async with maker() as db:
+        ok = await delete_tag(db, session_id, entry_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    return {"status": "deleted"}
+
+
+async def station_tags_assign(
+    request: Request, ws_id: UUID, tag_id: UUID, body: WorkspaceTagAssign,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import assign_tag
+    maker = request.app.state.db
+    async with maker() as db:
+        return await assign_tag(db, session_id, ws_id, tag_id, body.object_type, body.object_id)
+
+
+async def station_tags_unassign(
+    request: Request, ws_id: UUID, tag_id: UUID, body: WorkspaceTagAssign,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import unassign_tag
+    maker = request.app.state.db
+    async with maker() as db:
+        return await unassign_tag(db, session_id, ws_id, tag_id, body.object_type, body.object_id)
+
+
+async def station_tags_objects(
+    request: Request, ws_id: UUID, tag_id: UUID,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import list_tagged_objects
+    maker = request.app.state.db
+    async with maker() as db:
+        return await list_tagged_objects(db, session_id, ws_id, tag_id)
+
+
+async def station_stats(request: Request, ws_id: UUID, x_session_id: str | None = Header(None, alias="X-Session-Id")):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import get_stats
+    maker = request.app.state.db
+    async with maker() as db:
+        return await get_stats(db, session_id, ws_id)
+
+
+async def station_search(
+    request: Request, ws_id: UUID,
+    q: str = Query(..., min_length=1),
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import search_workspace
+    maker = request.app.state.db
+    async with maker() as db:
+        return await search_workspace(db, session_id, ws_id, q)
+
+
+async def station_load_all(request: Request, ws_id: UUID, x_session_id: str | None = Header(None, alias="X-Session-Id")):
+    session_id = get_session_id(request)
+    from server.src.services.workspace_station_service import load_all
+    maker = request.app.state.db
+    async with maker() as db:
+        return await load_all(db, session_id, ws_id)

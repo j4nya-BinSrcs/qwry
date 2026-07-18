@@ -247,3 +247,211 @@ class OverviewResponse(BaseModel):
     query: str
     overview: str
     created_at: datetime
+
+
+# ── Workspace Station ─────────────────────────────────────────────────────
+
+
+class WorkspaceReadCreate(BaseModel):
+    item_id: UUID
+    status: str = "unread"
+
+
+class WorkspaceReadUpdate(BaseModel):
+    status: str
+
+
+class WorkspaceReadResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    item_id: UUID
+    status: str
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    created_at: datetime
+
+
+class WorkspaceHighlightCreate(BaseModel):
+    item_id: UUID
+    text: str
+    color: str | None = None
+    note: str | None = None
+    page_url: str | None = None
+
+
+class WorkspaceHighlightResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    item_id: UUID
+    text: str
+    color: str | None = None
+    note: str | None = None
+    page_url: str | None = None
+    created_at: datetime
+
+
+class WorkspaceNoteCreate(BaseModel):
+    title: str
+    content: str = ""
+
+
+class WorkspaceNoteUpdate(BaseModel):
+    title: str | None = None
+    content: str | None = None
+
+
+class WorkspaceNoteResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    title: str
+    content: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class WorkspacePinCreate(BaseModel):
+    pinnable_type: str
+    pinnable_id: UUID
+
+
+class WorkspacePinReorder(BaseModel):
+    pin_ids: list[UUID]
+
+
+class WorkspacePinResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    pinnable_type: str
+    pinnable_id: UUID
+    order_index: int
+    created_at: datetime
+
+
+class WorkspaceImageCreate(BaseModel):
+    item_id: UUID | None = None
+    url: str
+    caption: str | None = None
+    resolution_w: int | None = None
+    resolution_h: int | None = None
+    license: str | None = None
+
+
+class WorkspaceImageResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    item_id: UUID | None = None
+    url: str
+    caption: str | None = None
+    resolution_w: int | None = None
+    resolution_h: int | None = None
+    license: str | None = None
+    created_at: datetime
+
+
+class WorkspaceVideoUpdate(BaseModel):
+    title: str | None = None
+    thumbnail: str | None = None
+    duration_secs: int | None = None
+    creator: str | None = None
+    platform: str | None = None
+    transcript: str | None = None
+    summary: str | None = None
+
+
+class WorkspaceVideoCreate(BaseModel):
+    item_id: UUID | None = None
+    url: str
+    title: str | None = None
+    thumbnail: str | None = None
+    duration_secs: int | None = None
+    creator: str | None = None
+    platform: str | None = None
+    transcript: str | None = None
+    summary: str | None = None
+
+
+class WorkspaceVideoResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    item_id: UUID | None = None
+    url: str
+    title: str | None = None
+    thumbnail: str | None = None
+    duration_secs: int | None = None
+    creator: str | None = None
+    platform: str | None = None
+    transcript: str | None = None
+    summary: str | None = None
+    created_at: datetime
+
+
+class WorkspaceComparisonCreate(BaseModel):
+    title: str
+    data: dict | None = None
+
+
+class WorkspaceComparisonUpdate(BaseModel):
+    title: str | None = None
+    data: dict | None = None
+
+
+class WorkspaceComparisonResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    title: str
+    data: dict | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class WorkspaceTimelineEventResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    action_type: str
+    object_type: str
+    object_id: UUID
+    event_metadata: dict | None = None
+    created_at: datetime
+
+
+class WorkspaceTagCreate(BaseModel):
+    name: str
+    color: str | None = None
+
+
+class WorkspaceTagAssign(BaseModel):
+    object_type: str
+    object_id: UUID
+
+
+class WorkspaceTagResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    name: str
+    color: str | None = None
+    created_at: datetime
+
+
+class WorkspaceStatsResponse(BaseModel):
+    sources: int = 0
+    reads: int = 0
+    summaries: int = 0
+    notes: int = 0
+    pins: int = 0
+    images: int = 0
+    videos: int = 0
+    comparisons: int = 0
+    highlights: int = 0
+    tags: int = 0
+
+
+class WorkspaceSearchQuery(BaseModel):
+    q: str
+
+
+class WorkspaceSearchResult(BaseModel):
+    object_type: str
+    object_id: UUID
+    title: str
+    snippet: str | None = None
+    url: str | None = None
