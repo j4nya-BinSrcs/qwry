@@ -41,7 +41,7 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
   }, [handleKeyDown]);
 
   const mins = data ? Math.round(data.reading_time_seconds / 60) : 0;
-  const hostname = data ? new URL(data.url).hostname : "";
+  const hostname = data ? (() => { try { return new URL(data.url).hostname; } catch { return ""; } })() : "";
 
   return (
     <div

@@ -10,7 +10,7 @@ const PANEL_DEFAULTS = { sources: 30, context: 40, discovery: 30 };
 const PANEL_MINS = { sources: 12, context: 20, discovery: 12 };
 const PANEL_MAXS = { sources: 40, context: 70, discovery: 40 };
 
-function renderPanel(id) {
+function PanelContent({ id }) {
   switch (id) {
     case "sources":
       return (
@@ -30,6 +30,8 @@ function renderPanel(id) {
           <DiscoveryPanel />
         </div>
       );
+    default:
+      return null;
   }
 }
 
@@ -44,7 +46,7 @@ export default function AppLayout() {
         {expandedPanel ? (
           <PanelGroup direction="horizontal">
             <Panel defaultSize={100} minSize={100}>
-              {renderPanel(expandedPanel)}
+              <PanelContent id={expandedPanel} />
             </Panel>
           </PanelGroup>
         ) : (
@@ -57,7 +59,7 @@ export default function AppLayout() {
                   minSize={PANEL_MINS[id]}
                   maxSize={PANEL_MAXS[id]}
                 >
-                  {renderPanel(id)}
+                  <PanelContent id={id} />
                 </Panel>
               </Fragment>
             ))}

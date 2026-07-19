@@ -29,6 +29,10 @@ const SECTIONS = [
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
+function getHostname(url) {
+  try { return new URL(url).hostname; } catch { return ""; }
+}
+
 function Favicon({ domain }) {
   return (
     <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`} alt=""
@@ -87,10 +91,10 @@ function SourceItemCard({ item }) {
         <button {...attributes} {...listeners}
           className="mt-0.5 shrink-0 text-dim cursor-grab active:cursor-grabbing hover:text-text transition-colors"
         ><GripVertical size={14} /></button>
-        <Favicon domain={new URL(item.url).hostname} />
+        <Favicon domain={getHostname(item.url)} />
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium text-text truncate">{item.title || "Untitled"}</div>
-          <div className="text-xs text-muted mt-0.5 truncate">{new URL(item.url).hostname}</div>
+          <div className="text-xs text-muted mt-0.5 truncate">{getHostname(item.url)}</div>
         </div>
         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={(e) => { e.stopPropagation(); openReader(item.url, item.title, item.media_url); }}
@@ -253,7 +257,7 @@ function SummariesSection({ items, className }) {
           {hasSummaries.map((item) => (
             <div key={item.id} className="bg-panel border border-border rounded-md px-3 py-2.5">
               <div className="flex items-center gap-2 mb-1">
-                <Favicon domain={new URL(item.url).hostname} />
+                <Favicon domain={getHostname(item.url)} />
                 <span className="text-sm font-medium text-text truncate">{item.title || "Untitled"}</span>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-text">
@@ -758,6 +762,7 @@ export default function WorkspaceView() {
   const createWorkspace = useWorkspaceStore((s) => s.createWorkspace);
 
   const station = useWorkspaceStationStore();
+  const stationError = station.error;
   const [activeSection, setActiveSection] = useState("sources");
 
   useEffect(() => {
@@ -804,7 +809,7 @@ export default function WorkspaceView() {
 
       {/* Content area — all sections rendered unconditionally, hidden via className */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        {error && <div className="px-3 py-2 m-2 text-xs text-text bg-hover rounded">{error}</div>}
+        {(error || stationError) && <div className="px-3 py-2 m-2 text-xs text-text bg-hover rounded">{error || stationError}</div>}
 
         <SourcesSection items={items} loading={loading} sessionId={sessionId}
           className={activeSection === "sources" ? "" : "hidden"} />

@@ -2,12 +2,14 @@ import { Maximize2, Minimize2 } from "lucide-react";
 import { useUIStore } from "../stores/uiStore";
 import SearchAssist from "../context/SearchAssist";
 import WorkspaceView from "../context/WorkspaceView";
+import CanvasView from "../context/CanvasView";
 import ReaderView from "../context/ReaderView";
 import SummarizerView from "../context/SummarizerView";
 
 const MODES = [
   { id: "search-assist", label: "Search Assist" },
   { id: "workspaces", label: "Station" },
+  { id: "canvas", label: "Canvas" },
   { id: "reader", label: "Reader" },
   { id: "summarizer", label: "Summarizer" },
 ];
@@ -54,6 +56,7 @@ export default function ContextPanel() {
       <div className="flex-1 min-h-0">
         {contextMode === "search-assist" && <SearchAssist />}
         {contextMode === "workspaces" && <WorkspaceView />}
+        {contextMode === "canvas" && <CanvasView />}
         {contextMode === "reader" && <ReaderView />}
         {contextMode === "summarizer" && <SummarizerView />}
       </div>

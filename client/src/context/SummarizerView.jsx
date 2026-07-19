@@ -5,6 +5,10 @@ import { useContentStore } from "../stores/contentStore";
 import { useUIStore } from "../stores/uiStore";
 import MarkdownRenderer from "../components/MarkdownRenderer";
 
+function getHostname(url) {
+  try { return new URL(url).hostname; } catch { return url || ""; }
+}
+
 export default function SummarizerView() {
   const summarizeUrl = useUIStore((s) => s.summarizeUrl);
   const summarizeTitle = useUIStore((s) => s.summarizeTitle);
@@ -134,13 +138,13 @@ export default function SummarizerView() {
               onClick={() => toggleSummary(s.id)}
             >
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium text-text truncate">{s.title || new URL(s.url).hostname}</div>
+                <div className="text-xs font-medium text-text truncate">{s.title || getHostname(s.url)}</div>
                 <a href={s.url} target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-1 text-[10px] text-text hover:text-muted mt-0.5"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <ExternalLink size={10} />
-                  {new URL(s.url).hostname}
+                  {getHostname(s.url)}
                 </a>
               </div>
               <div className="flex items-center gap-1 shrink-0">

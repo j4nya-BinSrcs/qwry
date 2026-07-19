@@ -18,6 +18,10 @@ const FILTERS = [
   { id: "code", label: "Code", icon: Code },
 ];
 
+function getHostname(url) {
+  try { return new URL(url).hostname; } catch { return ""; }
+}
+
 function Favicon({ domain }) {
   return (
     <img
@@ -97,7 +101,7 @@ function DraggableResultCard({ result }) {
           onError={(e) => (e.target.style.display = "none")}
         />
       ) : (
-        <Favicon domain={new URL(result.url).hostname} />
+        <Favicon domain={getHostname(result.url)} />
       )}
 
       <div className="flex-1 min-w-0">
@@ -113,7 +117,7 @@ function DraggableResultCard({ result }) {
         </div>
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-xs text-muted truncate">
-            {new URL(result.url).hostname}
+            {getHostname(result.url)}
           </span>
           {result.source && (
             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-hover text-text">

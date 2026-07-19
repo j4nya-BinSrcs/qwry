@@ -1,5 +1,17 @@
 from fastapi import APIRouter, FastAPI
 from server.src.api.endpoints import (
+    ai_responses_create,
+    ai_responses_delete,
+    ai_responses_list,
+    ai_responses_update,
+    canvas_connections_create,
+    canvas_connections_delete,
+    canvas_connections_list,
+    canvas_nodes_create,
+    canvas_nodes_delete,
+    canvas_nodes_get,
+    canvas_nodes_list,
+    canvas_nodes_update,
     health,
     history_activity,
     history_reads,
@@ -56,6 +68,10 @@ from server.src.api.endpoints import (
     suggest,
     summarize,
     system_stats,
+    tasks_create,
+    tasks_delete,
+    tasks_list,
+    tasks_update,
     workspace_chat,
     workspace_create,
     workspace_delete,
@@ -65,6 +81,8 @@ from server.src.api.endpoints import (
 )
 from server.src.api.schemas import (
     ActivityLogItem,
+    CanvasConnectionResponse,
+    CanvasNodeResponse,
     ChatResponse,
     ItemSummaryResponse,
     LLMGenerateResponse,
@@ -78,6 +96,7 @@ from server.src.api.schemas import (
     SummarizeResponse,
     SummaryListEntry,
     SystemStats,
+    WorkspaceAIResponseResponse,
     WorkspaceComparisonResponse,
     WorkspaceHighlightResponse,
     WorkspaceImageResponse,
@@ -89,6 +108,7 @@ from server.src.api.schemas import (
     WorkspaceSearchResult,
     WorkspaceStatsResponse,
     WorkspaceTagResponse,
+    WorkspaceTaskResponse,
     WorkspaceTimelineEventResponse,
     WorkspaceVideoResponse,
 )
@@ -219,6 +239,44 @@ station_router.add_api_route("/search", station_search, methods=["GET"], respons
 station_router.add_api_route("/load-all", station_load_all, methods=["GET"])
 
 
+# ── Workspace Canvas Router ────────────────────────────────────────────────
+
+
+canvas_router = APIRouter(prefix="/api/workspaces/{ws_id}/canvas", tags=["workspace-canvas"])
+
+canvas_router.add_api_route("/nodes", canvas_nodes_list, methods=["GET"], response_model=list[CanvasNodeResponse])
+canvas_router.add_api_route("/nodes", canvas_nodes_create, methods=["POST"], response_model=CanvasNodeResponse, status_code=201)
+canvas_router.add_api_route("/nodes/{node_id}", canvas_nodes_get, methods=["GET"], response_model=CanvasNodeResponse)
+canvas_router.add_api_route("/nodes/{node_id}", canvas_nodes_update, methods=["PATCH"], response_model=CanvasNodeResponse)
+canvas_router.add_api_route("/nodes/{node_id}", canvas_nodes_delete, methods=["DELETE"])
+
+canvas_router.add_api_route("/connections", canvas_connections_list, methods=["GET"], response_model=list[CanvasConnectionResponse])
+canvas_router.add_api_route("/connections", canvas_connections_create, methods=["POST"], response_model=CanvasConnectionResponse, status_code=201)
+canvas_router.add_api_route("/connections/{conn_id}", canvas_connections_delete, methods=["DELETE"])
+
+
+# ── AI Responses Router ────────────────────────────────────────────────────
+
+
+ai_router = APIRouter(prefix="/api/workspaces/{ws_id}/ai", tags=["workspace-ai"])
+
+ai_router.add_api_route("/responses", ai_responses_list, methods=["GET"], response_model=list[WorkspaceAIResponseResponse])
+ai_router.add_api_route("/responses", ai_responses_create, methods=["POST"], response_model=WorkspaceAIResponseResponse, status_code=201)
+ai_router.add_api_route("/responses/{entry_id}", ai_responses_update, methods=["PATCH"], response_model=WorkspaceAIResponseResponse)
+ai_router.add_api_route("/responses/{entry_id}", ai_responses_delete, methods=["DELETE"])
+
+
+# ── Tasks Router ───────────────────────────────────────────────────────────
+
+
+tasks_router = APIRouter(prefix="/api/workspaces/{ws_id}/tasks", tags=["workspace-tasks"])
+
+tasks_router.add_api_route("", tasks_list, methods=["GET"], response_model=list[WorkspaceTaskResponse])
+tasks_router.add_api_route("", tasks_create, methods=["POST"], response_model=WorkspaceTaskResponse, status_code=201)
+tasks_router.add_api_route("/{entry_id}", tasks_update, methods=["PATCH"], response_model=WorkspaceTaskResponse)
+tasks_router.add_api_route("/{entry_id}", tasks_delete, methods=["DELETE"])
+
+
 def register_routes(app: FastAPI) -> None:
     app.include_router(health_router)
     app.include_router(search_router)
@@ -233,3 +291,6 @@ def register_routes(app: FastAPI) -> None:
     app.include_router(profile_router)
     app.include_router(history_router)
     app.include_router(station_router)
+    app.include_router(canvas_router)
+    app.include_router(ai_router)
+    app.include_router(tasks_router)

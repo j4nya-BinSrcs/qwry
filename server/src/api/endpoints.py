@@ -6,6 +6,11 @@ import httpx
 from fastapi import Header, HTTPException, Query, Request, Response
 from server.src.api.schemas import (
     ActivityLogItem,
+    CanvasConnectionCreate,
+    CanvasConnectionResponse,
+    CanvasNodeCreate,
+    CanvasNodeResponse,
+    CanvasNodeUpdate,
     ChatRequest,
     ChatResponse,
     ChatSource,
@@ -23,6 +28,9 @@ from server.src.api.schemas import (
     SummarizeResponse,
     SummaryListEntry,
     SystemStats,
+    WorkspaceAIResponseCreate,
+    WorkspaceAIResponseResponse,
+    WorkspaceAIResponseUpdate,
     WorkspaceComparisonCreate,
     WorkspaceComparisonResponse,
     WorkspaceComparisonUpdate,
@@ -50,6 +58,9 @@ from server.src.api.schemas import (
     WorkspaceTagAssign,
     WorkspaceTagCreate,
     WorkspaceTagResponse,
+    WorkspaceTaskCreate,
+    WorkspaceTaskResponse,
+    WorkspaceTaskUpdate,
     WorkspaceTimelineEventResponse,
     WorkspaceUpdateRequest,
     WorkspaceVideoCreate,
@@ -1178,3 +1189,200 @@ async def station_load_all(request: Request, ws_id: UUID, x_session_id: str | No
     maker = request.app.state.db
     async with maker() as db:
         return await load_all(db, session_id, ws_id)
+
+
+# ── Canvas Nodes ────────────────────────────────────────────────────────────
+
+
+async def canvas_nodes_list(request: Request, ws_id: UUID, x_session_id: str | None = Header(None, alias="X-Session-Id")):
+    session_id = get_session_id(request)
+    from server.src.services.canvas_service import list_nodes
+    maker = request.app.state.db
+    async with maker() as db:
+        return await list_nodes(db, session_id, ws_id)
+
+
+async def canvas_nodes_create(
+    request: Request, ws_id: UUID, body: CanvasNodeCreate,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.canvas_service import create_node
+    maker = request.app.state.db
+    async with maker() as db:
+        return await create_node(db, session_id, ws_id, body.object_type, body.object_id,
+                                  body.x, body.y, body.width, body.height,
+                                  body.z_index, body.pinned, body.label, body.color)
+
+
+async def canvas_nodes_get(
+    request: Request, node_id: UUID,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.canvas_service import get_node
+    maker = request.app.state.db
+    async with maker() as db:
+        return await get_node(db, session_id, node_id)
+
+
+async def canvas_nodes_update(
+    request: Request, node_id: UUID, body: CanvasNodeUpdate,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.canvas_service import update_node
+    maker = request.app.state.db
+    async with maker() as db:
+        kwargs = body.model_dump(exclude_unset=True)
+        return await update_node(db, session_id, node_id, **kwargs)
+
+
+async def canvas_nodes_delete(
+    request: Request, node_id: UUID,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.canvas_service import delete_node
+    maker = request.app.state.db
+    async with maker() as db:
+        ok = await delete_node(db, session_id, node_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Canvas node not found")
+    return {"status": "deleted"}
+
+
+# ── Canvas Connections ─────────────────────────────────────────────────────
+
+
+async def canvas_connections_list(request: Request, ws_id: UUID, x_session_id: str | None = Header(None, alias="X-Session-Id")):
+    session_id = get_session_id(request)
+    from server.src.services.canvas_service import list_connections
+    maker = request.app.state.db
+    async with maker() as db:
+        return await list_connections(db, session_id, ws_id)
+
+
+async def canvas_connections_create(
+    request: Request, ws_id: UUID, body: CanvasConnectionCreate,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.canvas_service import create_connection
+    maker = request.app.state.db
+    async with maker() as db:
+        return await create_connection(db, session_id, ws_id, body.source_node_id,
+                                        body.target_node_id, body.label, body.style, body.color)
+
+
+async def canvas_connections_delete(
+    request: Request, conn_id: UUID,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.canvas_service import delete_connection
+    maker = request.app.state.db
+    async with maker() as db:
+        ok = await delete_connection(db, session_id, conn_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Canvas connection not found")
+    return {"status": "deleted"}
+
+
+# ── AI Responses ───────────────────────────────────────────────────────────
+
+
+async def ai_responses_list(request: Request, ws_id: UUID, x_session_id: str | None = Header(None, alias="X-Session-Id")):
+    session_id = get_session_id(request)
+    from server.src.services.ai_response_service import list_ai_responses
+    maker = request.app.state.db
+    async with maker() as db:
+        return await list_ai_responses(db, session_id, ws_id)
+
+
+async def ai_responses_create(
+    request: Request, ws_id: UUID, body: WorkspaceAIResponseCreate,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.ai_response_service import create_ai_response
+    maker = request.app.state.db
+    async with maker() as db:
+        return await create_ai_response(db, session_id, ws_id, body.title, body.prompt,
+                                         body.response_text, body.model, body.provider,
+                                         body.tokens_in, body.tokens_out)
+
+
+async def ai_responses_update(
+    request: Request, entry_id: UUID, body: WorkspaceAIResponseUpdate,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.ai_response_service import update_ai_response
+    maker = request.app.state.db
+    async with maker() as db:
+        kwargs = body.model_dump(exclude_unset=True)
+        return await update_ai_response(db, session_id, entry_id, **kwargs)
+
+
+async def ai_responses_delete(
+    request: Request, entry_id: UUID,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.ai_response_service import delete_ai_response
+    maker = request.app.state.db
+    async with maker() as db:
+        ok = await delete_ai_response(db, session_id, entry_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="AI response not found")
+    return {"status": "deleted"}
+
+
+# ── Tasks ──────────────────────────────────────────────────────────────────
+
+
+async def tasks_list(request: Request, ws_id: UUID, x_session_id: str | None = Header(None, alias="X-Session-Id")):
+    session_id = get_session_id(request)
+    from server.src.services.task_service import list_tasks
+    maker = request.app.state.db
+    async with maker() as db:
+        return await list_tasks(db, session_id, ws_id)
+
+
+async def tasks_create(
+    request: Request, ws_id: UUID, body: WorkspaceTaskCreate,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.task_service import create_task
+    maker = request.app.state.db
+    async with maker() as db:
+        return await create_task(db, session_id, ws_id, body.title, body.description,
+                                  body.status, body.priority, body.due_date, body.assignee)
+
+
+async def tasks_update(
+    request: Request, entry_id: UUID, body: WorkspaceTaskUpdate,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.task_service import update_task
+    maker = request.app.state.db
+    async with maker() as db:
+        kwargs = body.model_dump(exclude_unset=True)
+        return await update_task(db, session_id, entry_id, **kwargs)
+
+
+async def tasks_delete(
+    request: Request, entry_id: UUID,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+):
+    session_id = get_session_id(request)
+    from server.src.services.task_service import delete_task
+    maker = request.app.state.db
+    async with maker() as db:
+        ok = await delete_task(db, session_id, entry_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return {"status": "deleted"}

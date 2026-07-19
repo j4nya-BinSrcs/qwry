@@ -1,7 +1,10 @@
+from datetime import datetime
 from uuid import UUID
 
 from server.src.db.models import (
     ActivityLog,
+    CanvasConnection,
+    CanvasNode,
     LLMOverview,
     Profile,
     ReadingListItem,
@@ -9,6 +12,7 @@ from server.src.db.models import (
     SummaryListItem,
     User,
     Workspace,
+    WorkspaceAIResponse,
     WorkspaceComparison,
     WorkspaceHighlight,
     WorkspaceImage,
@@ -18,6 +22,7 @@ from server.src.db.models import (
     WorkspaceRead,
     WorkspaceTag,
     WorkspaceTagging,
+    WorkspaceTask,
     WorkspaceTimelineEvent,
     WorkspaceVideo,
 )
@@ -682,3 +687,145 @@ class WorkspaceTaggingRepo(WorkspaceStationRepoBase):
         await self._session.delete(obj)
         await self._session.commit()
         return True
+
+
+# ── Canvas Repos ───────────────────────────────────────────────────────────
+
+
+class CanvasNodeRepo(WorkspaceStationRepoBase):
+    async def list_by_workspace(self, ws_id: UUID) -> list[CanvasNode]:
+        return await self._list_by_workspace(CanvasNode, ws_id, CanvasNode.z_index)
+
+    async def get_by_id(self, node_id: UUID) -> CanvasNode | None:
+        return await self._get_by(CanvasNode, node_id)
+
+    async def get_by_object(self, ws_id: UUID, object_type: str, object_id: UUID) -> CanvasNode | None:
+        result = await self._session.execute(
+            select(CanvasNode).where(
+                CanvasNode.workspace_id == ws_id,
+                CanvasNode.object_type == object_type,
+                CanvasNode.object_id == object_id,
+            ),
+        )
+        return result.scalar_one_or_none()
+
+    async def create(self, ws_id: UUID, object_type: str, object_id: UUID, x: float = 0.0, y: float = 0.0,
+                     width: float | None = None, height: float | None = None, z_index: int = 0,
+                     pinned: bool = False, label: str | None = None, color: str | None = None) -> CanvasNode:
+        obj = CanvasNode(workspace_id=ws_id, object_type=object_type, object_id=object_id,
+                         x=x, y=y, width=width, height=height, z_index=z_index,
+                         pinned=pinned, label=label, color=color)
+        self._session.add(obj)
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+    async def update(self, node_id: UUID, **kwargs: object) -> CanvasNode | None:
+        obj = await self.get_by_id(node_id)
+        if not obj:
+            return None
+        for key, value in kwargs.items():
+            if value is not None and hasattr(obj, key):
+                setattr(obj, key, value)
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+    async def delete(self, node_id: UUID) -> bool:
+        return await self._delete(CanvasNode, node_id)
+
+
+class CanvasConnectionRepo(WorkspaceStationRepoBase):
+    async def list_by_workspace(self, ws_id: UUID) -> list[CanvasConnection]:
+        return await self._list_by_workspace(CanvasConnection, ws_id)
+
+    async def get_by_id(self, conn_id: UUID) -> CanvasConnection | None:
+        return await self._get_by(CanvasConnection, conn_id)
+
+    async def create(self, ws_id: UUID, source_node_id: UUID, target_node_id: UUID,
+                     label: str | None = None, style: str = "solid",
+                     color: str | None = None) -> CanvasConnection:
+        obj = CanvasConnection(workspace_id=ws_id, source_node_id=source_node_id,
+                               target_node_id=target_node_id, label=label,
+                               style=style, color=color)
+        self._session.add(obj)
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+    async def delete(self, conn_id: UUID) -> bool:
+        return await self._delete(CanvasConnection, conn_id)
+
+
+# ── AI Response Repo ───────────────────────────────────────────────────────
+
+
+class WorkspaceAIResponseRepo(WorkspaceStationRepoBase):
+    async def list_by_workspace(self, ws_id: UUID) -> list[WorkspaceAIResponse]:
+        return await self._list_by_workspace(WorkspaceAIResponse, ws_id)
+
+    async def get_by_id(self, entry_id: UUID) -> WorkspaceAIResponse | None:
+        return await self._get_by(WorkspaceAIResponse, entry_id)
+
+    async def create(self, ws_id: UUID, title: str, prompt: str = "", response_text: str = "",
+                     model: str | None = None, provider: str | None = None,
+                     tokens_in: int | None = None, tokens_out: int | None = None) -> WorkspaceAIResponse:
+        obj = WorkspaceAIResponse(workspace_id=ws_id, title=title, prompt=prompt,
+                                  response_text=response_text, model=model, provider=provider,
+                                  tokens_in=tokens_in, tokens_out=tokens_out)
+        self._session.add(obj)
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+    async def update(self, entry_id: UUID, **kwargs: object) -> WorkspaceAIResponse | None:
+        obj = await self.get_by_id(entry_id)
+        if not obj:
+            return None
+        for key, value in kwargs.items():
+            if value is not None and hasattr(obj, key):
+                setattr(obj, key, value)
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+    async def delete(self, entry_id: UUID) -> bool:
+        return await self._delete(WorkspaceAIResponse, entry_id)
+
+
+# ── Task Repo ──────────────────────────────────────────────────────────────
+
+
+class WorkspaceTaskRepo(WorkspaceStationRepoBase):
+    async def list_by_workspace(self, ws_id: UUID) -> list[WorkspaceTask]:
+        return await self._list_by_workspace(WorkspaceTask, ws_id)
+
+    async def get_by_id(self, entry_id: UUID) -> WorkspaceTask | None:
+        return await self._get_by(WorkspaceTask, entry_id)
+
+    async def create(self, ws_id: UUID, title: str, description: str | None = None,
+                     status: str = "pending", priority: str = "medium",
+                     due_date: datetime | None = None, assignee: str | None = None) -> WorkspaceTask:
+        obj = WorkspaceTask(workspace_id=ws_id, title=title, description=description,
+                            status=status, priority=priority, due_date=due_date, assignee=assignee)
+        self._session.add(obj)
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+    async def update(self, entry_id: UUID, **kwargs: object) -> WorkspaceTask | None:
+        obj = await self.get_by_id(entry_id)
+        if not obj:
+            return None
+        was_status = obj.status
+        for key, value in kwargs.items():
+            if value is not None and hasattr(obj, key):
+                setattr(obj, key, value)
+        if kwargs.get("status") == "completed" and was_status != "completed":
+            obj.completed_at = func.now()
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+    async def delete(self, entry_id: UUID) -> bool:
+        return await self._delete(WorkspaceTask, entry_id)

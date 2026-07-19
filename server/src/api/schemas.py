@@ -455,3 +455,138 @@ class WorkspaceSearchResult(BaseModel):
     title: str
     snippet: str | None = None
     url: str | None = None
+
+
+# ── Canvas ─────────────────────────────────────────────────────────────────
+
+
+class CanvasNodeCreate(BaseModel):
+    object_type: str
+    object_id: UUID
+    x: float = 0.0
+    y: float = 0.0
+    width: float | None = None
+    height: float | None = None
+    z_index: int = 0
+    pinned: bool = False
+    label: str | None = None
+    color: str | None = None
+
+
+class CanvasNodeUpdate(BaseModel):
+    x: float | None = None
+    y: float | None = None
+    width: float | None = None
+    height: float | None = None
+    z_index: int | None = None
+    pinned: bool | None = None
+    label: str | None = None
+    color: str | None = None
+
+
+class CanvasNodeResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    object_type: str
+    object_id: UUID
+    x: float = 0.0
+    y: float = 0.0
+    width: float | None = None
+    height: float | None = None
+    z_index: int = 0
+    pinned: bool = False
+    label: str | None = None
+    color: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class CanvasConnectionCreate(BaseModel):
+    source_node_id: UUID
+    target_node_id: UUID
+    label: str | None = None
+    style: str = "solid"
+    color: str | None = None
+
+
+class CanvasConnectionResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    source_node_id: UUID
+    target_node_id: UUID
+    label: str | None = None
+    style: str = "solid"
+    color: str | None = None
+    created_at: datetime
+
+
+# ── AI Responses ───────────────────────────────────────────────────────────
+
+
+class WorkspaceAIResponseCreate(BaseModel):
+    title: str
+    prompt: str = ""
+    response_text: str = ""
+    model: str | None = None
+    provider: str | None = None
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+
+
+class WorkspaceAIResponseUpdate(BaseModel):
+    title: str | None = None
+    prompt: str | None = None
+    response_text: str | None = None
+    model: str | None = None
+    provider: str | None = None
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+
+
+class WorkspaceAIResponseResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    title: str
+    prompt: str
+    response_text: str
+    model: str | None = None
+    provider: str | None = None
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+# ── Tasks ──────────────────────────────────────────────────────────────────
+
+
+class WorkspaceTaskCreate(BaseModel):
+    title: str
+    description: str | None = None
+    status: str = "pending"
+    priority: str = "medium"
+    due_date: datetime | None = None
+    assignee: str | None = None
+
+
+class WorkspaceTaskUpdate(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    status: str | None = None
+    priority: str | None = None
+    due_date: datetime | None = None
+    assignee: str | None = None
+
+
+class WorkspaceTaskResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    title: str
+    description: str | None = None
+    status: str = "pending"
+    priority: str = "medium"
+    due_date: datetime | None = None
+    assignee: str | None = None
+    created_at: datetime
+    updated_at: datetime
+    completed_at: datetime | None = None

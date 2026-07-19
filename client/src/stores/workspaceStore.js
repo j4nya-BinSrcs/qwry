@@ -85,6 +85,14 @@ export const useWorkspaceStore = create((set, get) => ({
     }
   },
 
+  reorderItem: async (sessionId, itemId, order) => {
+    try {
+      await api.updateItem(sessionId, itemId, { order_index: order });
+    } catch (err) {
+      set({ error: err.message });
+    }
+  },
+
   addItem: async (sessionId, wsId, url, title, snippet, source, mediaUrl) => {
     set({ error: null });
     try {
