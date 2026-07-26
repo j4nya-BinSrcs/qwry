@@ -37,7 +37,7 @@ export const useUIStore = create((set, get) => ({
   panelOrder: loadPanelOrder(),
   theme: loadTheme(),
   expandedPanel: null,
-  contextMode: "search-assist",
+  contextMode: "home",
   readerUrl: null,
   readerTitle: null,
   readerMediaUrl: null,

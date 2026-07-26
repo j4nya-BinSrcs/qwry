@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import TopBar from "../components/TopBar";
+import HomeView from "../context/HomeView";
 import SourcesPanel from "../panels/SourcesPanel";
 import ContextPanel from "../panels/ContextPanel";
 import DiscoveryPanel from "../panels/DiscoveryPanel";
@@ -36,14 +37,17 @@ function PanelContent({ id }) {
 }
 
 export default function AppLayout() {
+  const contextMode = useUIStore((s) => s.contextMode);
   const panelOrder = useUIStore((s) => s.panelOrder);
   const expandedPanel = useUIStore((s) => s.expandedPanel);
 
   return (
     <div className="h-full flex flex-col">
-      <TopBar />
+      {contextMode !== "home" && <TopBar />}
       <div className="flex-1 min-h-0">
-        {expandedPanel ? (
+        {contextMode === "home" ? (
+          <HomeView />
+        ) : expandedPanel ? (
           <PanelGroup direction="horizontal">
             <Panel defaultSize={100} minSize={100}>
               <PanelContent id={expandedPanel} />

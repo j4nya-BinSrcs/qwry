@@ -1,4 +1,4 @@
-import { Search, Settings, Sun, Moon } from "lucide-react";
+import { Home, Moon, Search, Settings, Sun } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchStore } from "../stores/searchStore";
 import { useUIStore } from "../stores/uiStore";
@@ -13,6 +13,8 @@ export default function TopBar() {
   const submittedRef = useRef(false);
   const inputRef = useRef(null);
 
+  const contextMode = useUIStore((s) => s.contextMode);
+  const setContextMode = useUIStore((s) => s.setContextMode);
   const theme = useUIStore((s) => s.theme);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
   const search = useSearchStore((s) => s.search);
@@ -132,6 +134,15 @@ export default function TopBar() {
 
       {/* Spacer */}
       <div className="flex-1" />
+
+      {/* Home */}
+      <button
+        onClick={() => setContextMode("home")}
+        className="flex items-center justify-center size-7 rounded text-dim hover:text-text hover:bg-hover transition-colors"
+        title="Home"
+      >
+        <Home size={14} />
+      </button>
 
       {/* Theme toggle */}
       <button
