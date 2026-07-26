@@ -3,10 +3,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "../api/client";
 import { useContentStore } from "../stores/contentStore";
 import { useUIStore } from "../stores/uiStore";
+import { useWorkspaceStore } from "../stores/workspaceStore";
 import MarkdownRenderer from "../components/MarkdownRenderer";
 
 function getHostname(url) {
   try { return new URL(url).hostname; } catch { return url || ""; }
+}
+
+function WorkspaceBadge() {
+  const activeId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const workspaces = useWorkspaceStore((s) => s.workspaces);
+  const ws = workspaces.find((w) => w.id === activeId);
+  if (!ws) return null;
+  return <span className="text-[10px] px-1.5 py-0.5 bg-hover rounded text-dim truncate max-w-28">{ws.name}</span>;
 }
 
 export default function SummarizerView() {
@@ -125,9 +134,12 @@ export default function SummarizerView() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="shrink-0 px-3 py-2 border-b border-border">
-        <h2 className="text-sm font-semibold text-text">Summarizer</h2>
-        <p className="text-[10px] text-muted">{summaries.length} {summaries.length === 1 ? "summary" : "summaries"}</p>
+      <div className="shrink-0 px-3 py-2 border-b border-border flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-text">Summarizer</h2>
+          <p className="text-[10px] text-muted">{summaries.length} {summaries.length === 1 ? "summary" : "summaries"}</p>
+        </div>
+        <WorkspaceBadge />
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-3">

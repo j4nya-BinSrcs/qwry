@@ -242,9 +242,9 @@ export default function SourcesPanel() {
       <div className="flex-1 rounded-xl border border-border bg-panel overflow-hidden flex flex-col">
         <div className="shrink-0 px-4 py-3 border-b border-border flex items-center justify-between">
           <h2 className="text-xs font-semibold text-text uppercase tracking-wider">
-            Sources
+            Pages
           </h2>
-          <span className="text-xs text-dim">{filtered.length} results</span>
+          <span className="text-xs text-dim">{filtered.length} pages</span>
         </div>
 
         <div className="flex-1 flex min-h-0">

@@ -1,9 +1,9 @@
 import { Check, FileText, Image, Layers, Loader2, MessageCircle, Minus, Plus, Search, Tag, Trash2, Video, X, ZoomIn, ZoomOut } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as canvasApi from "../api/canvas";
-import * as stationApi from "../api/workspaceStation";
 import { useSessionStore } from "../stores/sessionStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
+import { useWorkspaceStationStore } from "../stores/workspaceStationStore";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -214,66 +214,6 @@ function Minimap({ nodes, viewport }) {
   );
 }
 
-// ── Import Panel ──────────────────────────────────────────────────────────
-
-const IMPORT_TABS = [
-  { id: "sources", label: "Sources", icon: Layers },
-  { id: "notes", label: "Notes", icon: FileText },
-  { id: "images", label: "Images", icon: Image },
-  { id: "videos", label: "Videos", icon: Video },
-];
-
-function ImportPanel({ wsId, sessionId, onPlace }) {
-  const [tab, setTab] = useState("sources");
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!wsId) return;
-    let cancelled = false;
-    setLoading(true);
-    const load = async () => {
-      let data = [];
-      try {
-        if (tab === "sources") data = await stationApi.listReads(sessionId, wsId);
-        else if (tab === "notes") data = await (await fetch(`/api/workspaces/${wsId}/station/notes`, { headers: { "X-Session-Id": sessionId } })).json();
-        else if (tab === "images") data = await stationApi.listImages ? await stationApi.listImages(sessionId, wsId) : [];
-        else if (tab === "videos") data = await stationApi.listVideos ? await stationApi.listVideos(sessionId, wsId) : [];
-      } catch {}
-      if (!cancelled) { setItems(data || []); setLoading(false); }
-    };
-    load();
-    return () => { cancelled = true; };
-  }, [tab, wsId, sessionId]);
-
-  return (
-    <div className="h-full flex flex-col bg-surface border-l border-border">
-      <div className="shrink-0 px-3 py-2 border-b border-border">
-        <h3 className="text-xs font-semibold text-text">Import to Canvas</h3>
-      </div>
-      <div className="shrink-0 flex gap-1 px-2 py-1.5 border-b border-border">
-        {IMPORT_TABS.map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1 px-2 py-1 text-[10px] rounded transition-colors ${
-              tab === t.id ? "bg-hover text-text font-medium" : "text-dim hover:text-text hover:bg-hover"
-            }`}
-          ><t.icon size={10} /> {t.label}</button>
-        ))}
-      </div>
-      <div className="flex-1 overflow-y-auto p-2 space-y-1">
-        {loading && <div className="flex justify-center py-4"><Loader2 size={14} className="animate-spin text-dim" /></div>}
-        {!loading && items.length === 0 && <p className="text-[10px] text-dim text-center py-4">Nothing to import</p>}
-        {items.map((item) => (
-          <button key={item.id}
-            onClick={() => onPlace(tab === "sources" ? "source" : tab === "notes" ? "note" : tab === "images" ? "image" : "video", item)}
-            className="w-full text-left px-2 py-1.5 rounded text-[10px] text-text hover:bg-hover transition-colors truncate"
-          >{item.title || item.id?.slice(0, 12)}</button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ── Main Canvas View ─────────────────────────────────────────────────────
 
 export default function CanvasView() {
@@ -287,7 +227,6 @@ export default function CanvasView() {
 
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [connectionMode, setConnectionMode] = useState(null);
-  const [showImport, setShowImport] = useState(false);
   const [noteInput, setNoteInput] = useState("");
 
   const containerRef = useRef(null);
@@ -297,28 +236,91 @@ export default function CanvasView() {
 
   useEffect(() => { zoomRef.current = viewport.zoom; }, [viewport.zoom]);
 
-  // ── Load canvas data ──────────────────────────────────────────────
+  // ── Load canvas data + auto-populate from station ─────────────────
 
   useEffect(() => {
     if (!activeId) { setLoading(false); return; }
     let cancelled = false;
     setLoading(true);
     setError(null);
-    Promise.all([
-      canvasApi.listNodes(sessionId, activeId),
-      canvasApi.listConnections(sessionId, activeId),
-    ]).then(([nodeList, connList]) => {
-      if (cancelled) return;
-      const m = {};
-      for (const n of nodeList) m[n.id] = n;
-      setNodes(m);
-      setConnections(connList);
-      setLoading(false);
-    }).catch((err) => {
-      if (cancelled) return;
-      setError(err.message);
-      setLoading(false);
-    });
+
+    const load = async () => {
+      try {
+        const [nodeList, connList] = await Promise.all([
+          canvasApi.listNodes(sessionId, activeId),
+          canvasApi.listConnections(sessionId, activeId),
+        ]);
+        if (cancelled) return;
+
+        const nodeMap = {};
+        for (const n of nodeList) {
+          nodeMap[`${n.object_type}:${n.object_id}`] = n;
+          nodeMap[n.id] = n;
+        }
+
+        // Load station data to find items without canvas nodes
+        try {
+          const wsStore = useWorkspaceStore.getState();
+          const stationStore = useWorkspaceStationStore.getState();
+          await Promise.all([
+            wsStore.loadItems(sessionId, activeId),
+            stationStore.loadAll(sessionId, activeId),
+          ]);
+          const wsItems = useWorkspaceStore.getState().items;
+          const { notes, images, videos } = useWorkspaceStationStore.getState();
+
+          const stationItems = [
+            ...wsItems.map((i) => ({ type: "source", id: i.id, label: i.title })),
+            ...notes.map((n) => ({ type: "note", id: n.id, label: n.title })),
+            ...images.map((img) => ({ type: "image", id: img.id, label: img.caption })),
+            ...videos.map((v) => ({ type: "video", id: v.id, label: v.title })),
+          ];
+
+          const toCreate = stationItems.filter((si) => !nodeMap[`${si.type}:${si.id}`]);
+
+          if (toCreate.length > 0) {
+            const gridCols = Math.ceil(Math.sqrt(toCreate.length));
+            const created = await Promise.all(
+              toCreate.map((si, i) => {
+                const dims = NODE_DIMS[si.type] || { w: 200, h: 80 };
+                const col = i % gridCols;
+                const row = Math.floor(i / gridCols);
+                return canvasApi.createNode(sessionId, activeId, {
+                  object_type: si.type,
+                  object_id: si.id,
+                  x: col * 260 + 50,
+                  y: row * 180 + 50,
+                  width: dims.w,
+                  height: dims.h,
+                  label: si.label || "",
+                });
+              })
+            );
+            for (const cn of created) {
+              if (cn) {
+                nodeMap[cn.id] = cn;
+                nodeMap[`${cn.object_type}:${cn.object_id}`] = cn;
+              }
+            }
+          }
+        } catch { /* station load is best-effort */ }
+
+        // Build final node map (by id only)
+        const m = {};
+        for (const key in nodeMap) {
+          if (nodeMap[key].id) m[nodeMap[key].id] = nodeMap[key];
+        }
+        setNodes(m);
+        setConnections(connList);
+        setLoading(false);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+
+    load();
     return () => { cancelled = true; };
   }, [activeId, sessionId]);
 
@@ -476,12 +478,6 @@ export default function CanvasView() {
     }
   }, [connectionMode, addConnection]);
 
-  // ── Import onto canvas ────────────────────────────────────────────
-
-  const handlePlace = useCallback((objectType, item) => {
-    addNode(objectType, item.id, item.title || item.name, Math.random() * 400, Math.random() * 300);
-  }, [addNode]);
-
   // ── Create inline note ────────────────────────────────────────────
 
   const handleCreateNote = useCallback(() => {
@@ -593,11 +589,8 @@ export default function CanvasView() {
               <div className="size-8 rounded bg-hover border border-border flex items-center justify-center mx-auto mb-3">
                 <Layers size={16} className="text-dim" />
               </div>
-              <p className="text-xs text-muted max-w-xs mb-3">Canvas is empty — import content from your workspace or create a note</p>
+              <p className="text-xs text-muted max-w-xs mb-3">Canvas is empty — add sources from Search Assist or create a note</p>
               <div className="flex items-center justify-center gap-2">
-                <button onClick={() => setShowImport(!showImport)}
-                  className="pointer-events-auto text-xs px-3 py-1.5 rounded bg-text text-surface hover:opacity-80 transition-opacity"
-                >Import Content</button>
                 <button onClick={() => { const name = prompt("Note title:"); if (name) addNode("note", null, name, 100, 100); }}
                   className="pointer-events-auto text-xs px-3 py-1.5 rounded border border-border text-text hover:bg-hover transition-colors"
                 >+ New Note</button>
@@ -622,12 +615,7 @@ export default function CanvasView() {
           <button onClick={fitToScreen}
             className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors" title="Fit to screen"
           ><Minus size={14} /></button>
-          <div className="w-px h-4 bg-border mx-1" />
-          <button onClick={() => setShowImport(!showImport)}
-            className={`p-1 rounded transition-colors ${showImport ? "bg-hover text-text" : "text-dim hover:text-text hover:bg-hover"}`}
-            title="Import content"
-          ><Layers size={14} /></button>
-          <div className="flex items-center gap-1 ml-1">
+          <div className="flex items-center gap-1 ml-2">
             <input type="text" value={noteInput} onChange={(e) => setNoteInput(e.target.value)}
               placeholder="Note..." maxLength={100}
               className="w-20 bg-hover border border-border rounded px-1.5 py-0.5 text-[10px] text-text outline-none placeholder:text-dim"
@@ -639,13 +627,7 @@ export default function CanvasView() {
           </div>
         </div>
       </div>
-
-      {/* Import sidebar */}
-      {showImport && (
-        <div className="w-56 shrink-0">
-          <ImportPanel wsId={activeId} sessionId={sessionId} onPlace={handlePlace} />
-        </div>
-      )}
     </div>
   );
 }
+
