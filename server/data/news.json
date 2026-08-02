@@ -1,0 +1,18 @@
+[
+  {
+    "id": "n1",
+    "title": "Vite 6 Released: Unlocking Next-Level Build Performance",
+    "source": "Frontend Weekly",
+    "image": "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=400&q=80",
+    "url": "https://example.com/news1",
+    "publishedAt": "2 hours ago"
+  },
+  {
+    "id": "n2",
+    "title": "The Rise of Warm Obsidian & Glassmorphism Design Systems",
+    "source": "UX Collective",
+    "image": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=400&q=80",
+    "url": "https://example.com/news2",
+    "publishedAt": "5 hours ago"
+  }
+]

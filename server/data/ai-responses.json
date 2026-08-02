@@ -1,0 +1,14 @@
+{
+  "web design": {
+    "summary": "Modern web design in 2026 focuses on high-performance obsidian dark surfaces, fluid glassmorphism backdrop filters, micro-animations, and organic aurora mesh gradient blobs. Key techniques combine CSS custom property design tokens, hardware-accelerated transforms, and accessible contrast palettes.",
+    "suggestions": ["glassmorphism css", "aurora gradient mesh", "obsidian color palette", "react micro-interactions"]
+  },
+  "react": {
+    "summary": "React continues to power responsive web apps using functional component architecture, custom hooks, and concurrent features. Pairing React with Vite ensures instant HMR, while motion engines like Framer Motion enable fluid spring-based layout transitions.",
+    "suggestions": ["react custom hooks", "framer motion layoutId", "dnd-kit integration", "vite fast refresh"]
+  },
+  "default": {
+    "summary": "Qwry AI has synthesized the latest search web indexes and media archives for your request. Discover curated links, interactive visual cards, and follow-up prompts tailored to your workflow.",
+    "suggestions": ["web design trends", "dark mode CSS tokens", "framer motion guide"]
+  }
+}

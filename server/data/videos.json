@@ -1,0 +1,26 @@
+[
+  {
+    "id": "v1",
+    "thumbnail": "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?auto=format&fit=crop&w=600&q=80",
+    "title": "Building 60FPS Glassmorphism UI Components in React",
+    "source": "YouTube — Web Dev Simplified",
+    "duration": "14:20",
+    "url": "https://youtube.com/watch?v=mock1"
+  },
+  {
+    "id": "v2",
+    "thumbnail": "https://images.unsplash.com/photo-1536240478700-b869070f9279?auto=format&fit=crop&w=600&q=80",
+    "title": "Framer Motion Masterclass: Layout Animations & Shared Elements",
+    "source": "Vimeo — UI Motion Studio",
+    "duration": "28:45",
+    "url": "https://vimeo.com/mock2"
+  },
+  {
+    "id": "v3",
+    "thumbnail": "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=600&q=80",
+    "title": "The Evolution of Search Engines: From Crawler to AI Agents",
+    "source": "TechCrunch Video",
+    "duration": "08:15",
+    "url": "https://youtube.com/watch?v=mock3"
+  }
+]
