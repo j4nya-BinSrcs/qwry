@@ -1,6 +1,6 @@
 import { ExternalLink, Loader2, Send, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { chatWithWorkspace } from "../api/chat";
+import { chatWithWorkspace, workspaceChatHistory } from "../api/chat";
 import { useSessionStore } from "../stores/sessionStore";
 
 export default function ChatModal({ workspaceId, workspaceName, onClose }) {
@@ -8,11 +8,29 @@ export default function ChatModal({ workspaceId, workspaceName, onClose }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const bottomRef = useRef(null);
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
+
+  useEffect(() => {
+    if (!workspaceId || !sessionId) return;
+    setHistoryLoading(true);
+    workspaceChatHistory(sessionId, workspaceId)
+      .then((data) => {
+        if (data?.messages) {
+          setMessages(data.messages.map((m) => ({
+            role: m.role,
+            content: m.content,
+            sources: m.sources || [],
+          })));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setHistoryLoading(false));
+  }, [workspaceId, sessionId]);
 
   useEffect(() => {
     scrollToBottom();

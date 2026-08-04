@@ -8,6 +8,9 @@ export const useWorkspaceStore = create((set, get) => ({
   loading: false,
   error: null,
 
+  chatMessages: [],
+  chatLoading: false,
+
   setActiveWorkspace: (id) => set({ activeWorkspaceId: id }),
   setItems: (items) => set({ items }),
 
@@ -98,7 +101,6 @@ export const useWorkspaceStore = create((set, get) => ({
     try {
       const item = await api.addItem(sessionId, wsId, url, title, snippet, source, mediaUrl);
       set((s) => ({ items: [...s.items, item] }));
-      // refresh item_count on workspace
       set((s) => ({
         workspaces: s.workspaces.map((w) =>
           w.id === wsId ? { ...w, item_count: (w.item_count || 0) + 1 } : w
@@ -111,19 +113,6 @@ export const useWorkspaceStore = create((set, get) => ({
     }
   },
 
-  summarizingId: null,
-
-  summarizeItem: async (sessionId, itemId, retries = 3) => {
-    set({ summarizingId: itemId, error: null });
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        const result = await api.summarizeItem(sessionId, itemId);
-        set((s) => ({
-          items: s.items.map((i) =>
-            i.id === itemId
-              ? { ...i, summary: result.summary, summary_provider: result.provider, summary_model: result.model }
-              : i
-          ),
   addItemsBulk: async (sessionId, wsId, items) => {
     set({ error: null });
     try {
@@ -144,6 +133,19 @@ export const useWorkspaceStore = create((set, get) => ({
   },
 
   summarizingId: null,
+
+  summarizeItem: async (sessionId, itemId, retries = 3) => {
+    set({ summarizingId: itemId, error: null });
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const result = await api.summarizeItem(sessionId, itemId);
+        set((s) => ({
+          items: s.items.map((i) =>
+            i.id === itemId
+              ? { ...i, summary: result.summary, summary_provider: result.provider, summary_model: result.model }
+              : i
+          ),
+          summarizingId: null,
         }));
         return;
       } catch (err) {
@@ -178,4 +180,37 @@ export const useWorkspaceStore = create((set, get) => ({
   },
 
   clearError: () => set({ error: null }),
+
+  loadChatHistory: async (sessionId, wsId) => {
+    if (!wsId) return;
+    try {
+      const data = await api.workspaceChatHistory(sessionId, wsId);
+      set({ chatMessages: data.messages || [] });
+    } catch {
+      set({ chatMessages: [] });
+    }
+  },
+
+  sendChatMessage: async (sessionId, wsId, question) => {
+    if (!wsId || !question.trim()) return;
+    const userMsg = { id: crypto.randomUUID(), role: "user", content: question, created_at: new Date().toISOString() };
+    set((s) => ({ chatMessages: [...s.chatMessages, userMsg], chatLoading: true }));
+    try {
+      const result = await api.workspaceChat(sessionId, wsId, question);
+      const assistantMsg = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: result.answer,
+        sources: result.sources || [],
+        created_at: new Date().toISOString(),
+      };
+      set((s) => ({ chatMessages: [...s.chatMessages, assistantMsg], chatLoading: false }));
+      return result;
+    } catch (err) {
+      set({ chatLoading: false, error: err.message });
+      return null;
+    }
+  },
+
+  clearChatHistory: () => set({ chatMessages: [] }),
 }));

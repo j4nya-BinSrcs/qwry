@@ -18,6 +18,15 @@ export default function TopBar() {
   const theme = useUIStore((s) => s.theme);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
   const search = useSearchStore((s) => s.search);
+  const storeQuery = useSearchStore((s) => s.query);
+  const provider = useSearchStore((s) => s.provider);
+
+  useEffect(() => {
+    if (storeQuery && storeQuery !== input) {
+      setInput(storeQuery);
+      submittedRef.current = true;
+    }
+  }, [storeQuery]);
 
   const dismissSuggestions = useCallback(() => {
     setShowSuggestions(false);
@@ -46,7 +55,7 @@ export default function TopBar() {
       }
       clearTimeout(inputRef.current?._debounce);
       const id = setTimeout(async () => {
-        const s = await fetchSuggestions(val);
+        const s = await fetchSuggestions(val, provider);
         setSuggestions(s);
         if (!submittedRef.current) setShowSuggestions(s.length > 0);
       }, 200);
@@ -152,11 +161,6 @@ export default function TopBar() {
       >
         {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
       </button>
-
-      {/* Profile */}
-      <div className="size-7 rounded-full border border-border flex items-center justify-center text-xs font-semibold text-text shrink-0">
-        U
-      </div>
 
       {/* Settings */}
       <SettingsPopup

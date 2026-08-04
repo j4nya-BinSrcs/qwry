@@ -177,6 +177,19 @@ class ChatResponse(BaseModel):
     sources: list[ChatSource]
 
 
+class ChatMessageResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    role: str
+    content: str
+    sources: list[ChatSource] = []
+    created_at: datetime
+
+
+class ChatHistoryResponse(BaseModel):
+    messages: list[ChatMessageResponse]
+
+
 class LLMGenerateRequest(BaseModel):
     query: str
     results: list[SearchResultItem] = []
@@ -215,6 +228,18 @@ class ProfileUpdateRequest(BaseModel):
     username: str | None = None
     theme: str | None = None
     search_provider: str | None = None
+
+
+class ProfileCreateRequest(BaseModel):
+    username: str | None = None
+
+
+class ProfileSwitchRequest(BaseModel):
+    session_id: str
+
+
+class ProfileDeleteRequest(BaseModel):
+    session_id: str
 
 
 # ── History ─────────────────────────────────────────────────────────────

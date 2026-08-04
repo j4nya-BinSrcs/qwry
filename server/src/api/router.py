@@ -26,7 +26,10 @@ from server.src.api.endpoints import (
     item_update,
     llm_generate,
     overview_get,
+    profile_create,
+    profile_delete,
     profile_get,
+    profile_list,
     profile_update,
     read_url,
     search,
@@ -74,6 +77,7 @@ from server.src.api.endpoints import (
     tasks_list,
     tasks_update,
     workspace_chat,
+    workspace_chat_history,
     workspace_create,
     workspace_delete,
     workspace_get,
@@ -84,6 +88,7 @@ from server.src.api.schemas import (
     ActivityLogItem,
     CanvasConnectionResponse,
     CanvasNodeResponse,
+    ChatHistoryResponse,
     ChatResponse,
     ItemSummaryResponse,
     LLMGenerateResponse,
@@ -177,6 +182,7 @@ workspace_router.add_api_route(
     status_code=201,
 )
 workspace_router.add_api_route("/{ws_id}/chat", workspace_chat, methods=["POST"], response_model=ChatResponse)
+workspace_router.add_api_route("/{ws_id}/chat/history", workspace_chat_history, methods=["GET"], response_model=ChatHistoryResponse)
 
 item_router = APIRouter(prefix="/api/workspaces/items", tags=["workspaces"])
 item_router.add_api_route("/{item_id}", item_update, methods=["PATCH"], response_model=WorkspaceItemResponse)
@@ -187,6 +193,9 @@ item_router.add_api_route("/{item_id}/summarize", item_summarize, methods=["POST
 profile_router = APIRouter(prefix="/api", tags=["profile"])
 profile_router.add_api_route("/profile", profile_get, methods=["GET"], response_model=ProfileResponse)
 profile_router.add_api_route("/profile", profile_update, methods=["PUT"], response_model=ProfileResponse)
+profile_router.add_api_route("/profiles", profile_list, methods=["GET"], response_model=list[ProfileResponse])
+profile_router.add_api_route("/profiles", profile_create, methods=["POST"], response_model=ProfileResponse, status_code=201)
+profile_router.add_api_route("/profiles/delete", profile_delete, methods=["POST"])
 
 history_router = APIRouter(prefix="/api/history", tags=["history"])
 history_router.add_api_route("/search", history_search, methods=["GET"], response_model=list[SearchHistoryItem])

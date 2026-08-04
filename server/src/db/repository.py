@@ -13,6 +13,7 @@ from server.src.db.models import (
     User,
     Workspace,
     WorkspaceAIResponse,
+    WorkspaceChatMessage,
     WorkspaceComparison,
     WorkspaceHighlight,
     WorkspaceImage,
@@ -847,3 +848,35 @@ class WorkspaceTaskRepo(WorkspaceStationRepoBase):
 
     async def delete(self, entry_id: UUID) -> bool:
         return await self._delete(WorkspaceTask, entry_id)
+
+
+# ── Chat Message Repo ────────────────────────────────────────────────────
+
+
+class WorkspaceChatMessageRepo(WorkspaceStationRepoBase):
+    async def list_by_workspace(self, ws_id: UUID, limit: int = 100) -> list[WorkspaceChatMessage]:
+        result = await self._session.execute(
+            select(WorkspaceChatMessage)
+            .where(WorkspaceChatMessage.workspace_id == ws_id)
+            .order_by(WorkspaceChatMessage.created_at.asc())
+            .limit(limit),
+        )
+        return list(result.scalars().all())
+
+    async def create(self, ws_id: UUID, role: str, content: str,
+                     sources_json: str | None = None) -> WorkspaceChatMessage:
+        obj = WorkspaceChatMessage(workspace_id=ws_id, role=role,
+                                   content=content, sources_json=sources_json)
+        self._session.add(obj)
+        await self._session.commit()
+        await self._session.refresh(obj)
+        return obj
+
+    async def delete_by_workspace(self, ws_id: UUID) -> int:
+        stmt = select(WorkspaceChatMessage).where(WorkspaceChatMessage.workspace_id == ws_id)
+        result = await self._session.execute(stmt)
+        msgs = list(result.scalars().all())
+        for m in msgs:
+            await self._session.delete(m)
+        await self._session.commit()
+        return len(msgs)

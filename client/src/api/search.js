@@ -11,8 +11,10 @@ export async function searchQuery(q, page = 1, pageSize = 20, provider = null, c
   return res.json();
 }
 
-export async function fetchSuggestions(q) {
-  const res = await apiFetch(`${BASE}/suggest?q=${encodeURIComponent(q)}`);
+export async function fetchSuggestions(q, provider = null) {
+  const params = new URLSearchParams({ q });
+  if (provider) params.set("provider", provider);
+  const res = await apiFetch(`${BASE}/suggest?${params}`);
   if (!res.ok) return [];
   const data = await res.json();
   return data.suggestions || [];

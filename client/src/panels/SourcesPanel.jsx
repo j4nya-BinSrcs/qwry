@@ -1,4 +1,4 @@
-import { ExternalLink, GripVertical, Plus, BookOpen, Sparkles, Search, Newspaper, Youtube, MessageCircle, Image, Code, Globe, ArrowRight } from "lucide-react";
+import { ExternalLink, GripVertical, Plus, BookOpen, Sparkles, Search, MessageCircle, Globe } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { useSearchStore } from "../stores/searchStore";
@@ -9,13 +9,8 @@ import { useUIStore } from "../stores/uiStore";
 const FILTERS = [
   { id: "all", label: "All", icon: Search },
   { id: "research", label: "Research", icon: BookOpen },
-  { id: "articles", label: "Articles", icon: Globe },
   { id: "discussions", label: "Discussions", icon: MessageCircle },
-  { id: "videos", label: "Videos", icon: Youtube },
-  { id: "shopping", label: "Shopping", icon: Image },
-  { id: "news", label: "News", icon: Newspaper },
   { id: "official", label: "Official", icon: Globe },
-  { id: "code", label: "Code", icon: Code },
 ];
 
 function getHostname(url) {
@@ -187,42 +182,15 @@ function matchFilter(r, filterId) {
              host.includes("scholar") || host.includes("arxiv") || host.includes("cambridge") ||
              host.includes("springer") || host.includes("ieee") || host.includes("acm.org") ||
              text.includes("research paper") || text.includes("study shows");
-    case "articles":
-      return cat === "articles" || cat === "blog" || cat === "opinion" || cat === "blogs" ||
-             host.includes("medium.com") || host.includes("substack") || host.includes("wordpress") ||
-             host.includes("blog") || host.includes("tutorial") ||
-             text.includes("blog post") || text.includes("tutorial") || text.includes("opinion");
     case "discussions":
       return cat.includes("discuss") || cat.includes("forum") || cat.includes("qa") || cat === "social media" ||
              host.includes("reddit") || host.includes("stackoverflow") || host.includes("stackexchange") ||
              host.includes("quora") || host.includes("discourse") || host.includes("forum");
-    case "videos":
-      return cat === "videos" || cat === "video" ||
-             host.includes("youtube") || host.includes("youtu.be") || host.includes("vimeo") ||
-             host.includes("twitch") || host.includes("dailymotion");
-    case "news":
-      return cat === "news" || cat === "newspaper" ||
-             host.includes("cnn.com") || host.includes("nytimes") || host.includes("reuters") ||
-             host.includes("bbc") || host.includes("theguardian") || host.includes("bloomberg") ||
-             text.includes("breaking news") || text.includes("report") && text.includes("today");
-    case "shopping":
-      return cat === "shopping" || cat.includes("shop") || cat === "products" ||
-             host.includes("amazon") || host.includes("ebay") || host.includes("walmart") ||
-             host.includes("etsy") || host.includes("bestbuy") || host.includes("target.com") ||
-             host.includes("alibaba") || host.includes("aliexpress") ||
-             text.includes("buy ") || text.includes("price") || text.includes("$");
     case "official":
       return host.endsWith(".gov") || host.endsWith(".mil") || host.endsWith(".gov.uk") ||
              cat.includes("official") || cat.includes("documentation") || cat === "standards" ||
              host.includes("company/") || host.includes("about") ||
              text.includes("official website") || text.includes("documentation") || text.includes("standards");
-    case "code":
-      return host.includes("github") || host.includes("gitlab") || host.includes("bitbucket") ||
-             host.includes("npmjs") || host.includes("pypi") || host.includes("crates.io") ||
-             host.includes("docs.rs") || host.includes("packagist") || host.includes("nuget") ||
-             host.includes("docker") || host.includes("hub.docker") ||
-             cat === "it" || cat === "code" || cat === "repository" || cat === "package" ||
-             text.includes("source code") || text.includes("api reference") || text.includes("sdk");
     default:
       return false;
   }
@@ -282,7 +250,7 @@ export default function SourcesPanel() {
             {hasMore && (
               <button
                 onClick={handleLoadMore}
-                className="text-[10px] text-dim hover:text-text transition-colors"
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md border border-border text-text hover:bg-hover hover:border-text transition-all"
               >
                 Load more
               </button>

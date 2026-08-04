@@ -87,9 +87,6 @@ export default function HomeView() {
           className="flex items-center justify-center size-7 rounded text-dim hover:text-text hover:bg-hover transition-colors"
           title={theme === "dark" ? "Light mode" : "Dark mode"}
         >{theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}</button>
-        <div className="size-7 rounded-full border border-border flex items-center justify-center text-xs font-semibold text-text shrink-0">
-          U
-        </div>
         <SettingsPopup open={settingsOpen} onToggle={() => setSettingsOpen(!settingsOpen)} />
       </div>
 

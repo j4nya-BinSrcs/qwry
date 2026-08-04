@@ -139,6 +139,22 @@ class LLMOverview(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+# ── Workspace Chat Messages ──────────────────────────────────────────────
+
+
+class WorkspaceChatMessage(Base):
+    __tablename__ = "workspace_chat_messages"
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    workspace_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False)
+    role: Mapped[str] = mapped_column(String(20), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    sources_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    workspace: Mapped["Workspace"] = relationship()
+
+
 # ── Workspace Station ─────────────────────────────────────────────────────
 
 

@@ -106,3 +106,21 @@ export async function summarizeItem(sessionId, itemId) {
   }
   return res.json();
 }
+
+export async function workspaceChat(sessionId, wsId, question) {
+  const res = await fetch(`${BASE}/workspaces/${wsId}/chat`, {
+    method: "POST",
+    headers: headers(sessionId),
+    body: JSON.stringify({ question }),
+  });
+  if (!res.ok) throw new Error(`workspace chat failed: ${res.status}`);
+  return res.json();
+}
+
+export async function workspaceChatHistory(sessionId, wsId) {
+  const res = await fetch(`${BASE}/workspaces/${wsId}/chat/history`, {
+    headers: headers(sessionId),
+  });
+  if (!res.ok) throw new Error(`chat history failed: ${res.status}`);
+  return res.json();
+}

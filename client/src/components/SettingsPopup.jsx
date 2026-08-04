@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Settings, User, Copy, Check } from "lucide-react";
-import { getProfile, updateProfile } from "../api/profile";
+import { Settings, User, Copy, Check, Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { getProfile, updateProfile, listProfiles, createProfile, deleteProfile } from "../api/profile";
 import { useSearchStore, providers } from "../stores/searchStore";
 import { useSessionStore } from "../stores/sessionStore";
 
@@ -9,35 +9,91 @@ export default function SettingsPopup({ open, onToggle }) {
   const [username, setUsername] = useState("");
   const [editing, setEditing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [profiles, setProfiles] = useState([]);
+  const [showProfiles, setShowProfiles] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
 
   const provider = useSearchStore((s) => s.provider);
   const setProvider = useSearchStore((s) => s.setProvider);
   const search = useSearchStore((s) => s.search);
   const query = useSearchStore((s) => s.query);
   const sessionId = useSessionStore((s) => s.sessionId);
+  const setSessionId = useSessionStore((s) => s.setSessionId);
 
   const loadProfile = useCallback(async () => {
-    const p = await getProfile();
-    if (p) {
-      setProfile(p);
-      setUsername(p.username || "");
-    }
+    try {
+      const p = await getProfile();
+      if (p) {
+        setProfile(p);
+        setUsername(p.username || "");
+      }
+    } catch {}
+  }, []);
+
+  const loadProfiles = useCallback(async () => {
+    try {
+      const ps = await listProfiles();
+      setProfiles(ps);
+    } catch {}
   }, []);
 
   useEffect(() => {
-    if (open) loadProfile();
-  }, [open, loadProfile]);
+    if (open) {
+      loadProfile();
+      loadProfiles();
+    }
+  }, [open, loadProfile, loadProfiles]);
 
   const handleSaveUsername = async () => {
     const p = await updateProfile({ username: username.trim() || null, search_provider: provider });
     if (p) setProfile(p);
     setEditing(false);
+    loadProfiles();
   };
 
   const handleCopySession = () => {
     navigator.clipboard.writeText(sessionId);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleCreateProfile = async () => {
+    if (!newName.trim()) return;
+    const p = await createProfile(newName.trim());
+    if (p) {
+      setSessionId(p.session_id);
+      setProfile(p);
+      setUsername(p.username || "");
+      setCreating(false);
+      setNewName("");
+      loadProfiles();
+    }
+  };
+
+  const handleSwitchProfile = async (targetSessionId) => {
+    if (targetSessionId === sessionId) return;
+    setSessionId(targetSessionId);
+    const p = await getProfile();
+    if (p) {
+      setProfile(p);
+      setUsername(p.username || "");
+    }
+    loadProfiles();
+  };
+
+  const handleDeleteProfile = async (targetSessionId) => {
+    if (profiles.length <= 1) return;
+    await deleteProfile(targetSessionId);
+    if (targetSessionId === sessionId) {
+      const remaining = profiles.filter((p) => p.session_id !== targetSessionId);
+      if (remaining.length > 0) {
+        setSessionId(remaining[0].session_id);
+        setProfile(remaining[0]);
+        setUsername(remaining[0].username || "");
+      }
+    }
+    loadProfiles();
   };
 
   return (
@@ -52,53 +108,128 @@ export default function SettingsPopup({ open, onToggle }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={onToggle} />
-          <div className="absolute top-full right-0 mt-1 w-64 rounded-lg bg-elevated border border-border overflow-hidden z-50">
+          <div className="absolute top-full right-0 mt-1 w-72 rounded-lg bg-elevated border border-border overflow-hidden z-50 max-h-[80vh] overflow-y-auto">
             <div className="px-3 py-2 text-xs text-muted font-medium border-b border-border">
               Settings
             </div>
 
-            {/* Profile */}
+            {/* Profiles */}
             <div className="px-3 py-2 border-b border-border">
-              <div className="flex items-center gap-1.5 text-xs text-muted mb-1.5">
+              <button
+                onClick={() => setShowProfiles(!showProfiles)}
+                className="flex items-center gap-1.5 w-full text-xs text-muted mb-1.5"
+              >
+                {showProfiles ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                 <User size={12} />
-                Profile
-              </div>
-              {editing ? (
-                <div className="flex items-center gap-1">
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Your name"
-                    className="flex-1 px-2 py-1 text-xs rounded bg-hover border border-border text-text outline-none focus:border-text"
-                    autoFocus
-                    onKeyDown={(e) => { if (e.key === "Enter") handleSaveUsername(); if (e.key === "Escape") setEditing(false); }}
-                  />
+                <span>Profiles</span>
+                <span className="text-dim ml-auto">{profiles.length}</span>
+              </button>
+
+              {showProfiles && (
+                <div className="space-y-1">
+                  {/* Current profile name */}
+                  <div className="flex items-center justify-between px-1 py-0.5">
+                    {editing ? (
+                      <div className="flex items-center gap-1 flex-1">
+                        <input
+                          type="text"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          placeholder="Your name"
+                          className="flex-1 px-2 py-1 text-xs rounded bg-hover border border-border text-text outline-none focus:border-text"
+                          autoFocus
+                          onKeyDown={(e) => { if (e.key === "Enter") handleSaveUsername(); if (e.key === "Escape") setEditing(false); }}
+                        />
+                        <button
+                          onClick={handleSaveUsername}
+                          className="px-2 py-1 text-[10px] rounded bg-text text-surface hover:bg-text/80 transition-colors"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-xs text-text">{profile?.username || "Anonymous"}</span>
+                        <button
+                          onClick={() => setEditing(true)}
+                          className="text-[10px] text-dim hover:text-text transition-colors"
+                        >
+                          Edit
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Session ID */}
                   <button
-                    onClick={handleSaveUsername}
-                    className="px-2 py-1 text-[10px] rounded bg-text text-surface hover:bg-text/80 transition-colors"
+                    onClick={handleCopySession}
+                    className="flex items-center gap-1 text-[10px] text-dim hover:text-text transition-colors px-1"
                   >
-                    Save
+                    {copied ? <Check size={10} /> : <Copy size={10} />}
+                    {copied ? "Copied!" : `Session: ${sessionId.slice(0, 8)}...`}
                   </button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-text">{profile?.username || "Anonymous"}</span>
-                  <button
-                    onClick={() => setEditing(true)}
-                    className="text-[10px] text-text hover:text-muted transition-colors"
-                  >
-                    Edit
-                  </button>
+
+                  {/* Profile list */}
+                  <div className="mt-1.5 space-y-0.5">
+                    {profiles.map((p) => (
+                      <div
+                        key={p.session_id}
+                        className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-xs cursor-pointer transition-colors ${
+                          p.session_id === sessionId
+                            ? "bg-text text-surface"
+                            : "text-text hover:bg-hover"
+                        }`}
+                        onClick={() => handleSwitchProfile(p.session_id)}
+                      >
+                        <span className="flex-1 truncate">
+                          {p.username || "Anonymous"}
+                        </span>
+                        {p.session_id === sessionId && (
+                          <span className="text-[9px] opacity-70">active</span>
+                        )}
+                        {profiles.length > 1 && p.session_id !== sessionId && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteProfile(p.session_id); }}
+                            className="shrink-0 text-dim hover:text-red-400 transition-colors"
+                            title="Delete profile"
+                          >
+                            <Trash2 size={10} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Create new */}
+                  {creating ? (
+                    <div className="flex items-center gap-1 mt-1">
+                      <input
+                        type="text"
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        placeholder="Profile name"
+                        className="flex-1 px-2 py-1 text-xs rounded bg-hover border border-border text-text outline-none focus:border-text"
+                        autoFocus
+                        onKeyDown={(e) => { if (e.key === "Enter") handleCreateProfile(); if (e.key === "Escape") setCreating(false); }}
+                      />
+                      <button
+                        onClick={handleCreateProfile}
+                        className="px-2 py-1 text-[10px] rounded bg-text text-surface hover:bg-text/80 transition-colors"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setCreating(true)}
+                      className="flex items-center gap-1.5 w-full px-2 py-1.5 text-[10px] text-dim hover:text-text transition-colors"
+                    >
+                      <Plus size={10} />
+                      New profile
+                    </button>
+                  )}
                 </div>
               )}
-              <button
-                onClick={handleCopySession}
-                className="flex items-center gap-1 mt-1 text-[10px] text-dim hover:text-text transition-colors"
-              >
-                {copied ? <Check size={10} /> : <Copy size={10} />}
-                {copied ? "Copied!" : `Session: ${sessionId.slice(0, 8)}...`}
-              </button>
             </div>
 
             {/* Search provider */}

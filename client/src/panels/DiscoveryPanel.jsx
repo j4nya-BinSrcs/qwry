@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Hash, Image, Youtube, Maximize2, Minimize2, ShoppingBag, Newspaper, ExternalLink, BookOpen, Sparkles, Plus, Check, GripVertical, ArrowRight } from "lucide-react";
+import { Hash, Image, Youtube, Maximize2, Minimize2, Newspaper, ExternalLink, BookOpen, Sparkles, Plus, Check, GripVertical, Loader2 } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { useSearchStore } from "../stores/searchStore";
@@ -12,37 +12,7 @@ const FILTERS = [
   { id: "images", label: "Images" },
   { id: "videos", label: "Videos" },
   { id: "news", label: "News" },
-  { id: "shopping", label: "Shopping" },
 ];
-
-function SectionHeader({ title, icon: Icon, count, children }) {
-  const [open, setOpen] = useState(true);
-  return (
-    <div>
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-muted uppercase tracking-wider hover:text-text transition-colors"
-      >
-        {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-        {Icon && <Icon size={13} />}
-        <span>{title}</span>
-        {count != null && <span className="text-dim font-normal">{count}</span>}
-      </button>
-      {open && children}
-    </div>
-  );
-}
-
-function HorizontalScroll({ children }) {
-  const scrollRef = useRef(null);
-  return (
-    <div ref={scrollRef} className="overflow-x-auto scrollbar-none">
-      <div className="flex gap-3 px-3 pb-3 min-w-min">
-        {children}
-      </div>
-    </div>
-  );
-}
 
 function MultiRowScroll({ children, rows = 3 }) {
   const scrollRef = useRef(null);
@@ -62,8 +32,28 @@ function MultiRowScroll({ children, rows = 3 }) {
   );
 }
 
+function LoadMoreButton({ loading, hasMore, onClick }) {
+  if (!hasMore) return null;
+  return (
+    <button
+      onClick={onClick}
+      disabled={loading}
+      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border text-text hover:bg-hover hover:border-text transition-all disabled:opacity-50"
+    >
+      {loading ? (
+        <>
+          <Loader2 size={12} className="animate-spin" />
+          Loading...
+        </>
+      ) : (
+        "Load more"
+      )}
+    </button>
+  );
+}
+
 function DraggableImageCard({ result }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `discover-img-${result.url}`,
     data: { type: "search-result", result },
   });
@@ -99,7 +89,6 @@ function DraggableImageCard({ result }) {
             <div className="w-full h-full flex items-center justify-center text-dim text-[10px]">No image</div>
           )}
         </div>
-        {/* Hover actions overlay */}
         <div className="absolute inset-0 bg-text/0 group-hover:bg-text/30 transition-all flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
           <button {...listeners} className="p-1.5 rounded bg-text/50 text-surface hover:bg-text/70 transition-colors cursor-grab active:cursor-grabbing">
             <GripVertical size={13} />
@@ -130,7 +119,7 @@ function DraggableImageCard({ result }) {
 }
 
 function DraggableVideoCard({ result }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `discover-vid-${result.url}`,
     data: { type: "search-result", result },
   });
@@ -199,89 +188,8 @@ function DraggableVideoCard({ result }) {
 }
 
 function DraggableNewsCard({ result }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `discover-news-${result.url}`,
-    data: { type: "search-result", result },
-  });
-  const style = transform ? { transform: `translate(${transform.x}px, ${transform.y}px)` } : undefined;
-  const sessionId = useSessionStore((s) => s.sessionId);
-  const activeWsId = useWorkspaceStore((s) => s.activeWorkspaceId);
-  const addItem = useWorkspaceStore((s) => s.addItem);
-  const openReader = useUIStore((s) => s.openReader);
-  const openSummarizer = useUIStore((s) => s.openSummarizer);
-  const [saved, setSaved] = useState(false);
-
-  const handleSave = useCallback((e) => {
-    e.stopPropagation();
-    if (!activeWsId || saved) return;
-    addItem(sessionId, activeWsId, result.url, result.title, result.snippet, result.source, result.img_src);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1500);
-  }, [sessionId, activeWsId, result, addItem, saved]);
-
-  return (
-    <div ref={setNodeRef} style={style}
-      className={`group flex-shrink-0 w-72 rounded border border-border hover:border-text transition-all cursor-default ${isDragging ? "opacity-50" : "hover:bg-hover"}`}
-    >
-      <div className="p-2.5">
-        <div className="flex items-start gap-2.5">
-          <button {...listeners} className="mt-0.5 shrink-0 text-dim cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity">
-            <GripVertical size={12} />
-          </button>
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-medium text-text leading-snug line-clamp-2">
-              {result.title}
-            </div>
-            <div className="flex items-center gap-2 mt-1.5">
-              {result.img_src && (
-                <img
-                  src={`/api/image-proxy?url=${encodeURIComponent(result.img_src)}`}
-                  alt="" className="size-4 rounded object-cover shrink-0"
-                  onError={(e) => { e.target.style.display = "none"; }}
-                />
-              )}
-              <span className="text-[10px] text-dim truncate">
-                {result.engine || result.source || result.category}
-              </span>
-              {result.published_date && (
-                <>
-                  <span className="text-dim text-[10px]">·</span>
-                  <span className="text-[10px] text-dim shrink-0">{result.published_date}</span>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
-          <button onClick={(e) => { e.stopPropagation(); openReader(result.url, result.title, result.img_src); }}
-            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all" title="Reader"
-          >
-            <BookOpen size={11} />
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); openSummarizer(result.url, result.title); }}
-            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all" title="Summarize"
-          >
-            <Sparkles size={11} />
-          </button>
-          <button onClick={handleSave} disabled={!activeWsId}
-            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all disabled:opacity-30" title="Save"
-          >
-            {saved ? <Check size={11} /> : <Plus size={11} />}
-          </button>
-          <button onClick={() => window.open(result.url, "_blank")}
-            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all" title="Open"
-          >
-            <ExternalLink size={11} />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DraggableShoppingCard({ result }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `discover-shop-${result.url}`,
     data: { type: "search-result", result },
   });
   const style = transform ? { transform: `translate(${transform.x}px, ${transform.y}px)` } : undefined;
@@ -289,6 +197,8 @@ function DraggableShoppingCard({ result }) {
   const sessionId = useSessionStore((s) => s.sessionId);
   const activeWsId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const addItem = useWorkspaceStore((s) => s.addItem);
+  const openReader = useUIStore((s) => s.openReader);
+  const openSummarizer = useUIStore((s) => s.openSummarizer);
   const [saved, setSaved] = useState(false);
 
   const handleSave = useCallback((e) => {
@@ -301,33 +211,59 @@ function DraggableShoppingCard({ result }) {
 
   return (
     <div ref={setNodeRef} style={style}
-      className={`group flex-shrink-0 w-36 cursor-default ${isDragging ? "opacity-50" : ""}`}
+      className={`group flex-shrink-0 w-72 rounded border border-border hover:border-text transition-all cursor-default ${isDragging ? "opacity-50" : "hover:bg-hover"}`}
     >
-      <div className="rounded border border-border overflow-hidden hover:border-text transition-all">
-        <div className="aspect-square bg-hover relative">
-          {imgSrc ? (
-            <img src={`/api/image-proxy?url=${encodeURIComponent(imgSrc)}`}
-              alt="" className="w-full h-full object-cover"
-              onError={(e) => { e.target.style.display = "none"; }}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-dim text-[10px]">No image</div>
-          )}
-          <div className="absolute inset-0 bg-text/0 group-hover:bg-text/30 transition-all flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
-            <button {...listeners} className="p-1 rounded bg-text/50 text-surface hover:bg-text/70 transition-colors cursor-grab active:cursor-grabbing">
-              <GripVertical size={12} />
-            </button>
-            <button onClick={handleSave} disabled={!activeWsId}
-              className="p-1 rounded bg-text/50 text-surface hover:bg-text/70 transition-colors disabled:opacity-30" title="Save"
-            >
-              {saved ? <Check size={12} /> : <Plus size={12} />}
-            </button>
+      <div className="flex items-start gap-2.5 p-2.5">
+        {imgSrc ? (
+          <img
+            src={`/api/image-proxy?url=${encodeURIComponent(imgSrc)}`}
+            alt="" className="size-10 rounded object-cover shrink-0"
+            onError={(e) => { e.target.style.display = "none"; }}
+          />
+        ) : (
+          <div className="size-10 rounded bg-hover shrink-0 flex items-center justify-center text-dim text-[10px]">No img</div>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="text-xs font-medium text-text leading-snug line-clamp-2">
+            {result.title}
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-[10px] text-dim truncate">
+              {result.engine || result.source || result.category}
+            </span>
+            {result.published_date && (
+              <>
+                <span className="text-dim text-[10px]">·</span>
+                <span className="text-[10px] text-dim shrink-0">{result.published_date}</span>
+              </>
+            )}
           </div>
         </div>
-        <div className="p-1.5">
-          <div className="text-[10px] text-text line-clamp-2 leading-snug font-medium">{result.title}</div>
-          <div className="text-[10px] text-text font-semibold mt-0.5">{result.engine || result.source || "—"}</div>
-        </div>
+      </div>
+      <div className="flex items-center gap-1 px-2.5 pb-2 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+        <button {...listeners} className="p-1 rounded text-dim cursor-grab active:cursor-grabbing hover:text-text hover:bg-hover transition-all">
+          <GripVertical size={12} />
+        </button>
+        <button onClick={(e) => { e.stopPropagation(); openReader(result.url, result.title, imgSrc); }}
+          className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all" title="Reader"
+        >
+          <BookOpen size={11} />
+        </button>
+        <button onClick={(e) => { e.stopPropagation(); openSummarizer(result.url, result.title); }}
+          className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all" title="Summarize"
+        >
+          <Sparkles size={11} />
+        </button>
+        <button onClick={handleSave} disabled={!activeWsId}
+          className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all disabled:opacity-30" title="Save"
+        >
+          {saved ? <Check size={11} /> : <Plus size={11} />}
+        </button>
+        <button onClick={() => window.open(result.url, "_blank")}
+          className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all" title="Open"
+        >
+          <ExternalLink size={11} />
+        </button>
       </div>
     </div>
   );
@@ -337,148 +273,26 @@ export default function DiscoveryPanel() {
   const query = useSearchStore((s) => s.query);
   const imageResults = useSearchStore((s) => s.imageResults);
   const videoResults = useSearchStore((s) => s.videoResults);
+  const newsResults = useSearchStore((s) => s.newsResults);
   const infobox = useSearchStore((s) => s.infobox);
-  const results = useSearchStore((s) => s.results);
-  const addItemsBulk = useWorkspaceStore((s) => s.addItemsBulk);
   const loadMoreImages = useSearchStore((s) => s.loadMoreImages);
   const loadMoreVideos = useSearchStore((s) => s.loadMoreVideos);
+  const loadMoreNews = useSearchStore((s) => s.loadMoreNews);
+  const loading = useSearchStore((s) => s.loading);
   const imageTotal = useSearchStore((s) => s.imageTotal);
   const videoTotal = useSearchStore((s) => s.videoTotal);
-  const imagePage = useSearchStore((s) => s.imagePage);
-  const videoPage = useSearchStore((s) => s.videoPage);
-  const sessionId = useSessionStore((s) => s.sessionId);
-  const activeWsId = useWorkspaceStore((s) => s.activeWorkspaceId);
-  const [imageMsg, setImageMsg] = useState("");
-  const [videoMsg, setVideoMsg] = useState("");
-  const [newsMsg, setNewsMsg] = useState("");
-  const [shoppingMsg, setShoppingMsg] = useState("");
+  const newsTotal = useSearchStore((s) => s.newsTotal);
   const [activeFilter, setActiveFilter] = useState("all");
   const expandedPanel = useUIStore((s) => s.expandedPanel);
   const toggleExpand = useUIStore((s) => s.toggleExpand);
   const isExpanded = expandedPanel === "discovery";
 
-  const newsResults = results.filter((r) =>
-    r.category === "news" || r.category === "general"
-  ).slice(0, 10);
-
-  const shoppingResults = results.filter((r) =>
-    r.category?.includes("shop") || r.source?.includes("shop")
-  ).slice(0, 8);
-
   const hasContent = query && (
     infobox || imageResults.length > 0 || videoResults.length > 0 ||
-    newsResults.length > 0 || shoppingResults.length > 0
+    newsResults.length > 0
   );
 
-  const showAll = activeFilter === "all" || activeFilter === "all";
-
-  const handleAddAllImages = useCallback(async () => {
-    if (!activeWsId) return;
-    const items = imageResults.map((r) => ({
-      url: r.url,
-      title: r.title || "",
-      snippet: r.snippet || "",
-      source: r.source || "",
-      mediaUrl: r.img_src || r.thumbnail || null,
-    }));
-    if (items.length === 0) return;
-    setImageMsg("");
-    try {
-      const result = await addItemsBulk(sessionId, activeWsId, items);
-      if (result) {
-        const parts = [];
-        if (result.created.length) parts.push(`${result.created.length} added`);
-        if (result.duplicates.length) parts.push(`${result.duplicates.length} dupes`);
-        if (result.rejected) parts.push(`${result.rejected} skipped`);
-        setImageMsg(parts.join(" · "));
-        setTimeout(() => setImageMsg(""), 4000);
-      }
-    } catch {
-      setImageMsg("Failed");
-      setTimeout(() => setImageMsg(""), 3000);
-    }
-  }, [sessionId, activeWsId, addItemsBulk, imageResults]);
-
-  const handleAddAllVideos = useCallback(async () => {
-    if (!activeWsId) return;
-    const items = videoResults.map((r) => ({
-      url: r.url,
-      title: r.title || "",
-      snippet: r.snippet || "",
-      source: r.source || "",
-      mediaUrl: r.img_src || r.thumbnail || null,
-    }));
-    if (items.length === 0) return;
-    setVideoMsg("");
-    try {
-      const result = await addItemsBulk(sessionId, activeWsId, items);
-      if (result) {
-        const parts = [];
-        if (result.created.length) parts.push(`${result.created.length} added`);
-        if (result.duplicates.length) parts.push(`${result.duplicates.length} dupes`);
-        if (result.rejected) parts.push(`${result.rejected} skipped`);
-        setVideoMsg(parts.join(" · "));
-        setTimeout(() => setVideoMsg(""), 4000);
-      }
-    } catch {
-      setVideoMsg("Failed");
-      setTimeout(() => setVideoMsg(""), 3000);
-    }
-  }, [sessionId, activeWsId, addItemsBulk, videoResults]);
-
-  const handleAddAllNews = useCallback(async () => {
-    if (!activeWsId) return;
-    const items = newsResults.map((r) => ({
-      url: r.url,
-      title: r.title || "",
-      snippet: r.snippet || "",
-      source: r.source || "",
-      mediaUrl: r.img_src || null,
-    }));
-    if (items.length === 0) return;
-    setNewsMsg("");
-    try {
-      const result = await addItemsBulk(sessionId, activeWsId, items);
-      if (result) {
-        const parts = [];
-        if (result.created.length) parts.push(`${result.created.length} added`);
-        if (result.duplicates.length) parts.push(`${result.duplicates.length} dupes`);
-        if (result.rejected) parts.push(`${result.rejected} skipped`);
-        setNewsMsg(parts.join(" · "));
-        setTimeout(() => setNewsMsg(""), 4000);
-      }
-    } catch {
-      setNewsMsg("Failed");
-      setTimeout(() => setNewsMsg(""), 3000);
-    }
-  }, [sessionId, activeWsId, addItemsBulk, newsResults]);
-
-  const handleAddAllShopping = useCallback(async () => {
-    if (!activeWsId) return;
-    const items = shoppingResults.map((r) => ({
-      url: r.url,
-      title: r.title || "",
-      snippet: r.snippet || "",
-      source: r.source || "",
-      mediaUrl: r.img_src || r.thumbnail || null,
-    }));
-    if (items.length === 0) return;
-    setShoppingMsg("");
-    try {
-      const result = await addItemsBulk(sessionId, activeWsId, items);
-      if (result) {
-        const parts = [];
-        if (result.created.length) parts.push(`${result.created.length} added`);
-        if (result.duplicates.length) parts.push(`${result.duplicates.length} dupes`);
-        if (result.rejected) parts.push(`${result.rejected} skipped`);
-        setShoppingMsg(parts.join(" · "));
-        setTimeout(() => setShoppingMsg(""), 4000);
-      }
-    } catch {
-      setShoppingMsg("Failed");
-      setTimeout(() => setShoppingMsg(""), 3000);
-    }
-  }, [sessionId, activeWsId, addItemsBulk, shoppingResults]);
+  const showAll = activeFilter === "all";
 
   return (
     <div className="h-full flex flex-col">
@@ -524,30 +338,31 @@ export default function DiscoveryPanel() {
         ) : (
           <>
             {(showAll || activeFilter === "all") && infobox && (
-              <SectionHeader title="Overview" icon={Hash}>
+              <div className="border-t border-border">
+                <div className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-muted uppercase tracking-wider">
+                  <Hash size={13} />
+                  <span>Overview</span>
+                </div>
                 <div className="px-3 pb-2">
                   <InfoBoxCard infobox={infobox} />
                 </div>
-              </SectionHeader>
+              </div>
             )}
 
             {(showAll || activeFilter === "images") && imageResults.length > 0 && (
               <div className="border-t border-border">
-                <SectionHeader title="Images" icon={Image} count={imageResults.length}>
-                  <div className="flex items-center gap-2">
-                    {imageResults.length < imageTotal && (
-                      <button
-                        onClick={loadMoreImages}
-                        className="text-[10px] text-dim hover:text-text transition-colors"
-                      >
-                        Load more
-                      </button>
-                    )}
+                <div className="flex items-center justify-between px-3 py-2">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-muted uppercase tracking-wider">
+                    <Image size={13} />
+                    <span>Images</span>
+                    <span className="text-dim font-normal">{imageResults.length}</span>
                   </div>
-                  {imageMsg && (
-                    <span className="text-[10px] text-muted">{imageMsg}</span>
-                  )}
-                </SectionHeader>
+                  <LoadMoreButton
+                    loading={loading}
+                    hasMore={imageResults.length < imageTotal}
+                    onClick={loadMoreImages}
+                  />
+                </div>
                 <MultiRowScroll rows={3}>
                   {imageResults.map((r, i) => (
                     <DraggableImageCard key={`img-${r.url}-${i}`} result={r} />
@@ -558,21 +373,18 @@ export default function DiscoveryPanel() {
 
             {(showAll || activeFilter === "videos") && videoResults.length > 0 && (
               <div className="border-t border-border">
-                <SectionHeader title="Videos" icon={Youtube} count={videoResults.length}>
-                  <div className="flex items-center gap-2">
-                    {videoResults.length < videoTotal && (
-                      <button
-                        onClick={loadMoreVideos}
-                        className="text-[10px] text-dim hover:text-text transition-colors"
-                      >
-                        Load more
-                      </button>
-                    )}
+                <div className="flex items-center justify-between px-3 py-2">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-muted uppercase tracking-wider">
+                    <Youtube size={13} />
+                    <span>Videos</span>
+                    <span className="text-dim font-normal">{videoResults.length}</span>
                   </div>
-                  {videoMsg && (
-                    <span className="text-[10px] text-muted">{videoMsg}</span>
-                  )}
-                </SectionHeader>
+                  <LoadMoreButton
+                    loading={loading}
+                    hasMore={videoResults.length < videoTotal}
+                    onClick={loadMoreVideos}
+                  />
+                </div>
                 <MultiRowScroll rows={3}>
                   {videoResults.map((r, i) => (
                     <DraggableVideoCard key={`vid-${r.url}-${i}`} result={r} />
@@ -583,31 +395,23 @@ export default function DiscoveryPanel() {
 
             {(showAll || activeFilter === "news") && newsResults.length > 0 && (
               <div className="border-t border-border">
-                <SectionHeader title="News" icon={Newspaper} count={newsResults.length}>
-                  {newsMsg && (
-                    <span className="text-[10px] text-muted">{newsMsg}</span>
-                  )}
-                </SectionHeader>
-                <HorizontalScroll>
+                <div className="flex items-center justify-between px-3 py-2">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-muted uppercase tracking-wider">
+                    <Newspaper size={13} />
+                    <span>News</span>
+                    <span className="text-dim font-normal">{newsResults.length}</span>
+                  </div>
+                  <LoadMoreButton
+                    loading={loading}
+                    hasMore={newsResults.length < newsTotal}
+                    onClick={loadMoreNews}
+                  />
+                </div>
+                <MultiRowScroll rows={3}>
                   {newsResults.map((r, i) => (
                     <DraggableNewsCard key={`news-${r.url}-${i}`} result={r} />
                   ))}
-                </HorizontalScroll>
-              </div>
-            )}
-
-            {(showAll || activeFilter === "shopping") && shoppingResults.length > 0 && (
-              <div className="border-t border-border">
-                <SectionHeader title="Shopping" icon={ShoppingBag} count={shoppingResults.length}>
-                  {shoppingMsg && (
-                    <span className="text-[10px] text-muted">{shoppingMsg}</span>
-                  )}
-                </SectionHeader>
-                <HorizontalScroll>
-                  {shoppingResults.map((r, i) => (
-                    <DraggableShoppingCard key={`shop-${r.url}-${i}`} result={r} />
-                  ))}
-                </HorizontalScroll>
+                </MultiRowScroll>
               </div>
             )}
           </>

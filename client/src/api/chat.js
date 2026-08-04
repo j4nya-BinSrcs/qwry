@@ -13,3 +13,13 @@ export async function chatWithWorkspace(sessionId, wsId, question) {
   }
   return res.json();
 }
+
+export async function workspaceChatHistory(sessionId, wsId) {
+  const res = await fetch(`/api/workspaces/${wsId}/chat/history`, {
+    headers: {
+      "X-Session-Id": sessionId,
+    },
+  });
+  if (!res.ok) return { messages: [] };
+  return res.json();
+}

@@ -11,6 +11,8 @@ from server.src.api.schemas import (
     CanvasNodeCreate,
     CanvasNodeResponse,
     CanvasNodeUpdate,
+    ChatHistoryResponse,
+    ChatMessageResponse,
     ChatRequest,
     ChatResponse,
     ChatSource,
@@ -18,7 +20,10 @@ from server.src.api.schemas import (
     LLMGenerateRequest,
     LLMGenerateResponse,
     OverviewResponse,
+    ProfileCreateRequest,
+    ProfileDeleteRequest,
     ProfileResponse,
+    ProfileSwitchRequest,
     ProfileUpdateRequest,
     ReaderResponse,
     ReadingListEntry,
@@ -144,6 +149,7 @@ async def search(
 async def suggest(
     request: Request,
     q: str = Query(..., min_length=1, description="Query prefix"),
+    provider: str | None = Query(None, description="Force a specific provider"),
 ) -> SuggestResponse:
     http: httpx.AsyncClient = request.app.state.http
     registry: EndpointRegistry = request.app.state.registry
@@ -151,16 +157,18 @@ async def suggest(
     suggestions: list[str] = []
     source = "none"
 
-    suggestions, source = await _try_searxng_autocompleter(http, registry.searxng.base_url, q)
-    if not suggestions:
-        suggestions, source = await _try_searxng_search_suggestions(http, registry.searxng.base_url, q)
-    if not suggestions:
+    if provider == "engine":
         suggestions, source = await _try_engine_search_suggestions(
-            http,
-            registry.engine.base_url,
-            q,
-            registry.engine.timeout,
+            http, registry.engine.base_url, q, registry.engine.timeout,
         )
+    elif provider == "searxng" or provider is None:
+        suggestions, source = await _try_searxng_autocompleter(http, registry.searxng.base_url, q)
+        if not suggestions:
+            suggestions, source = await _try_searxng_search_suggestions(http, registry.searxng.base_url, q)
+        if not suggestions and provider is None:
+            suggestions, source = await _try_engine_search_suggestions(
+                http, registry.engine.base_url, q, registry.engine.timeout,
+            )
 
     return SuggestResponse(query=q, suggestions=suggestions[:10], source=source)
 
@@ -460,7 +468,7 @@ async def workspace_chat(
     session_id = get_session_id(request)
     maker = request.app.state.db
     async with maker() as db:
-        from server.src.db.repository import WorkspaceItemRepo, WorkspaceRepo
+        from server.src.db.repository import WorkspaceChatMessageRepo, WorkspaceItemRepo, WorkspaceRepo
 
         ws_repo = WorkspaceRepo(db)
         ws = await ws_repo.get_by_session(ws_id, session_id)
@@ -468,18 +476,62 @@ async def workspace_chat(
             raise HTTPException(status_code=404, detail="Workspace not found")
         item_repo = WorkspaceItemRepo(db)
         items = await item_repo.list_by_workspace(ws_id)
+        chat_msg_repo = WorkspaceChatMessageRepo(db)
 
-    item_dicts = [{"url": it.url, "title": it.title, "snippet": it.snippet} for it in items]
+        import json
+        sources_list = []
+        await chat_msg_repo.create(ws_id, "user", body.question)
 
-    chat = ChatService(
-        reader=request.app.state.reader,
-        llm=request.app.state.llm,
-    )
-    result = await chat.answer(body.question, item_dicts)
+        item_dicts = [{"url": it.url, "title": it.title, "snippet": it.snippet} for it in items]
+        chat = ChatService(
+            reader=request.app.state.reader,
+            llm=request.app.state.llm,
+        )
+        result = await chat.answer(body.question, item_dicts)
+        sources_list = [{"url": s.url, "title": s.title} for s in result.sources]
+        await chat_msg_repo.create(ws_id, "assistant", result.answer, json.dumps(sources_list))
+
     return ChatResponse(
         answer=result.answer,
         sources=[ChatSource(url=s.url, title=s.title) for s in result.sources],
     )
+
+
+async def workspace_chat_history(
+    request: Request,
+    ws_id: UUID,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+) -> ChatHistoryResponse:
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        from server.src.db.repository import WorkspaceChatMessageRepo, WorkspaceRepo
+        import json
+
+        ws_repo = WorkspaceRepo(db)
+        ws = await ws_repo.get_by_session(ws_id, session_id)
+        if not ws:
+            raise HTTPException(status_code=404, detail="Workspace not found")
+        chat_msg_repo = WorkspaceChatMessageRepo(db)
+        msgs = await chat_msg_repo.list_by_workspace(ws_id)
+
+    result = []
+    for m in msgs:
+        sources = []
+        if m.sources_json:
+            try:
+                sources = [ChatSource(**s) for s in json.loads(m.sources_json)]
+            except Exception:
+                pass
+        result.append(ChatMessageResponse(
+            id=m.id,
+            workspace_id=m.workspace_id,
+            role=m.role,
+            content=m.content,
+            sources=sources,
+            created_at=m.created_at,
+        ))
+    return ChatHistoryResponse(messages=result)
 
 
 # ── Workspaces ─────────────────────────────────────────────────────────
@@ -731,6 +783,78 @@ async def profile_update(
             created_at=profile.created_at,
             last_active=profile.last_active,
         )
+
+
+async def profile_list(
+    request: Request,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+) -> list[ProfileResponse]:
+    maker = request.app.state.db
+    async with maker() as db:
+        from server.src.db.repository import ProfileRepo
+
+        repo = ProfileRepo(db)
+        from sqlalchemy import select
+        from server.src.db.models import Profile
+        result = await db.execute(select(Profile).order_by(Profile.last_active.desc()))
+        profiles = list(result.scalars().all())
+        return [
+            ProfileResponse(
+                session_id=p.session_id,
+                username=p.username,
+                theme=p.theme,
+                search_provider=p.search_provider,
+                created_at=p.created_at,
+                last_active=p.last_active,
+            )
+            for p in profiles
+        ]
+
+
+async def profile_create(
+    request: Request,
+    body: ProfileCreateRequest,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+) -> ProfileResponse:
+    import secrets
+    new_session_id = secrets.token_hex(32)
+    maker = request.app.state.db
+    async with maker() as db:
+        from server.src.services.profile_service import ProfileService
+
+        svc = ProfileService(db)
+        from server.src.db.repository import ProfileRepo
+        repo = ProfileRepo(db)
+        profile = await repo.create(new_session_id)
+        if body.username:
+            await repo.update(new_session_id, username=body.username)
+            profile = await repo.get(new_session_id)
+        return ProfileResponse(
+            session_id=profile.session_id,
+            username=profile.username,
+            theme=profile.theme,
+            search_provider=profile.search_provider,
+            created_at=profile.created_at,
+            last_active=profile.last_active,
+        )
+
+
+async def profile_delete(
+    request: Request,
+    body: ProfileDeleteRequest,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+) -> dict:
+    maker = request.app.state.db
+    async with maker() as db:
+        from server.src.db.repository import ProfileRepo
+
+        repo = ProfileRepo(db)
+        profile = await repo.get(body.session_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        await db.delete(profile)
+        await db.commit()
+    return {"ok": True}
 
 
 # ── History ─────────────────────────────────────────────────────────────
