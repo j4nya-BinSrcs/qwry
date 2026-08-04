@@ -82,6 +82,19 @@ export async function deleteItem(sessionId, itemId) {
   return res.json();
 }
 
+export async function addItemsBulk(sessionId, wsId, items) {
+  const res = await fetch(`${BASE}/workspaces/${wsId}/items/bulk`, {
+    method: "POST",
+    headers: headers(sessionId),
+    body: JSON.stringify({ items }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `bulk add failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function summarizeItem(sessionId, itemId) {
   const res = await fetch(`${BASE}/workspaces/items/${itemId}/summarize`, {
     method: "POST",

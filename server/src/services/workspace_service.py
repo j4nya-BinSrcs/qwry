@@ -1,7 +1,12 @@
 import logging
 from uuid import UUID
 
-from server.src.api.schemas import WorkspaceItemResponse, WorkspaceResponse
+from server.src.api.schemas import (
+    WorkspaceBulkItemsRequest,
+    WorkspaceBulkItemsResponse,
+    WorkspaceItemResponse,
+    WorkspaceResponse,
+)
 from server.src.db.models import Workspace, WorkspaceItem
 from server.src.db.repository import WorkspaceItemRepo, WorkspaceRepo
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 logger = logging.getLogger(__name__)
 
 
-MAX_ITEMS_PER_WORKSPACE = 100
+MAX_ITEMS_PER_WORKSPACE = 1000
 
 
 def _ws_to_response(ws: Workspace, item_count: int = 0) -> WorkspaceResponse:
@@ -119,6 +124,57 @@ async def add_item(
     item_repo = WorkspaceItemRepo(session)
     item = await item_repo.create(ws_id, url, media_url, title, snippet, source)
     return _item_to_response(item)
+
+
+async def add_items_bulk(
+    session: AsyncSession,
+    session_id: str,
+    ws_id: UUID,
+    bulk: WorkspaceBulkItemsRequest,
+) -> WorkspaceBulkItemsResponse | None:
+    ws_repo = WorkspaceRepo(session)
+    ws = await ws_repo.get_by_session(ws_id, session_id)
+    if not ws:
+        return None
+
+    item_repo = WorkspaceItemRepo(session)
+    existing_urls = await item_repo.urls_by_workspace(ws_id)
+    count = await ws_repo.item_count(ws_id)
+
+    seen: set[str] = set(existing_urls)
+    created_items: list[WorkspaceItem] = []
+    duplicates: list[str] = []
+    rejected = 0
+
+    for req in bulk.items:
+        normalized = req.url.strip().lower()
+        if normalized in seen:
+            duplicates.append(req.url)
+            continue
+        if count + len(created_items) >= MAX_ITEMS_PER_WORKSPACE:
+            rejected += 1
+            continue
+        item = WorkspaceItem(
+            workspace_id=ws_id,
+            url=req.url,
+            media_url=req.media_url,
+            title=req.title,
+            snippet=req.snippet,
+            source=req.source,
+        )
+        created_items.append(item)
+        seen.add(normalized)
+
+    if created_items:
+        await item_repo.create_many(ws_id, created_items)
+
+    return WorkspaceBulkItemsResponse(
+        created=[_item_to_response(it) for it in created_items],
+        duplicates=duplicates,
+        rejected=rejected,
+        workspace_total=count + len(created_items),
+        limit=MAX_ITEMS_PER_WORKSPACE,
+    )
 
 
 async def update_item(

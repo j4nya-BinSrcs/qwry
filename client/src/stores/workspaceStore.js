@@ -124,7 +124,26 @@ export const useWorkspaceStore = create((set, get) => ({
               ? { ...i, summary: result.summary, summary_provider: result.provider, summary_model: result.model }
               : i
           ),
-          summarizingId: null,
+  addItemsBulk: async (sessionId, wsId, items) => {
+    set({ error: null });
+    try {
+      const result = await api.addItemsBulk(sessionId, wsId, items);
+      set((s) => ({
+        items: [...s.items, ...result.created],
+        workspaces: s.workspaces.map((w) =>
+          w.id === wsId
+            ? { ...w, item_count: (w.item_count || 0) + result.created.length }
+            : w
+        ),
+      }));
+      return result;
+    } catch (err) {
+      set({ error: err.message });
+      return null;
+    }
+  },
+
+  summarizingId: null,
         }));
         return;
       } catch (err) {

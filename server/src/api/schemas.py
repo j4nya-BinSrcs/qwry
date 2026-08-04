@@ -123,6 +123,10 @@ class WorkspaceItemCreateRequest(BaseModel):
     source: str | None = None
 
 
+class WorkspaceBulkItemsRequest(BaseModel):
+    items: list[WorkspaceItemCreateRequest]
+
+
 class WorkspaceItemUpdateRequest(BaseModel):
     title: str | None = None
     snippet: str | None = None
@@ -142,6 +146,14 @@ class WorkspaceItemResponse(BaseModel):
     notes: str | None = None
     order_index: int = 0
     created_at: datetime
+
+
+class WorkspaceBulkItemsResponse(BaseModel):
+    created: list[WorkspaceItemResponse]
+    duplicates: list[str]
+    rejected: int
+    workspace_total: int
+    limit: int
 
 
 class ItemSummaryResponse(BaseModel):

@@ -144,9 +144,14 @@ class TestWorkspaceItems:
         items = client.get(f"/api/workspaces/{ws['id']}/items", headers=_headers()).json()
         assert len(items) == 0
 
-    def test_item_limit(self, client):
+    def test_item_limit(self, client, monkeypatch):
+        from server.src.services.workspace_service import MAX_ITEMS_PER_WORKSPACE
+
+        monkeypatch.setattr(
+            "server.src.services.workspace_service.MAX_ITEMS_PER_WORKSPACE", 3
+        )
         ws = client.post("/api/workspaces", json={"name": "Limit Test"}, headers=_headers()).json()
-        for i in range(100):
+        for i in range(3):
             resp = client.post(
                 f"/api/workspaces/{ws['id']}/items",
                 json={"url": f"https://test{i}.com", "title": f"Item {i}"},
@@ -171,6 +176,57 @@ class TestWorkspaceItems:
         ).json()
         items_b = client.get(f"/api/workspaces/{ws_b['id']}/items", headers=_headers()).json()
         assert len(items_b) == 0
+
+    def test_bulk_create(self, client):
+        ws = client.post("/api/workspaces", json={"name": "Bulk Test"}, headers=_headers()).json()
+        resp = client.post(
+            f"/api/workspaces/{ws['id']}/items/bulk",
+            json={"items": [
+                {"url": "https://a.com", "title": "A"},
+                {"url": "https://b.com", "title": "B"},
+                {"url": "https://c.com", "title": "C"},
+            ]},
+            headers=_headers(),
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert len(data["created"]) == 3
+        assert data["duplicates"] == []
+        assert data["rejected"] == 0
+        assert data["workspace_total"] == 3
+        assert data["limit"] == 1000
+
+    def test_bulk_create_dedups(self, client):
+        ws = client.post("/api/workspaces", json={"name": "Bulk Dedup"}, headers=_headers()).json()
+        client.post(
+            f"/api/workspaces/{ws['id']}/items",
+            json={"url": "https://existing.com", "title": "Existing"},
+            headers=_headers(),
+        )
+        resp = client.post(
+            f"/api/workspaces/{ws['id']}/items/bulk",
+            json={"items": [
+                {"url": "https://existing.com", "title": "Existing Again"},
+                {"url": "https://new.com", "title": "New"},
+                {"url": "https://existing.com", "title": "Duplicate in batch"},
+            ]},
+            headers=_headers(),
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert len(data["created"]) == 1
+        assert data["duplicates"] == ["https://existing.com", "https://existing.com"]
+        assert data["rejected"] == 0
+        assert data["workspace_total"] == 2
+
+    def test_bulk_create_unknown_workspace(self, client):
+        import uuid
+        resp = client.post(
+            f"/api/workspaces/{uuid.uuid4()}/items/bulk",
+            json={"items": [{"url": "https://x.com"}]},
+            headers=_headers(),
+        )
+        assert resp.status_code == 404
 
 
 class TestItemSummarize:

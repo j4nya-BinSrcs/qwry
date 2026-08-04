@@ -19,6 +19,7 @@ from server.src.api.endpoints import (
     history_summaries,
     image_proxy,
     item_create,
+    item_create_bulk,
     item_delete,
     item_list,
     item_summarize,
@@ -100,6 +101,7 @@ from server.src.api.schemas import (
     WorkspaceComparisonResponse,
     WorkspaceHighlightResponse,
     WorkspaceImageResponse,
+    WorkspaceBulkItemsResponse,
     WorkspaceItemResponse,
     WorkspaceNoteResponse,
     WorkspacePinResponse,
@@ -165,6 +167,13 @@ workspace_router.add_api_route(
     item_create,
     methods=["POST"],
     response_model=WorkspaceItemResponse,
+    status_code=201,
+)
+workspace_router.add_api_route(
+    "/{ws_id}/items/bulk",
+    item_create_bulk,
+    methods=["POST"],
+    response_model=WorkspaceBulkItemsResponse,
     status_code=201,
 )
 workspace_router.add_api_route("/{ws_id}/chat", workspace_chat, methods=["POST"], response_model=ChatResponse)

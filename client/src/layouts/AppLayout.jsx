@@ -44,31 +44,32 @@ export default function AppLayout() {
   return (
     <div className="h-full flex flex-col">
       {contextMode !== "home" && <TopBar />}
-      <div className="flex-1 min-h-0">
-        {contextMode === "home" ? (
-          <HomeView />
-        ) : expandedPanel ? (
-          <PanelGroup direction="horizontal">
-            <Panel defaultSize={100} minSize={100}>
-              <PanelContent id={expandedPanel} />
-            </Panel>
-          </PanelGroup>
-        ) : (
-          <PanelGroup direction="horizontal">
-            {panelOrder.map((id, index) => (
-              <Fragment key={id}>
-                {index > 0 && <PanelResizeHandle />}
-                <Panel
-                  defaultSize={PANEL_DEFAULTS[id]}
-                  minSize={PANEL_MINS[id]}
-                  maxSize={PANEL_MAXS[id]}
-                >
-                  <PanelContent id={id} />
-                </Panel>
-              </Fragment>
-            ))}
-          </PanelGroup>
-        )}
+      <div className="flex-1 min-h-0 relative">
+        <div className={contextMode === "home" ? "hidden" : "contents"}>
+          {expandedPanel ? (
+            <PanelGroup direction="horizontal">
+              <Panel defaultSize={100} minSize={100}>
+                <PanelContent id={expandedPanel} />
+              </Panel>
+            </PanelGroup>
+          ) : (
+            <PanelGroup direction="horizontal">
+              {panelOrder.map((id, index) => (
+                <Fragment key={id}>
+                  {index > 0 && <PanelResizeHandle />}
+                  <Panel
+                    defaultSize={PANEL_DEFAULTS[id]}
+                    minSize={PANEL_MINS[id]}
+                    maxSize={PANEL_MAXS[id]}
+                  >
+                    <PanelContent id={id} />
+                  </Panel>
+                </Fragment>
+              ))}
+            </PanelGroup>
+          )}
+        </div>
+        {contextMode === "home" && <HomeView />}
       </div>
     </div>
   );

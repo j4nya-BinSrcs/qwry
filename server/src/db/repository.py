@@ -156,6 +156,24 @@ class WorkspaceItemRepo:
         await self._session.refresh(item)
         return item
 
+    async def urls_by_workspace(self, ws_id: UUID) -> set[str]:
+        result = await self._session.execute(
+            select(WorkspaceItem.url).where(WorkspaceItem.workspace_id == ws_id),
+        )
+        return {row[0] for row in result.all()}
+
+    async def create_many(
+        self,
+        ws_id: UUID,
+        items: list[WorkspaceItem],
+    ) -> list[WorkspaceItem]:
+        for item in items:
+            self._session.add(item)
+        await self._session.commit()
+        for item in items:
+            await self._session.refresh(item)
+        return items
+
     async def delete(self, item_id: UUID) -> bool:
         item = await self.get_by_id(item_id)
         if not item:

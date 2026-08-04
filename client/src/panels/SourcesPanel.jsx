@@ -1,5 +1,5 @@
-import { ExternalLink, GripVertical, Plus, BookOpen, Sparkles, Search, Newspaper, Youtube, MessageCircle, Image, Code, Globe } from "lucide-react";
-import { useCallback } from "react";
+import { ExternalLink, GripVertical, Plus, BookOpen, Sparkles, Search, Newspaper, Youtube, MessageCircle, Image, Code, Globe, ArrowRight } from "lucide-react";
+import { useCallback, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { useSearchStore } from "../stores/searchStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
@@ -235,7 +235,40 @@ export default function SourcesPanel() {
   const error = useSearchStore((s) => s.error);
   const activeFilter = useSearchStore((s) => s.activeFilter);
   const setActiveFilter = useSearchStore((s) => s.setActiveFilter);
+  const loadMorePages = useSearchStore((s) => s.loadMorePages);
+  const totalResults = useSearchStore((s) => s.totalResults);
+  const activeId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const sessionId = useSessionStore((s) => s.sessionId);
+  const addItemsBulk = useWorkspaceStore((s) => s.addItemsBulk);
   const filtered = results.filter((r) => matchFilter(r, activeFilter));
+  const uniqueCount = new Set(results.map((r) => r.url)).size;
+  const hasMore = results.length < totalResults;
+  const [transferMsg, setTransferMsg] = useState("");
+
+  const handleTransferAll = useCallback(async () => {
+    if (!activeId) return;
+    const items = useSearchStore.getState().collectTransferSources();
+    if (items.length === 0) return;
+    setTransferMsg("");
+    try {
+      const result = await addItemsBulk(sessionId, activeId, items);
+      if (result) {
+        const parts = [];
+        if (result.created.length) parts.push(`${result.created.length} added`);
+        if (result.duplicates.length) parts.push(`${result.duplicates.length} duplicates`);
+        if (result.rejected) parts.push(`${result.rejected} skipped (limit)`);
+        setTransferMsg(parts.join(" · "));
+        setTimeout(() => setTransferMsg(""), 4000);
+      }
+    } catch {
+      setTransferMsg("Transfer failed");
+      setTimeout(() => setTransferMsg(""), 3000);
+    }
+  }, [sessionId, activeId, addItemsBulk]);
+
+  const handleLoadMore = useCallback(async () => {
+    await loadMorePages();
+  }, [loadMorePages]);
 
   return (
     <div className="h-full flex flex-col p-3">
@@ -244,8 +277,32 @@ export default function SourcesPanel() {
           <h2 className="text-xs font-semibold text-text uppercase tracking-wider">
             Pages
           </h2>
-          <span className="text-xs text-dim">{filtered.length} pages</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-dim">{uniqueCount} pages</span>
+            {hasMore && (
+              <button
+                onClick={handleLoadMore}
+                className="text-[10px] text-dim hover:text-text transition-colors"
+              >
+                Load more
+              </button>
+            )}
+            <button
+              onClick={handleTransferAll}
+              disabled={!activeId}
+              className="text-[10px] px-2 py-0.5 rounded bg-text text-surface hover:opacity-80 transition-opacity disabled:opacity-30"
+              title={activeId ? "Transfer all sources to workspace" : "Select a workspace first"}
+            >
+              Transfer all ({uniqueCount})
+            </button>
+          </div>
         </div>
+
+        {transferMsg && (
+          <div className="px-3 py-1.5 text-[10px] text-muted bg-hover border-b border-border">
+            {transferMsg}
+          </div>
+        )}
 
         <div className="flex-1 flex min-h-0">
           {/* Filter sidebar */}

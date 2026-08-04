@@ -39,6 +39,8 @@ from server.src.api.schemas import (
     WorkspaceHighlightResponse,
     WorkspaceImageCreate,
     WorkspaceImageResponse,
+    WorkspaceBulkItemsRequest,
+    WorkspaceBulkItemsResponse,
     WorkspaceItemCreateRequest,
     WorkspaceItemResponse,
     WorkspaceItemUpdateRequest,
@@ -77,6 +79,7 @@ from server.src.services.stats_service import StatsCollector
 from server.src.services.summarizer import Summarizer
 from server.src.services.workspace_service import (
     add_item,
+    add_items_bulk,
     create_workspace,
     delete_item,
     delete_workspace,
@@ -579,6 +582,21 @@ async def item_create(
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e)) from None
     if not result:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    return result
+
+
+async def item_create_bulk(
+    request: Request,
+    ws_id: UUID,
+    body: WorkspaceBulkItemsRequest,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+) -> WorkspaceBulkItemsResponse:
+    session_id = get_session_id(request)
+    maker = request.app.state.db
+    async with maker() as db:
+        result = await add_items_bulk(db, session_id, ws_id, body)
+    if result is None:
         raise HTTPException(status_code=404, detail="Workspace not found")
     return result
 

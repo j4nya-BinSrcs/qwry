@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Hash, Image, Youtube, Maximize2, Minimize2, ShoppingBag, Newspaper, ExternalLink, BookOpen, Sparkles, Plus, Check, GripVertical } from "lucide-react";
+import { ChevronDown, ChevronRight, Hash, Image, Youtube, Maximize2, Minimize2, ShoppingBag, Newspaper, ExternalLink, BookOpen, Sparkles, Plus, Check, GripVertical, ArrowRight } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { useSearchStore } from "../stores/searchStore";
@@ -339,6 +339,19 @@ export default function DiscoveryPanel() {
   const videoResults = useSearchStore((s) => s.videoResults);
   const infobox = useSearchStore((s) => s.infobox);
   const results = useSearchStore((s) => s.results);
+  const addItemsBulk = useWorkspaceStore((s) => s.addItemsBulk);
+  const loadMoreImages = useSearchStore((s) => s.loadMoreImages);
+  const loadMoreVideos = useSearchStore((s) => s.loadMoreVideos);
+  const imageTotal = useSearchStore((s) => s.imageTotal);
+  const videoTotal = useSearchStore((s) => s.videoTotal);
+  const imagePage = useSearchStore((s) => s.imagePage);
+  const videoPage = useSearchStore((s) => s.videoPage);
+  const sessionId = useSessionStore((s) => s.sessionId);
+  const activeWsId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const [imageMsg, setImageMsg] = useState("");
+  const [videoMsg, setVideoMsg] = useState("");
+  const [newsMsg, setNewsMsg] = useState("");
+  const [shoppingMsg, setShoppingMsg] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
   const expandedPanel = useUIStore((s) => s.expandedPanel);
   const toggleExpand = useUIStore((s) => s.toggleExpand);
@@ -358,6 +371,114 @@ export default function DiscoveryPanel() {
   );
 
   const showAll = activeFilter === "all" || activeFilter === "all";
+
+  const handleAddAllImages = useCallback(async () => {
+    if (!activeWsId) return;
+    const items = imageResults.map((r) => ({
+      url: r.url,
+      title: r.title || "",
+      snippet: r.snippet || "",
+      source: r.source || "",
+      mediaUrl: r.img_src || r.thumbnail || null,
+    }));
+    if (items.length === 0) return;
+    setImageMsg("");
+    try {
+      const result = await addItemsBulk(sessionId, activeWsId, items);
+      if (result) {
+        const parts = [];
+        if (result.created.length) parts.push(`${result.created.length} added`);
+        if (result.duplicates.length) parts.push(`${result.duplicates.length} dupes`);
+        if (result.rejected) parts.push(`${result.rejected} skipped`);
+        setImageMsg(parts.join(" · "));
+        setTimeout(() => setImageMsg(""), 4000);
+      }
+    } catch {
+      setImageMsg("Failed");
+      setTimeout(() => setImageMsg(""), 3000);
+    }
+  }, [sessionId, activeWsId, addItemsBulk, imageResults]);
+
+  const handleAddAllVideos = useCallback(async () => {
+    if (!activeWsId) return;
+    const items = videoResults.map((r) => ({
+      url: r.url,
+      title: r.title || "",
+      snippet: r.snippet || "",
+      source: r.source || "",
+      mediaUrl: r.img_src || r.thumbnail || null,
+    }));
+    if (items.length === 0) return;
+    setVideoMsg("");
+    try {
+      const result = await addItemsBulk(sessionId, activeWsId, items);
+      if (result) {
+        const parts = [];
+        if (result.created.length) parts.push(`${result.created.length} added`);
+        if (result.duplicates.length) parts.push(`${result.duplicates.length} dupes`);
+        if (result.rejected) parts.push(`${result.rejected} skipped`);
+        setVideoMsg(parts.join(" · "));
+        setTimeout(() => setVideoMsg(""), 4000);
+      }
+    } catch {
+      setVideoMsg("Failed");
+      setTimeout(() => setVideoMsg(""), 3000);
+    }
+  }, [sessionId, activeWsId, addItemsBulk, videoResults]);
+
+  const handleAddAllNews = useCallback(async () => {
+    if (!activeWsId) return;
+    const items = newsResults.map((r) => ({
+      url: r.url,
+      title: r.title || "",
+      snippet: r.snippet || "",
+      source: r.source || "",
+      mediaUrl: r.img_src || null,
+    }));
+    if (items.length === 0) return;
+    setNewsMsg("");
+    try {
+      const result = await addItemsBulk(sessionId, activeWsId, items);
+      if (result) {
+        const parts = [];
+        if (result.created.length) parts.push(`${result.created.length} added`);
+        if (result.duplicates.length) parts.push(`${result.duplicates.length} dupes`);
+        if (result.rejected) parts.push(`${result.rejected} skipped`);
+        setNewsMsg(parts.join(" · "));
+        setTimeout(() => setNewsMsg(""), 4000);
+      }
+    } catch {
+      setNewsMsg("Failed");
+      setTimeout(() => setNewsMsg(""), 3000);
+    }
+  }, [sessionId, activeWsId, addItemsBulk, newsResults]);
+
+  const handleAddAllShopping = useCallback(async () => {
+    if (!activeWsId) return;
+    const items = shoppingResults.map((r) => ({
+      url: r.url,
+      title: r.title || "",
+      snippet: r.snippet || "",
+      source: r.source || "",
+      mediaUrl: r.img_src || r.thumbnail || null,
+    }));
+    if (items.length === 0) return;
+    setShoppingMsg("");
+    try {
+      const result = await addItemsBulk(sessionId, activeWsId, items);
+      if (result) {
+        const parts = [];
+        if (result.created.length) parts.push(`${result.created.length} added`);
+        if (result.duplicates.length) parts.push(`${result.duplicates.length} dupes`);
+        if (result.rejected) parts.push(`${result.rejected} skipped`);
+        setShoppingMsg(parts.join(" · "));
+        setTimeout(() => setShoppingMsg(""), 4000);
+      }
+    } catch {
+      setShoppingMsg("Failed");
+      setTimeout(() => setShoppingMsg(""), 3000);
+    }
+  }, [sessionId, activeWsId, addItemsBulk, shoppingResults]);
 
   return (
     <div className="h-full flex flex-col">
@@ -413,48 +534,116 @@ export default function DiscoveryPanel() {
             {(showAll || activeFilter === "images") && imageResults.length > 0 && (
               <div className="border-t border-border">
                 <SectionHeader title="Images" icon={Image} count={imageResults.length}>
-                  <MultiRowScroll rows={3}>
-                    {imageResults.map((r, i) => (
-                      <DraggableImageCard key={`img-${r.url}-${i}`} result={r} />
-                    ))}
-                  </MultiRowScroll>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleAddAllImages}
+                      disabled={!activeWsId}
+                      className="text-[10px] px-2 py-0.5 rounded bg-text text-surface hover:opacity-80 transition-opacity disabled:opacity-30"
+                      title={activeWsId ? "Add all images to workspace" : "Select a workspace first"}
+                    >
+                      Add all ({imageResults.length})
+                    </button>
+                    {imageResults.length < imageTotal && (
+                      <button
+                        onClick={loadMoreImages}
+                        className="text-[10px] text-dim hover:text-text transition-colors"
+                      >
+                        Load more
+                      </button>
+                    )}
+                  </div>
+                  {imageMsg && (
+                    <span className="text-[10px] text-muted">{imageMsg}</span>
+                  )}
                 </SectionHeader>
+                <MultiRowScroll rows={3}>
+                  {imageResults.map((r, i) => (
+                    <DraggableImageCard key={`img-${r.url}-${i}`} result={r} />
+                  ))}
+                </MultiRowScroll>
               </div>
             )}
 
             {(showAll || activeFilter === "videos") && videoResults.length > 0 && (
               <div className="border-t border-border">
                 <SectionHeader title="Videos" icon={Youtube} count={videoResults.length}>
-                  <MultiRowScroll rows={3}>
-                    {videoResults.map((r, i) => (
-                      <DraggableVideoCard key={`vid-${r.url}-${i}`} result={r} />
-                    ))}
-                  </MultiRowScroll>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleAddAllVideos}
+                      disabled={!activeWsId}
+                      className="text-[10px] px-2 py-0.5 rounded bg-text text-surface hover:opacity-80 transition-opacity disabled:opacity-30"
+                      title={activeWsId ? "Add all videos to workspace" : "Select a workspace first"}
+                    >
+                      Add all ({videoResults.length})
+                    </button>
+                    {videoResults.length < videoTotal && (
+                      <button
+                        onClick={loadMoreVideos}
+                        className="text-[10px] text-dim hover:text-text transition-colors"
+                      >
+                        Load more
+                      </button>
+                    )}
+                  </div>
+                  {videoMsg && (
+                    <span className="text-[10px] text-muted">{videoMsg}</span>
+                  )}
                 </SectionHeader>
+                <MultiRowScroll rows={3}>
+                  {videoResults.map((r, i) => (
+                    <DraggableVideoCard key={`vid-${r.url}-${i}`} result={r} />
+                  ))}
+                </MultiRowScroll>
               </div>
             )}
 
             {(showAll || activeFilter === "news") && newsResults.length > 0 && (
               <div className="border-t border-border">
                 <SectionHeader title="News" icon={Newspaper} count={newsResults.length}>
-                  <HorizontalScroll>
-                    {newsResults.map((r, i) => (
-                      <DraggableNewsCard key={`news-${r.url}-${i}`} result={r} />
-                    ))}
-                  </HorizontalScroll>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleAddAllNews}
+                      disabled={!activeWsId}
+                      className="text-[10px] px-2 py-0.5 rounded bg-text text-surface hover:opacity-80 transition-opacity disabled:opacity-30"
+                      title={activeWsId ? "Add all news to workspace" : "Select a workspace first"}
+                    >
+                      Add all ({newsResults.length})
+                    </button>
+                  </div>
+                  {newsMsg && (
+                    <span className="text-[10px] text-muted">{newsMsg}</span>
+                  )}
                 </SectionHeader>
+                <HorizontalScroll>
+                  {newsResults.map((r, i) => (
+                    <DraggableNewsCard key={`news-${r.url}-${i}`} result={r} />
+                  ))}
+                </HorizontalScroll>
               </div>
             )}
 
             {(showAll || activeFilter === "shopping") && shoppingResults.length > 0 && (
               <div className="border-t border-border">
                 <SectionHeader title="Shopping" icon={ShoppingBag} count={shoppingResults.length}>
-                  <HorizontalScroll>
-                    {shoppingResults.map((r, i) => (
-                      <DraggableShoppingCard key={`shop-${r.url}-${i}`} result={r} />
-                    ))}
-                  </HorizontalScroll>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleAddAllShopping}
+                      disabled={!activeWsId}
+                      className="text-[10px] px-2 py-0.5 rounded bg-text text-surface hover:opacity-80 transition-opacity disabled:opacity-30"
+                      title={activeWsId ? "Add all shopping items to workspace" : "Select a workspace first"}
+                    >
+                      Add all ({shoppingResults.length})
+                    </button>
+                  </div>
+                  {shoppingMsg && (
+                    <span className="text-[10px] text-muted">{shoppingMsg}</span>
+                  )}
                 </SectionHeader>
+                <HorizontalScroll>
+                  {shoppingResults.map((r, i) => (
+                    <DraggableShoppingCard key={`shop-${r.url}-${i}`} result={r} />
+                  ))}
+                </HorizontalScroll>
               </div>
             )}
           </>
