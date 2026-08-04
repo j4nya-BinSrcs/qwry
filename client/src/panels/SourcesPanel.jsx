@@ -287,22 +287,8 @@ export default function SourcesPanel() {
                 Load more
               </button>
             )}
-            <button
-              onClick={handleTransferAll}
-              disabled={!activeId}
-              className="text-[10px] px-2 py-0.5 rounded bg-text text-surface hover:opacity-80 transition-opacity disabled:opacity-30"
-              title={activeId ? "Transfer all sources to workspace" : "Select a workspace first"}
-            >
-              Transfer all ({uniqueCount})
-            </button>
           </div>
         </div>
-
-        {transferMsg && (
-          <div className="px-3 py-1.5 text-[10px] text-muted bg-hover border-b border-border">
-            {transferMsg}
-          </div>
-        )}
 
         <div className="flex-1 flex min-h-0">
           {/* Filter sidebar */}

@@ -535,14 +535,6 @@ export default function DiscoveryPanel() {
               <div className="border-t border-border">
                 <SectionHeader title="Images" icon={Image} count={imageResults.length}>
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleAddAllImages}
-                      disabled={!activeWsId}
-                      className="text-[10px] px-2 py-0.5 rounded bg-text text-surface hover:opacity-80 transition-opacity disabled:opacity-30"
-                      title={activeWsId ? "Add all images to workspace" : "Select a workspace first"}
-                    >
-                      Add all ({imageResults.length})
-                    </button>
                     {imageResults.length < imageTotal && (
                       <button
                         onClick={loadMoreImages}
@@ -568,14 +560,6 @@ export default function DiscoveryPanel() {
               <div className="border-t border-border">
                 <SectionHeader title="Videos" icon={Youtube} count={videoResults.length}>
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleAddAllVideos}
-                      disabled={!activeWsId}
-                      className="text-[10px] px-2 py-0.5 rounded bg-text text-surface hover:opacity-80 transition-opacity disabled:opacity-30"
-                      title={activeWsId ? "Add all videos to workspace" : "Select a workspace first"}
-                    >
-                      Add all ({videoResults.length})
-                    </button>
                     {videoResults.length < videoTotal && (
                       <button
                         onClick={loadMoreVideos}
@@ -600,16 +584,6 @@ export default function DiscoveryPanel() {
             {(showAll || activeFilter === "news") && newsResults.length > 0 && (
               <div className="border-t border-border">
                 <SectionHeader title="News" icon={Newspaper} count={newsResults.length}>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleAddAllNews}
-                      disabled={!activeWsId}
-                      className="text-[10px] px-2 py-0.5 rounded bg-text text-surface hover:opacity-80 transition-opacity disabled:opacity-30"
-                      title={activeWsId ? "Add all news to workspace" : "Select a workspace first"}
-                    >
-                      Add all ({newsResults.length})
-                    </button>
-                  </div>
                   {newsMsg && (
                     <span className="text-[10px] text-muted">{newsMsg}</span>
                   )}
@@ -625,16 +599,6 @@ export default function DiscoveryPanel() {
             {(showAll || activeFilter === "shopping") && shoppingResults.length > 0 && (
               <div className="border-t border-border">
                 <SectionHeader title="Shopping" icon={ShoppingBag} count={shoppingResults.length}>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleAddAllShopping}
-                      disabled={!activeWsId}
-                      className="text-[10px] px-2 py-0.5 rounded bg-text text-surface hover:opacity-80 transition-opacity disabled:opacity-30"
-                      title={activeWsId ? "Add all shopping items to workspace" : "Select a workspace first"}
-                    >
-                      Add all ({shoppingResults.length})
-                    </button>
-                  </div>
                   {shoppingMsg && (
                     <span className="text-[10px] text-muted">{shoppingMsg}</span>
                   )}
