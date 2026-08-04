@@ -37,9 +37,9 @@ export const useSearchStore = create((set, get) => ({
     try {
       const [mainData, imageData, videoData, newsData, suggestions] = await Promise.all([
         searchQuery(q, page, 50, resolvedProvider),
-        searchQuery(q, 1, 24, resolvedProvider, "images").catch(() => null),
-        searchQuery(q, 1, 24, resolvedProvider, "videos").catch(() => null),
-        searchQuery(q, 1, 24, resolvedProvider, "news").catch(() => null),
+        searchQuery(q, 1, 8, resolvedProvider, "images").catch(() => null),
+        searchQuery(q, 1, 8, resolvedProvider, "videos").catch(() => null),
+        searchQuery(q, 1, 8, resolvedProvider, "news").catch(() => null),
         fetchSuggestions(q, resolvedProvider).catch(() => []),
       ]);
       set({
@@ -83,7 +83,7 @@ export const useSearchStore = create((set, get) => ({
     if (!query) return;
     const nextPage = imagePage + 1;
     try {
-      const data = await searchQuery(query, nextPage, 24, provider, "images");
+      const data = await searchQuery(query, nextPage, 8, provider, "images");
       set((s) => ({
         imageResults: [...s.imageResults, ...(data.results || [])],
         imagePage: data.page || nextPage,
@@ -98,7 +98,7 @@ export const useSearchStore = create((set, get) => ({
     if (!query) return;
     const nextPage = videoPage + 1;
     try {
-      const data = await searchQuery(query, nextPage, 24, provider, "videos");
+      const data = await searchQuery(query, nextPage, 8, provider, "videos");
       set((s) => ({
         videoResults: [...s.videoResults, ...(data.results || [])],
         videoPage: data.page || nextPage,
@@ -113,7 +113,7 @@ export const useSearchStore = create((set, get) => ({
     if (!query) return;
     const nextPage = newsPage + 1;
     try {
-      const data = await searchQuery(query, nextPage, 24, provider, "news");
+      const data = await searchQuery(query, nextPage, 8, provider, "news");
       set((s) => ({
         newsResults: [...s.newsResults, ...(data.results || [])],
         newsPage: data.page || nextPage,
