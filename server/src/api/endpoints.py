@@ -165,6 +165,8 @@ async def suggest(
         suggestions, source = await _try_searxng_autocompleter(http, registry.searxng.base_url, q)
         if not suggestions:
             suggestions, source = await _try_searxng_search_suggestions(http, registry.searxng.base_url, q)
+        if not suggestions:
+            suggestions, source = await _try_searxng_result_titles(http, registry.searxng.base_url, q)
         if not suggestions and provider is None:
             suggestions, source = await _try_engine_search_suggestions(
                 http, registry.engine.base_url, q, registry.engine.timeout,
@@ -200,6 +202,27 @@ async def _try_searxng_search_suggestions(
             data = resp.json()
             if "suggestions" in data and isinstance(data["suggestions"], list):
                 return data["suggestions"], "searxng_search"
+    except Exception:
+        pass
+    return [], "none"
+
+
+async def _try_searxng_result_titles(
+    http: httpx.AsyncClient,
+    base_url: str,
+    q: str,
+) -> tuple[list[str], str]:
+    try:
+        resp = await http.get(
+            f"{base_url}/search",
+            params={"q": q, "format": "json", "categories": "general"},
+            timeout=3.0,
+        )
+        if resp.is_success:
+            data = resp.json()
+            titles = [r.get("title", "") for r in data.get("results", []) if r.get("title")]
+            if titles:
+                return titles[:10], "searxng_titles"
     except Exception:
         pass
     return [], "none"

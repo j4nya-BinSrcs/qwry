@@ -18,9 +18,11 @@ def test_suggest_returns_list(monkeypatch, client):
 def test_suggest_empty_suggestions(monkeypatch, client):
     mock_auto = AsyncMock(return_value=([], "none"))
     mock_search = AsyncMock(return_value=([], "none"))
+    mock_titles = AsyncMock(return_value=([], "none"))
     mock_engine = AsyncMock(return_value=(["engine title"], "engine"))
     monkeypatch.setattr(endpoints, "_try_searxng_autocompleter", mock_auto)
     monkeypatch.setattr(endpoints, "_try_searxng_search_suggestions", mock_search)
+    monkeypatch.setattr(endpoints, "_try_searxng_result_titles", mock_titles)
     monkeypatch.setattr(endpoints, "_try_engine_search_suggestions", mock_engine)
 
     resp = client.get("/api/suggest", params={"q": "test"})
@@ -32,9 +34,11 @@ def test_suggest_empty_suggestions(monkeypatch, client):
 def test_suggest_no_results(monkeypatch, client):
     mock_auto = AsyncMock(return_value=([], "none"))
     mock_search = AsyncMock(return_value=([], "none"))
+    mock_titles = AsyncMock(return_value=([], "none"))
     mock_engine = AsyncMock(return_value=([], "none"))
     monkeypatch.setattr(endpoints, "_try_searxng_autocompleter", mock_auto)
     monkeypatch.setattr(endpoints, "_try_searxng_search_suggestions", mock_search)
+    monkeypatch.setattr(endpoints, "_try_searxng_result_titles", mock_titles)
     monkeypatch.setattr(endpoints, "_try_engine_search_suggestions", mock_engine)
 
     resp = client.get("/api/suggest", params={"q": "xyz"})
