@@ -66,13 +66,13 @@ class SearxngClient:
             )
             for r in raw_results
             if r.get("url")
-        ]
+        ][:page_size]
 
         return SearchResponse(
             query=data.get("query", q),
             page=page,
             page_size=page_size,
-            total_results=total or len(results),
+            total_results=total or len(results) + page_size,
             results=results,
             provider="searxng",
             suggestions=data.get("suggestions", []),

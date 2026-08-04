@@ -22,9 +22,9 @@ export const useSearchStore = create((set, get) => ({
   imagePage: 1,
   videoPage: 1,
   newsPage: 1,
-  imageTotal: 0,
-  videoTotal: 0,
-  newsTotal: 0,
+  hasMoreImages: true,
+  hasMoreVideos: true,
+  hasMoreNews: true,
   provider: "searxng",
   activeFilter: "all",
   setQuery: (query) => set({ query }),
@@ -42,22 +42,25 @@ export const useSearchStore = create((set, get) => ({
         searchQuery(q, 1, 8, resolvedProvider, "news").catch(() => null),
         fetchSuggestions(q, resolvedProvider).catch(() => []),
       ]);
+      const images = imageData?.results?.filter((r) => r.img_src) || [];
+      const videos = videoData?.results || [];
+      const news = newsData?.results || [];
       set({
         results: mainData.results || [],
         suggestions: suggestions || [],
         infobox: mainData.infoboxes?.[0] || null,
-        imageResults: imageData?.results?.filter((r) => r.img_src) || [],
-        videoResults: videoData?.results || [],
-        newsResults: newsData?.results || [],
+        imageResults: images,
+        videoResults: videos,
+        newsResults: news,
         loading: false,
         page: mainData.page || page,
         totalResults: mainData.total_results ?? mainData.results?.length ?? 0,
         imagePage: 1,
         videoPage: 1,
         newsPage: 1,
-        imageTotal: imageData?.total_results ?? imageData?.results?.length ?? 0,
-        videoTotal: videoData?.total_results ?? videoData?.results?.length ?? 0,
-        newsTotal: newsData?.total_results ?? newsData?.results?.length ?? 0,
+        hasMoreImages: images.length >= 8,
+        hasMoreVideos: videos.length >= 8,
+        hasMoreNews: news.length >= 8,
       });
     } catch (err) {
       set({ error: err.message, loading: false });
@@ -84,10 +87,11 @@ export const useSearchStore = create((set, get) => ({
     const nextPage = imagePage + 1;
     try {
       const data = await searchQuery(query, nextPage, 8, provider, "images");
+      const newResults = data.results || [];
       set((s) => ({
-        imageResults: [...s.imageResults, ...(data.results || [])],
+        imageResults: [...s.imageResults, ...newResults.filter((r) => r.img_src)],
         imagePage: data.page || nextPage,
-        imageTotal: data.total_results ?? s.imageTotal,
+        hasMoreImages: newResults.length >= 8,
       }));
     } catch {
       set({ error: "Failed to load more images" });
@@ -99,10 +103,11 @@ export const useSearchStore = create((set, get) => ({
     const nextPage = videoPage + 1;
     try {
       const data = await searchQuery(query, nextPage, 8, provider, "videos");
+      const newResults = data.results || [];
       set((s) => ({
-        videoResults: [...s.videoResults, ...(data.results || [])],
+        videoResults: [...s.videoResults, ...newResults],
         videoPage: data.page || nextPage,
-        videoTotal: data.total_results ?? s.videoTotal,
+        hasMoreVideos: newResults.length >= 8,
       }));
     } catch {
       set({ error: "Failed to load more videos" });
@@ -114,10 +119,11 @@ export const useSearchStore = create((set, get) => ({
     const nextPage = newsPage + 1;
     try {
       const data = await searchQuery(query, nextPage, 8, provider, "news");
+      const newResults = data.results || [];
       set((s) => ({
-        newsResults: [...s.newsResults, ...(data.results || [])],
+        newsResults: [...s.newsResults, ...newResults],
         newsPage: data.page || nextPage,
-        newsTotal: data.total_results ?? s.newsTotal,
+        hasMoreNews: newResults.length >= 8,
       }));
     } catch {
       set({ error: "Failed to load more news" });
@@ -176,8 +182,8 @@ export const useSearchStore = create((set, get) => ({
       suggestions: [],
       infobox: null,
       totalResults: 0,
-      imageTotal: 0,
-      videoTotal: 0,
-      newsTotal: 0,
+      hasMoreImages: true,
+      hasMoreVideos: true,
+      hasMoreNews: true,
     }),
 }));

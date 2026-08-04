@@ -279,9 +279,9 @@ export default function DiscoveryPanel() {
   const loadMoreVideos = useSearchStore((s) => s.loadMoreVideos);
   const loadMoreNews = useSearchStore((s) => s.loadMoreNews);
   const loading = useSearchStore((s) => s.loading);
-  const imageTotal = useSearchStore((s) => s.imageTotal);
-  const videoTotal = useSearchStore((s) => s.videoTotal);
-  const newsTotal = useSearchStore((s) => s.newsTotal);
+  const hasMoreImages = useSearchStore((s) => s.hasMoreImages);
+  const hasMoreVideos = useSearchStore((s) => s.hasMoreVideos);
+  const hasMoreNews = useSearchStore((s) => s.hasMoreNews);
   const [activeFilter, setActiveFilter] = useState("all");
   const expandedPanel = useUIStore((s) => s.expandedPanel);
   const toggleExpand = useUIStore((s) => s.toggleExpand);
@@ -359,7 +359,7 @@ export default function DiscoveryPanel() {
                   </div>
                   <LoadMoreButton
                     loading={loading}
-                    hasMore={imageResults.length < imageTotal}
+                    hasMore={hasMoreImages}
                     onClick={loadMoreImages}
                   />
                 </div>
@@ -381,7 +381,7 @@ export default function DiscoveryPanel() {
                   </div>
                   <LoadMoreButton
                     loading={loading}
-                    hasMore={videoResults.length < videoTotal}
+                    hasMore={hasMoreVideos}
                     onClick={loadMoreVideos}
                   />
                 </div>
@@ -403,7 +403,7 @@ export default function DiscoveryPanel() {
                   </div>
                   <LoadMoreButton
                     loading={loading}
-                    hasMore={newsResults.length < newsTotal}
+                    hasMore={hasMoreNews}
                     onClick={loadMoreNews}
                   />
                 </div>
