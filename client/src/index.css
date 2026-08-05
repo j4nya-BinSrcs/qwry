@@ -4,32 +4,32 @@
 
 @theme {
   --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-  --color-surface: #f6f5f8;
+  --color-surface: #f7f6f2;
   --color-panel: #ffffff;
   --color-elevated: #ffffff;
-  --color-hover: #ecebf0;
-  --color-border: #e2e0e8;
-  --color-text: #232130;
-  --color-muted: #5c5a6b;
-  --color-dim: #8f8c9e;
-  --color-accent: #0d5c63;
-  --color-accent-hover: #147078;
+  --color-hover: #efeee9;
+  --color-border: #e5e2da;
+  --color-text: #242220;
+  --color-muted: #5c5850;
+  --color-dim: #938e84;
+  --color-accent: #7a6f50;
+  --color-accent-hover: #8f835f;
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
 }
 
 .dark {
-  --color-surface: #4e4b5c;
-  --color-panel: #565364;
-  --color-elevated: #5e5b6e;
-  --color-hover: #5b5870;
-  --color-border: #676478;
-  --color-text: #c1cad6;
-  --color-muted: #a6aebd;
-  --color-dim: #848ca0;
-  --color-accent: #0d5c63;
-  --color-accent-hover: #147078;
+  --color-surface: #252323;
+  --color-panel: #2d2b2a;
+  --color-elevated: #343130;
+  --color-hover: #3a3735;
+  --color-border: #443f3c;
+  --color-text: #e8e4dc;
+  --color-muted: #b9b2a6;
+  --color-dim: #8a847a;
+  --color-accent: #dad2bc;
+  --color-accent-hover: #e7e0cc;
 }
 
 * {
@@ -91,4 +91,31 @@ body {
   transform: scale(1.02);
   border: 1px solid var(--color-border);
   background: var(--color-surface);
+}
+
+/* Workspace masonry grid */
+.ws-grid {
+  display: grid;
+  grid-auto-rows: 8px;
+  grid-auto-flow: row;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 768px) {
+  .ws-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.ws-card {
+  grid-row: span var(--rows, 16);
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
+}
+.ws-card:hover {
+  grid-row: span var(--rows-hover, calc(var(--rows, 9) + 3));
+  transform: translateY(-1px);
+  z-index: 5;
+  border-color: var(--color-accent);
+  box-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.45);
 }

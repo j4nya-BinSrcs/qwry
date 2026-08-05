@@ -24,7 +24,7 @@ function loadTheme() {
     const stored = localStorage.getItem("qwry_theme");
     if (stored === "dark" || stored === "light") return stored;
   } catch {}
-  return "light";
+  return "dark";
 }
 
 function saveTheme(theme) {

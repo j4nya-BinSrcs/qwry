@@ -64,8 +64,11 @@ export const useWorkspaceStore = create((set, get) => ({
       await api.deleteWorkspace(sessionId, wsId);
       set((s) => {
         const ws = s.workspaces.filter((w) => w.id !== wsId);
+        const itemsByWorkspace = { ...s.itemsByWorkspace };
+        delete itemsByWorkspace[wsId];
         return {
           workspaces: ws,
+          itemsByWorkspace,
           activeWorkspaceId:
             s.activeWorkspaceId === wsId
               ? ws[0]?.id || null

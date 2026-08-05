@@ -1,10 +1,11 @@
-import { Layers, Moon, Plus, Search, Settings, Sun } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Layers, Moon, Plus, Search, Settings, Sun, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchStore } from "../stores/searchStore";
 import { useSessionStore } from "../stores/sessionStore";
 import { useUIStore } from "../stores/uiStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import SettingsPopup from "../components/SettingsPopup";
+import SmokeBackground from "../components/SmokeBackground";
 
 function getHostname(url) {
   try { return new URL(url).hostname; } catch { return ""; }
@@ -27,37 +28,55 @@ const GRADIENTS = [
   ["#596e8a", "#37445c"],
 ];
 
-const THUMB_HEIGHTS = [168, 200, 184, 216];
-const MAX_TILES = 6;
+const CAT_TILES = [4, 6, 8];
+const CAT_COLS = [2, 3, 4];
+const CAT_SPANS = [8, 9, 11];
+const FAV_SIZE = [16, 20, 24];
+const HOVER_GROW = 3;
+
+const PHRASES = [
+  "Search the web...",
+  "Save your research...",
+  "Study the results...",
+  "Organize your ideas...",
+];
 
 function faviconUrl(domain) {
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`;
 }
 
-function GradientTile({ seed }) {
+function gradientStyle(seed) {
   const grad = GRADIENTS[hashString(seed) % GRADIENTS.length];
-  return (
-    <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${grad[0]}, ${grad[1]})` }} />
-  );
+  return { background: `linear-gradient(135deg, ${grad[0]}, ${grad[1]})` };
 }
 
-function FaviconTile({ domain }) {
+function GradientTile({ seed }) {
+  return <div className="w-full h-full" style={gradientStyle(seed)} />;
+}
+
+function GradientSquare({ seed, size }) {
+  return <div style={{ width: size, height: size, borderRadius: 4, ...gradientStyle(seed) }} />;
+}
+
+function FaviconTile({ domain, size }) {
   const [failed, setFailed] = useState(false);
-  if (failed) return <GradientTile seed={domain} />;
+  if (failed) return <GradientSquare seed={domain} size={size} />;
   return (
-    <div className="w-full h-full bg-hover/50 flex items-center justify-center">
-      <img
-        src={faviconUrl(domain)}
-        alt=""
-        loading="lazy"
-        className="size-7 rounded-sm"
-        onError={() => setFailed(true)}
-      />
-    </div>
+    <img
+      src={faviconUrl(domain)}
+      alt=""
+      loading="lazy"
+      className="rounded-[3px]"
+      style={{ width: size, height: size }}
+      onError={() => setFailed(true)}
+    />
   );
 }
 
-function WorkspaceThumb({ ws, items }) {
+function WorkspaceThumb({ ws, items, cat }) {
+  const tiles = CAT_TILES[cat];
+  const cols = CAT_COLS[cat];
+  const favSize = FAV_SIZE[cat];
   const allDomains = useMemo(() => {
     const seen = new Set();
     const out = [];
@@ -70,36 +89,87 @@ function WorkspaceThumb({ ws, items }) {
     return out;
   }, [items]);
 
-  const height = THUMB_HEIGHTS[hashString(ws.id) % THUMB_HEIGHTS.length];
-  const shown = allDomains.slice(0, MAX_TILES);
-  const extra = Math.max(0, allDomains.length - MAX_TILES);
+  const shown = allDomains.slice(0, tiles);
+  const extra = Math.max(0, allDomains.length - tiles);
 
   if (allDomains.length === 0) {
     return (
-      <div className="w-full relative" style={{ height }}>
+      <div className="w-full relative flex-1 min-h-0 overflow-hidden">
         <GradientTile seed={ws.id} />
         <div className="absolute inset-0 flex items-center justify-center">
-          <Layers size={22} className="text-surface/80" />
+          <Layers size={12} className="text-surface/80" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full relative" style={{ height }}>
-      <div className="w-full h-full grid grid-cols-3 grid-rows-2 gap-0.5">
-        {shown.map((d) => <FaviconTile key={d} domain={d} />)}
-        {Array.from({ length: MAX_TILES - shown.length }).map((_, i) => (
-          <GradientTile key={`placeholder-${i}`} seed={`${ws.id}-${i}`} />
-        ))}
+    <div className="w-full relative flex-1 min-h-0 overflow-hidden">
+      <GradientTile seed={ws.id} />
+      <div className="absolute inset-0 flex items-center justify-center p-1">
+        <div
+          className="grid gap-px group-hover:scale-110 transition-transform duration-700 ease-out will-change-transform"
+          style={{ gridTemplateColumns: `repeat(${cols}, auto)`, justifyItems: "center", alignItems: "center" }}
+        >
+          {shown.map((d) => <FaviconTile key={d} domain={d} size={favSize} />)}
+          {Array.from({ length: tiles - shown.length }).map((_, i) => (
+            <GradientSquare key={`placeholder-${i}`} seed={`${ws.id}-${i}`} size={favSize} />
+          ))}
+        </div>
       </div>
       {extra > 0 && (
-        <span className="absolute bottom-1.5 right-1.5 bg-accent text-surface text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+        <span className="absolute bottom-1 right-1 bg-accent text-surface text-[9px] font-semibold px-1 py-px rounded-full">
           +{extra}
         </span>
       )}
     </div>
   );
+}
+
+function cardParams(ws, items) {
+  const count = ws.item_count ?? items?.length ?? 0;
+  const cat = count >= 10 ? 2 : count > 4 ? 1 : 0;
+  return { cat, span: CAT_SPANS[cat] };
+}
+
+function useTypewriter(paused) {
+  const [text, setText] = useState("");
+  const state = useRef({ phrase: 0, char: 0, deleting: false });
+
+  useEffect(() => {
+    if (paused) return;
+    let timer;
+    const tick = () => {
+      const { phrase, char, deleting } = state.current;
+      const current = PHRASES[phrase];
+      if (!deleting) {
+        const next = char + 1;
+        state.current.char = next;
+        setText(current.slice(0, next));
+        if (next === current.length) {
+          state.current.deleting = true;
+          timer = setTimeout(tick, 1800);
+        } else {
+          timer = setTimeout(tick, 50);
+        }
+      } else {
+        const next = char - 1;
+        state.current.char = next;
+        setText(current.slice(0, next));
+        if (next === 0) {
+          state.current.deleting = false;
+          state.current.phrase = (phrase + 1) % PHRASES.length;
+          timer = setTimeout(tick, 350);
+        } else {
+          timer = setTimeout(tick, 26);
+        }
+      }
+    };
+    timer = setTimeout(tick, 300);
+    return () => clearTimeout(timer);
+  }, [paused]);
+
+  return text;
 }
 
 export default function HomeView() {
@@ -110,6 +180,7 @@ export default function HomeView() {
   const loadWorkspaces = useWorkspaceStore((s) => s.loadWorkspaces);
   const loadAllItems = useWorkspaceStore((s) => s.loadAllItems);
   const createWorkspace = useWorkspaceStore((s) => s.createWorkspace);
+  const deleteWorkspace = useWorkspaceStore((s) => s.deleteWorkspace);
   const setActive = useWorkspaceStore((s) => s.setActiveWorkspace);
 
   const setSearchQuery = useSearchStore((s) => s.setQuery);
@@ -118,6 +189,7 @@ export default function HomeView() {
 
   const [quickQuery, setQuickQuery] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
   const theme = useUIStore((s) => s.theme);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
 
@@ -130,6 +202,8 @@ export default function HomeView() {
       loadAllItems(sessionId, workspaces);
     }
   }, [sessionId, workspaces, loadAllItems]);
+
+  const placeholder = useTypewriter(focused || quickQuery.length > 0);
 
   const handleQuickSearch = useCallback((e) => {
     e.preventDefault();
@@ -150,10 +224,19 @@ export default function HomeView() {
     setContextMode("workspace");
   }, [setActive, setContextMode]);
 
+  const handleDeleteWs = useCallback((e, wsId) => {
+    e.stopPropagation();
+    if (window.confirm("Delete this workspace?")) {
+      deleteWorkspace(sessionId, wsId);
+    }
+  }, [sessionId, deleteWorkspace]);
+
   return (
-    <div className="h-full overflow-y-auto relative">
+    <div className="h-full overflow-hidden relative flex flex-col">
+      <SmokeBackground />
+
       {/* Top controls */}
-      <div className="sticky top-0 z-10 flex items-center justify-end gap-2 px-6 py-3 bg-surface/80 backdrop-blur-sm">
+      <div className="relative z-10 flex flex-shrink-0 items-center justify-end gap-2 px-6 py-3">
         <button onClick={toggleTheme}
           className="flex items-center justify-center size-7 rounded text-dim hover:text-text hover:bg-hover transition-colors"
           title={theme === "dark" ? "Light mode" : "Dark mode"}
@@ -161,62 +244,84 @@ export default function HomeView() {
         <SettingsPopup open={settingsOpen} onToggle={() => setSettingsOpen(!settingsOpen)} />
       </div>
 
-      <div className="mx-auto max-w-5xl px-8 pt-12 pb-16">
-        {/* Hero section */}
-        <div className="text-center mb-14">
-          <div className="size-14 rounded-2xl bg-accent mb-5 flex items-center justify-center mx-auto shadow-lg shadow-accent/25">
-            <span className="text-surface text-2xl font-bold">Q</span>
+      <div className="relative z-10 flex-1 min-h-0 flex flex-col">
+        {/* Top: brand + search */}
+        <div className="flex-[2] flex items-end justify-center px-8 pb-10">
+          <div className="mx-auto w-full max-w-xl">
+            <div className="flex items-center justify-center gap-2.5 mb-2">
+              <div className="size-10 rounded-2xl bg-accent flex items-center justify-center shadow-lg shadow-accent/25">
+                <span className="text-surface text-base font-bold">Q</span>
+              </div>
+              <h1 className="text-xl font-semibold text-text tracking-wide">QWRY</h1>
+            </div>
+            <p className="text-[11px] text-muted text-center mb-4">Search, save, summarize, and organize your research.</p>
+
+            <form onSubmit={handleQuickSearch}>
+              <div className="relative">
+                <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-dim" />
+                <input type="text" value={quickQuery} onChange={(e) => setQuickQuery(e.target.value)}
+                  onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+                  placeholder={placeholder}
+                  className="w-full h-10 pl-10 pr-4 rounded-2xl bg-elevated border border-border text-sm text-text outline-none placeholder:text-dim focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all shadow-sm"
+                />
+              </div>
+            </form>
           </div>
-          <h1 className="text-3xl font-semibold text-text tracking-wide">QWRY</h1>
-          <p className="text-sm text-muted mt-2 max-w-md mx-auto">Search, save, summarize, and organize your research.</p>
         </div>
 
-        {/* Search */}
-        <form onSubmit={handleQuickSearch} className="mb-14">
-          <div className="relative max-w-xl mx-auto">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-dim" />
-            <input type="text" value={quickQuery} onChange={(e) => setQuickQuery(e.target.value)}
-              placeholder="Search the web..."
-              className="w-full h-12 pl-10 pr-4 rounded-2xl bg-elevated border border-border text-sm text-text outline-none placeholder:text-dim focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all shadow-sm"
-            />
-          </div>
-        </form>
-
-        {/* Workspaces */}
-        <div className="mb-12">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-text uppercase tracking-wider">Workspaces</h2>
-            <button onClick={handleCreateWs}
-              className="flex items-center gap-1.5 text-xs text-accent hover:text-accent-hover transition-colors"
-            ><Plus size={13} /> New</button>
-          </div>
-
-          {workspaces.length === 0 ? (
-            <div className="text-center py-12 rounded-2xl border border-dashed border-border">
-              <Layers size={24} className="text-dim mx-auto mb-3" />
-              <p className="text-sm text-muted">No workspaces yet</p>
+        {/* Bottom: workspace selector */}
+        <div className="flex-[8] min-h-0 flex items-start justify-center">
+          <div className="flex flex-col h-[90%] w-[50%] border border-border rounded-2xl overflow-hidden bg-surface/60">
+            <div className="flex items-center justify-between px-5 pt-3.5 pb-2.5">
+              <h2 className="text-sm font-semibold text-text uppercase tracking-wider">Workspaces</h2>
               <button onClick={handleCreateWs}
-                className="mt-4 text-sm px-4 py-2 rounded-lg bg-accent text-surface hover:bg-accent-hover transition-colors"
-              >Create your first workspace</button>
+                className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md text-accent hover:bg-accent hover:text-surface transition-colors"
+              ><Plus size={12} /> New</button>
             </div>
-          ) : (
-            <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-5">
-              {workspaces.map((ws) => (
-                <button key={ws.id} onClick={() => handleWsClick(ws.id)}
-                  className="block w-full mb-5 break-inside-avoid text-left bg-panel border border-border rounded-2xl overflow-hidden hover:border-accent/60 hover:shadow-lg hover:-translate-y-0.5 transition-all group"
-                >
-                  <WorkspaceThumb ws={ws} items={itemsByWorkspace[ws.id] || []} />
-                  <div className="px-4 py-3 flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-text truncate">{ws.name}</p>
-                      <p className="text-xs text-muted mt-0.5">{ws.item_count ?? 0} items</p>
-                    </div>
-                    <Layers size={14} className="text-dim shrink-0 group-hover:text-accent transition-colors" />
-                  </div>
-                </button>
-              ))}
+
+            <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-5">
+              {workspaces.length === 0 ? (
+                <div className="text-center py-10 rounded-xl border border-dashed border-border">
+                  <Layers size={24} className="text-dim mx-auto mb-3" />
+                  <p className="text-sm text-muted">No workspaces yet</p>
+                  <button onClick={handleCreateWs}
+                    className="mt-4 text-sm px-4 py-2 rounded-lg bg-accent text-surface hover:bg-accent-hover transition-colors"
+                  >Create your first workspace</button>
+                </div>
+              ) : (
+                <div className="ws-grid gap-3">
+                  {workspaces.map((ws) => {
+                    const items = itemsByWorkspace[ws.id] || [];
+                    const { cat, span } = cardParams(ws, items);
+                    return (
+                      <div key={ws.id} role="button" tabIndex={0}
+                        onClick={() => handleWsClick(ws.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") handleWsClick(ws.id);
+                        }}
+                        className="ws-card group w-full text-left bg-panel border border-border rounded-lg overflow-hidden cursor-pointer flex flex-col"
+                        style={{ "--rows": span, "--rows-hover": span + HOVER_GROW }}
+                      >
+                        <WorkspaceThumb ws={ws} items={items} cat={cat} />
+                        <div className="px-2 py-1.5 flex items-center justify-between gap-1.5">
+                          <div className="min-w-0 flex items-baseline gap-1">
+                            <p className="text-[11px] font-medium text-text truncate">{ws.name}</p>
+                            <span className="text-[9px] font-normal text-dim shrink-0">{ws.item_count ?? items.length}</span>
+                          </div>
+                          <button type="button" onClick={(e) => handleDeleteWs(e, ws.id)}
+                            className="flex items-center justify-center size-5 rounded-md text-dim hover:text-red-400 hover:bg-red-400/10 transition-colors shrink-0"
+                            title="Delete workspace"
+                          >
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
