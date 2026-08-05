@@ -5,6 +5,7 @@ export const useWorkspaceStore = create((set, get) => ({
   workspaces: [],
   activeWorkspaceId: null,
   items: [],
+  itemsByWorkspace: {},
   loading: false,
   error: null,
 
@@ -86,6 +87,22 @@ export const useWorkspaceStore = create((set, get) => ({
     } catch (err) {
       set({ error: err.message, loading: false });
     }
+  },
+
+  loadItemsByWorkspace: async (sessionId, wsId) => {
+    if (!wsId) return;
+    try {
+      const items = await api.listItems(sessionId, wsId);
+      set((s) => ({ itemsByWorkspace: { ...s.itemsByWorkspace, [wsId]: items } }));
+    } catch {
+      set((s) => ({ itemsByWorkspace: { ...s.itemsByWorkspace, [wsId]: [] } }));
+    }
+  },
+
+  loadAllItems: async (sessionId, workspaces = null) => {
+    const ws = workspaces || get().workspaces;
+    const targets = ws.slice(0, 30);
+    await Promise.all(targets.map((w) => get().loadItemsByWorkspace(sessionId, w.id)));
   },
 
   reorderItem: async (sessionId, itemId, order) => {

@@ -35,7 +35,7 @@ docs.
 | Low | N+1 drag-reorder: one PATCH per item in a loop. | `client/src/App.jsx:43` |
 | Low | `SummarizerView.jsx:102` calls `.delete` on a ref holding a string (no-op). | `SummarizerView.jsx:102` |
 | Low | Search input placeholder is leftover gibberish (`"Cofftset"`). | `client/src/components/TopBar.jsx:125` |
-| Low | Home workspace creation uses `prompt()` instead of an inline form. | `HomeView.jsx:62` |
+| Low | Home workspace creation uses `prompt()` instead of an inline form. | `HomeView.jsx:144` |
 
 ## Dead code
 

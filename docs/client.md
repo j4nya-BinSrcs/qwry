@@ -40,7 +40,7 @@ flowchart TB
 
 | Mode | View |
 |---|---|
-| `home` | HomeView — quick search, workspace list, profile picker |
+| `home` | HomeView — brand hero, centered search bar, workspace masonry grid |
 | `search-assist` | SearchAssist — AI overview over search results |
 | `workspace` | WorkspaceView — station + canvas tabs |
 | `reader` | ReaderView — article / image / video reader |
