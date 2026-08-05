@@ -98,8 +98,9 @@ The Canvas tab renders your workspace as a visual mind-map on a subtle grid back
 - **Cards match the Station view** — sources show favicon, hostname, title, snippet, and
   reader/summarize/open/pin actions; images and videos show thumbnails; notes and comparisons
   render their content inline.
-- **Navigate** — drag nodes to position them, pan with mouse or scroll, zoom with Ctrl+wheel,
-  and use the minimap and **fit-to-screen**.
+- **Navigate** — drag nodes to position them, drag the background (or middle/right-drag) to pan,
+  two-finger scroll pans on trackpads, and the mouse wheel or pinch **zooms toward the cursor**.
+  Use the minimap and **fit-to-screen**.
 - **Connect** nodes to show relationships (click a connection line to delete it); **Shift-click**
   to select several nodes and press **Delete** to remove them.
 - **Notes** — click **Note** in the toolbar, double-click the background, or use the empty-state

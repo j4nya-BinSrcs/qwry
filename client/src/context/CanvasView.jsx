@@ -58,6 +58,23 @@ function nodeSize(node) {
   return { w: d.w || node.width || 200, h: d.h || node.height || 120 };
 }
 
+const MIN_ZOOM = 0.1;
+const MAX_ZOOM = 5;
+
+function sanitizeZoom(z) {
+  return typeof z === "number" && Number.isFinite(z)
+    ? Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z))
+    : 1;
+}
+
+function sanitizeViewport(v) {
+  return {
+    x: Number.isFinite(v.x) ? v.x : 0,
+    y: Number.isFinite(v.y) ? v.y : 0,
+    zoom: sanitizeZoom(v.zoom),
+  };
+}
+
 const TYPE_LABELS = {
   source: "Source", note: "Note", image: "Image", video: "Video",
   comparison: "Comparison", ai_response: "AI Response", task: "Task",
@@ -299,6 +316,8 @@ function InspectorPanel({ node, obj, isPinned, onTogglePin, onDeleteNode, onDele
     setDraft({ title: obj?.title || node.label || "", content: obj?.content || "" });
     setSaved(false);
   }, [node.id]);
+
+  if (!node) return null;
 
   const data = obj?.data;
 
@@ -594,6 +613,7 @@ export default function CanvasView() {
 
         if (cancelled) return;
         setNodes(nodeMap);
+        setSelectedIds(new Set());
         setConnections(connList);
         setLoading(false);
       } catch (err) {
@@ -756,53 +776,68 @@ export default function CanvasView() {
   // ── Pan ───────────────────────────────────────────────────────────
 
   const handleMouseDown = useCallback((e) => {
-    if (e.button !== 0) return;
-    if (e.target !== e.currentTarget && !e.target.closest(".canvas-bg")) return;
+    if (e.button !== 0 && e.button !== 1 && e.button !== 2) return;
+    if (e.target && e.target.closest && e.target.closest(".canvas-ui")) return;
+    if (e.button === 0 && e.target !== e.currentTarget && !e.target.closest(".canvas-bg")) return;
+    if (e.button === 2) e.preventDefault();
     setSelectedIds(new Set());
-    panningRef.current = { startX: e.clientX, startY: e.clientY, origX: viewport.x, origY: viewport.y };
-  }, [viewport]);
+    panningRef.current = { lastX: e.clientX, lastY: e.clientY };
+  }, []);
 
-  // ── Zoom + scroll pan ─────────────────────────────────────────────
+  // ── Zoom + pan (native, non-passive wheel listener) ──────────────
 
-  const handleWheel = useCallback((e) => {
-    if (e.target.closest(".canvas-ui")) return;
-    e.preventDefault();
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    if (e.ctrlKey || e.metaKey) {
+  useEffect(() => {
+    if (loading || !activeId) return;
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e) => {
+      if (e.target && e.target.closest && e.target.closest(".canvas-ui")) return;
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      if (!rect) return;
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? Math.max(rect.height, 1) : 1;
+      const dx = Number.isFinite(e.deltaX) ? e.deltaX * unit : 0;
+      const dy = Number.isFinite(e.deltaY) ? e.deltaY * unit : 0;
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
-      const delta = -e.deltaY * 0.001;
-      const newZoom = Math.max(0.1, Math.min(5, viewport.zoom * (1 + delta)));
-      const scale = newZoom / viewport.zoom;
-      setViewport((v) => ({
-        x: mx - scale * (mx - v.x),
-        y: my - scale * (my - v.y),
-        zoom: newZoom,
-      }));
-    } else {
-      setViewport((v) => ({ x: v.x - e.deltaX, y: v.y - e.deltaY }));
-    }
-  }, [viewport]);
+      const isPinch = e.ctrlKey || e.metaKey;
+      if (isPinch || Math.max(Math.abs(dx), Math.abs(dy)) >= 15) {
+        const factor = Math.exp(-(dy || dx) * (isPinch ? 0.1 : 0.002));
+        setViewport((v) => {
+          const s = sanitizeViewport(v);
+          const newZoom = sanitizeZoom(s.zoom * factor);
+          const scale = newZoom / (s.zoom || 1);
+          return { x: mx - scale * (mx - s.x), y: my - scale * (my - s.y), zoom: newZoom };
+        });
+      } else {
+        setViewport((v) => sanitizeViewport({ ...v, x: v.x - dx, y: v.y - dy }));
+      }
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [loading, activeId]);
 
   // ── Window mouse events (drag/pan) ───────────────────────────────
 
   useEffect(() => {
     const handleMove = (e) => {
       if (panningRef.current) {
-        const dx = e.clientX - panningRef.current.startX;
-        const dy = e.clientY - panningRef.current.startY;
-        setViewport((v) => ({ ...v, x: panningRef.current.origX + dx, y: panningRef.current.origY + dy }));
+        const dx = e.clientX - panningRef.current.lastX;
+        const dy = e.clientY - panningRef.current.lastY;
+        panningRef.current.lastX = e.clientX;
+        panningRef.current.lastY = e.clientY;
+        setViewport((v) => sanitizeViewport({ ...v, x: v.x + dx, y: v.y + dy }));
       }
       if (draggingRef.current) {
         const d = draggingRef.current;
-        const dx = (e.clientX - d.startX) / zoomRef.current;
-        const dy = (e.clientY - d.startY) / zoomRef.current;
-        draggingRef.current.lastX = d.origX + dx;
-        draggingRef.current.lastY = d.origY + dy;
+        const zoom = Number.isFinite(zoomRef.current) ? zoomRef.current : 1;
+        const nx = Number.isFinite(d.origX + (e.clientX - d.startX) / zoom) ? d.origX + (e.clientX - d.startX) / zoom : d.origX;
+        const ny = Number.isFinite(d.origY + (e.clientY - d.startY) / zoom) ? d.origY + (e.clientY - d.startY) / zoom : d.origY;
+        draggingRef.current.lastX = nx;
+        draggingRef.current.lastY = ny;
         setNodes((prev) => prev[d.id] ? {
           ...prev,
-          [d.id]: { ...prev[d.id], x: d.origX + dx, y: d.origY + dy },
+          [d.id]: { ...prev[d.id], x: nx, y: ny },
         } : prev);
       }
     };
@@ -810,7 +845,9 @@ export default function CanvasView() {
       if (panningRef.current) panningRef.current = null;
       if (draggingRef.current) {
         const d = draggingRef.current;
-        updateNode(d.id, { x: d.lastX, y: d.lastY });
+        if (Number.isFinite(d.lastX) && Number.isFinite(d.lastY)) {
+          updateNode(d.id, { x: d.lastX, y: d.lastY });
+        }
         draggingRef.current = null;
       }
     };
@@ -924,12 +961,12 @@ export default function CanvasView() {
     const areaH = maxY - minY + 100;
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const zoom = Math.min(rect.width / areaW, rect.height / areaH, 1.5);
-    setViewport({
+    const zoom = sanitizeZoom(Math.min(rect.width / areaW, rect.height / areaH, 1.5));
+    setViewport(sanitizeViewport({
       x: (rect.width - areaW * zoom) / 2 - minX * zoom,
       y: (rect.height - areaH * zoom) / 2 - minY * zoom,
       zoom,
-    });
+    }));
   }, [nodes]);
 
   // ── Derived render state ──────────────────────────────────────────
@@ -981,6 +1018,7 @@ export default function CanvasView() {
 
   const transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`;
   const gridSize = 24 * viewport.zoom;
+  const zoomPct = Number.isFinite(viewport.zoom) ? Math.round(viewport.zoom * 100) : 100;
 
   return (
     <div className="h-full flex">
@@ -988,8 +1026,8 @@ export default function CanvasView() {
       <div className="flex-1 min-w-0 relative overflow-hidden bg-surface"
         ref={containerRef}
         onMouseDown={handleMouseDown}
-        onWheel={handleWheel}
         onDoubleClick={handleDoubleClick}
+        onContextMenu={(e) => e.preventDefault()}
       >
         {/* Grid background */}
         <div className="absolute inset-0 canvas-bg"
@@ -1137,11 +1175,11 @@ export default function CanvasView() {
             )}
           </div>
           <div className="w-px h-4 bg-border mx-1" />
-          <button onClick={() => setViewport((v) => ({ ...v, zoom: Math.max(0.1, v.zoom - 0.2) }))}
+          <button onClick={() => setViewport((v) => sanitizeViewport({ ...v, zoom: v.zoom - 0.2 }))}
             className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors" title="Zoom out"
           ><ZoomOut size={14} /></button>
-          <span className="text-[10px] text-dim w-10 text-center font-mono">{Math.round(viewport.zoom * 100)}%</span>
-          <button onClick={() => setViewport((v) => ({ ...v, zoom: Math.min(5, v.zoom + 0.2) }))}
+          <span className="text-[10px] text-dim w-10 text-center font-mono">{zoomPct}%</span>
+          <button onClick={() => setViewport((v) => sanitizeViewport({ ...v, zoom: v.zoom + 0.2 }))}
             className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors" title="Zoom in"
           ><ZoomIn size={14} /></button>
           <button onClick={fitToScreen}
