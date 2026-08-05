@@ -17,9 +17,10 @@ function getHostname(url) {
 }
 
 function centerOf(node) {
+  const s = nodeSize(node);
   return {
-    x: node.x + (node.width || NODE_DIMS[node.object_type]?.w || 240) / 2,
-    y: node.y + (node.height || NODE_DIMS[node.object_type]?.h || 120) / 2,
+    x: node.x + s.w / 2,
+    y: node.y + s.h / 2,
   };
 }
 
@@ -43,14 +44,19 @@ const NODE_COLORS = {
 };
 
 const NODE_DIMS = {
-  source: { w: 240, h: 150 },
-  note: { w: 240, h: 130 },
-  image: { w: 220, h: 180 },
-  video: { w: 220, h: 170 },
-  comparison: { w: 260, h: 130 },
-  ai_response: { w: 240, h: 130 },
-  task: { w: 220, h: 90 },
+  source: { w: 240, h: 210 },
+  note: { w: 240, h: 190 },
+  image: { w: 220, h: 200 },
+  video: { w: 220, h: 190 },
+  comparison: { w: 260, h: 150 },
+  ai_response: { w: 240, h: 170 },
+  task: { w: 220, h: 110 },
 };
+
+function nodeSize(node) {
+  const d = NODE_DIMS[node.object_type] || {};
+  return { w: d.w || node.width || 200, h: d.h || node.height || 120 };
+}
 
 const TYPE_LABELS = {
   source: "Source", note: "Note", image: "Image", video: "Video",
@@ -74,8 +80,7 @@ function IconBtn({ title, onClick, children, className }) {
 function NodeCard({ node, obj, isSelected, connectionMode, onSelect, onDragStart, onDelete, onConnect, onOpenReader, onOpenSummarizer, onOpenUrl, isPinned, onTogglePin, onEditNote }) {
   const type = node.object_type;
   const color = node.color || NODE_COLORS[type] || "#666";
-  const w = node.width || NODE_DIMS[type]?.w || 200;
-  const h = node.height || NODE_DIMS[type]?.h || 120;
+  const { w, h } = nodeSize(node);
   const domain = getHostname(obj?.url || "");
 
   return (
@@ -143,12 +148,12 @@ function NodeCard({ node, obj, isSelected, connectionMode, onSelect, onDragStart
             <IconBtn title="Remove from canvas" onClick={() => onDelete(node.id)}><Trash2 size={10} /></IconBtn>
           </div>
           <p className="text-xs font-medium text-text truncate">{obj?.title || node.label || "Untitled"}</p>
-          {type === "source" && obj?.snippet && <p className="text-[10px] text-muted mt-0.5 line-clamp-2 leading-relaxed">{obj.snippet}</p>}
-          {type === "note" && obj?.content && <p className="text-[10px] text-muted mt-0.5 line-clamp-3 leading-relaxed whitespace-pre-line">{obj.content}</p>}
+          {type === "source" && obj?.snippet && <p className="text-[10px] text-muted mt-0.5 line-clamp-3 leading-relaxed">{obj.snippet}</p>}
+          {type === "note" && obj?.content && <p className="text-[10px] text-muted mt-0.5 line-clamp-5 leading-relaxed whitespace-pre-line">{obj.content}</p>}
           {type === "comparison" && obj?.data?.sources?.length === 2 && (
             <p className="text-[10px] text-muted mt-0.5 truncate">{(obj.data.sources[0].title || "A")} vs {(obj.data.sources[1].title || "B")}</p>
           )}
-          {type === "ai_response" && obj?.response_text && <p className="text-[10px] text-muted mt-0.5 line-clamp-2 leading-relaxed">{obj.response_text}</p>}
+          {type === "ai_response" && obj?.response_text && <p className="text-[10px] text-muted mt-0.5 line-clamp-4 leading-relaxed">{obj.response_text}</p>}
           {type === "task" && obj?.name && <p className="text-[10px] text-muted mt-0.5 truncate">{obj.name}</p>}
           {type === "source" && (
             <div className="flex items-center gap-0.5 mt-auto pt-1.5">
@@ -227,8 +232,8 @@ function Minimap({ nodes, viewport }) {
   const ys = nodesArr.map((n) => n.y);
   const minX = Math.min(...xs) - 50;
   const minY = Math.min(...ys) - 50;
-  const maxX = Math.max(...xs.map((x, i) => x + (nodesArr[i].width || NODE_DIMS[nodesArr[i].object_type]?.w || 200))) + 50;
-  const maxY = Math.max(...ys.map((y, i) => y + (nodesArr[i].height || NODE_DIMS[nodesArr[i].object_type]?.h || 80))) + 50;
+  const maxX = Math.max(...xs.map((x, i) => x + nodeSize(nodesArr[i]).w)) + 50;
+  const maxY = Math.max(...ys.map((y, i) => y + nodeSize(nodesArr[i]).h)) + 50;
   const areaW = maxX - minX || 400;
   const areaH = maxY - minY || 400;
   const scale = Math.min((MINIMAP_SIZE - PAD * 2) / areaW, (MINIMAP_SIZE - PAD * 2) / areaH);
@@ -237,8 +242,9 @@ function Minimap({ nodes, viewport }) {
     <div className="canvas-ui absolute bottom-2 right-2 size-[120px] rounded border border-border bg-surface/80 backdrop-blur-sm overflow-hidden shadow-md z-10">
       <svg width={MINIMAP_SIZE} height={MINIMAP_SIZE}>
         {nodesArr.map((n) => {
-          const cx = PAD + (n.x + (n.width || NODE_DIMS[n.object_type]?.w || 200) / 2 - minX) * scale;
-          const cy = PAD + (n.y + (n.height || NODE_DIMS[n.object_type]?.h || 80) / 2 - minY) * scale;
+          const s = nodeSize(n);
+          const cx = PAD + (n.x + s.w / 2 - minX) * scale;
+          const cy = PAD + (n.y + s.h / 2 - minY) * scale;
           return <circle key={n.id} cx={cx} cy={cy} r={2} fill="var(--color-dim)" />;
         })}
         <rect
@@ -575,7 +581,7 @@ export default function CanvasView() {
                   object_type: si.type,
                   object_id: si.id,
                   x: col * 280 + 40,
-                  y: row * 220 + 40,
+                  y: row * 260 + 40,
                   width: dims.w,
                   height: dims.h,
                   label: si.label || "",
@@ -912,8 +918,8 @@ export default function CanvasView() {
     const ys = values.map((n) => n.y);
     const minX = Math.min(...xs);
     const minY = Math.min(...ys);
-    const maxX = Math.max(...xs.map((x, i) => x + (values[i].width || NODE_DIMS[values[i].object_type]?.w || 200)));
-    const maxY = Math.max(...ys.map((y, i) => y + (values[i].height || NODE_DIMS[values[i].object_type]?.h || 80)));
+    const maxX = Math.max(...xs.map((x, i) => x + nodeSize(values[i]).w));
+    const maxY = Math.max(...ys.map((y, i) => y + nodeSize(values[i]).h));
     const areaW = maxX - minX + 100;
     const areaH = maxY - minY + 100;
     const rect = containerRef.current?.getBoundingClientRect();
