@@ -1,6 +1,6 @@
 import {
   Book, Check, ExternalLink, Layers, MessageCircle,
-  Pencil, Pin, Plus, Search, Sparkles, Trash2, X,
+  Pencil, Pin, Plus, Scale, Search, Sparkles, Trash2, X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
@@ -332,7 +332,14 @@ function NotesSection({ notes, sessionId, wsId, pins, onCreateNote, onUpdateNote
 
 // ── Compare Panel ────────────────────────────────────────────────────────
 
-function ComparePanel({ sources, onClose }) {
+function snapshotSource(s) {
+  return {
+    _type: s._type, id: s.id, title: s.title, url: s.url, snippet: s.snippet,
+    summary: s.summary, notes: s.notes, caption: s.caption, thumbnail: s.thumbnail,
+  };
+}
+
+function ComparePanel({ sources, onClose, onSave }) {
   const [a, setA] = useState("");
   const [b, setB] = useState("");
 
@@ -381,7 +388,12 @@ function ComparePanel({ sources, onClose }) {
       <div className="px-3 py-2">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-xs font-semibold text-text">Compare Sources</h3>
-          <button onClick={onClose} className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors"><X size={12} /></button>
+          <div className="flex items-center gap-1">
+            <button onClick={() => onSave?.(srcA, srcB)}
+              className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-text text-surface hover:opacity-80 transition-opacity"
+            ><Plus size={10} /> Save</button>
+            <button onClick={onClose} className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors"><X size={12} /></button>
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
@@ -401,6 +413,49 @@ function ComparePanel({ sources, onClose }) {
             {srcB.notes && <p className="text-[10px] text-dim italic mt-0.5">{srcB.notes}</p>}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Saved Comparisons ────────────────────────────────────────────────────
+
+function SavedComparisons({ comparisons, onDelete }) {
+  const [openId, setOpenId] = useState(null);
+  if (comparisons.length === 0) return null;
+  return (
+    <div className="border-t border-border px-3 py-2">
+      <h3 className="text-xs font-semibold text-text mb-2">Saved Comparisons ({comparisons.length})</h3>
+      <div className="space-y-1">
+        {comparisons.map((c) => {
+          const data = c.data;
+          const open = openId === c.id;
+          return (
+            <div key={c.id} className="bg-panel border border-border rounded-md">
+              <div className="flex items-center gap-2 px-3 py-2">
+                <Scale size={12} className="text-dim shrink-0" />
+                <button onClick={() => setOpenId(open ? null : c.id)}
+                  className="flex-1 min-w-0 text-left text-xs text-text truncate hover:text-muted transition-colors"
+                >{c.title}</button>
+                <button onClick={() => onDelete(c.id)}
+                  className="p-0.5 rounded text-dim hover:text-text hover:bg-hover transition-colors" title="Delete comparison"
+                ><Trash2 size={11} /></button>
+              </div>
+              {open && data?.type === "two-way" && data.sources?.length === 2 && (
+                <div className="px-3 pb-3 pt-2 border-t border-border grid grid-cols-2 gap-3">
+                  {data.sources.map((s, i) => (
+                    <div key={i} className="space-y-1 min-w-0">
+                      <p className="text-xs font-medium text-text truncate">{s.title || "Untitled"}</p>
+                      <p className="text-[10px] text-dim">{s.url ? getHostname(s.url) : s._type}</p>
+                      {s.snippet && <p className="text-[10px] text-muted leading-relaxed">{s.snippet}</p>}
+                      {s.summary && <p className="text-[10px] text-text leading-relaxed">{s.summary}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -483,6 +538,13 @@ export default function StationView() {
   const handleDeleteNote = useCallback(async (sid, wsId, noteId) => {
     await station.deleteNote(sid, wsId, noteId);
   }, [station]);
+
+  const handleSaveComparison = useCallback(async (srcA, srcB) => {
+    if (!srcA || !srcB) return;
+    const title = `${srcA.title || "Untitled"} vs ${srcB.title || "Untitled"}`;
+    const data = { type: "two-way", sources: [snapshotSource(srcA), snapshotSource(srcB)] };
+    await station.createComparison(sessionId, activeId, title, data);
+  }, [station, sessionId, activeId]);
 
   if (!activeWs) {
     return (
@@ -579,8 +641,10 @@ export default function StationView() {
         </div>
 
         {compareOpen && (
-          <ComparePanel sources={allSources} onClose={() => setCompareOpen(false)} />
+          <ComparePanel sources={allSources} onClose={() => setCompareOpen(false)} onSave={handleSaveComparison} />
         )}
+
+        <SavedComparisons comparisons={station.comparisons} onDelete={async (id) => { await station.deleteComparison(sessionId, activeId, id); }} />
       </div>
 
       {chatOpen && <ChatModal workspaceId={activeId} workspaceName={activeWs?.name} onClose={() => setChatOpen(false)} />}

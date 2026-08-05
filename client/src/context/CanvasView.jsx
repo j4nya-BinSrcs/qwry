@@ -1,9 +1,14 @@
-import { Check, FileText, Image, Layers, Loader2, MessageCircle, Minus, Plus, Search, Tag, Trash2, Video, X, ZoomIn, ZoomOut } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Book, Check, ExternalLink, FileText, Image, Layers, Loader2, Maximize2, MessageCircle,
+  Pencil, Pin, Plus, Scale, Sparkles, Trash2, Video, X, ZoomIn, ZoomOut,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as canvasApi from "../api/canvas";
 import { useSessionStore } from "../stores/sessionStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import { useWorkspaceStationStore } from "../stores/workspaceStationStore";
+import { useUIStore } from "../stores/uiStore";
+import ChatModal from "../components/ChatModal";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -13,9 +18,18 @@ function getHostname(url) {
 
 function centerOf(node) {
   return {
-    x: node.x + (node.width || 200) / 2,
-    y: node.y + (node.height || 80) / 2,
+    x: node.x + (node.width || NODE_DIMS[node.object_type]?.w || 240) / 2,
+    y: node.y + (node.height || NODE_DIMS[node.object_type]?.h || 120) / 2,
   };
+}
+
+function Favicon({ domain }) {
+  return (
+    <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`} alt=""
+      className="size-4 rounded shrink-0"
+      onError={(e) => { e.target.style.display = "none"; }}
+    />
+  );
 }
 
 const NODE_COLORS = {
@@ -29,128 +43,142 @@ const NODE_COLORS = {
 };
 
 const NODE_DIMS = {
-  source: { w: 220, h: 80 },
-  note: { w: 220, h: 100 },
-  image: { w: 200, h: 160 },
-  video: { w: 220, h: 90 },
-  comparison: { w: 220, h: 70 },
-  ai_response: { w: 240, h: 100 },
-  task: { w: 220, h: 70 },
+  source: { w: 240, h: 150 },
+  note: { w: 240, h: 130 },
+  image: { w: 220, h: 180 },
+  video: { w: 220, h: 170 },
+  comparison: { w: 260, h: 130 },
+  ai_response: { w: 240, h: 130 },
+  task: { w: 220, h: 90 },
 };
+
+const TYPE_LABELS = {
+  source: "Source", note: "Note", image: "Image", video: "Video",
+  comparison: "Comparison", ai_response: "AI Response", task: "Task",
+};
+
+const GRID_LINE = "color-mix(in srgb, var(--color-border) 55%, transparent)";
+
+function IconBtn({ title, onClick, children, className }) {
+  return (
+    <button title={title}
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => { e.stopPropagation(); onClick && onClick(e); }}
+      className={`p-0.5 rounded text-dim hover:text-text hover:bg-hover transition-colors shrink-0 ${className || ""}`}
+    >{children}</button>
+  );
+}
 
 // ── Node Card ─────────────────────────────────────────────────────────────
 
-function NodeCard({ node, onClick, onDragStart, onDelete, onConnect, isSelected, connectionMode }) {
-  const color = NODE_COLORS[node.object_type] || "#666";
-
-  const content = () => {
-    switch (node.object_type) {
-      case "source":
-        return (
-          <>
-            <div className="flex items-center gap-2 min-w-0">
-              <Layers size={14} style={{ color }} className="shrink-0" />
-              <span className="text-xs font-medium text-text truncate">{node.label || node.object_id?.slice(0, 8)}</span>
-            </div>
-            {node.object_id && <span className="text-[10px] text-dim truncate mt-0.5 block">{node.object_id?.slice(0, 16)}</span>}
-          </>
-        );
-      case "note":
-        return (
-          <>
-            <div className="flex items-center gap-2 min-w-0">
-              <FileText size={14} style={{ color }} className="shrink-0" />
-              <span className="text-xs font-medium text-text truncate">{node.label || "Note"}</span>
-            </div>
-          </>
-        );
-      case "image":
-        return (
-          <>
-            <div className="flex items-center gap-2 min-w-0">
-              <Image size={14} style={{ color }} className="shrink-0" />
-              <span className="text-xs font-medium text-text truncate">{node.label || "Image"}</span>
-            </div>
-          </>
-        );
-      case "video":
-        return (
-          <>
-            <div className="flex items-center gap-2 min-w-0">
-              <Video size={14} style={{ color }} className="shrink-0" />
-              <span className="text-xs font-medium text-text truncate">{node.label || "Video"}</span>
-            </div>
-          </>
-        );
-      case "comparison":
-        return (
-          <div className="flex items-center gap-2 min-w-0">
-            <Search size={14} style={{ color }} className="shrink-0" />
-            <span className="text-xs font-medium text-text truncate">{node.label || "Comparison"}</span>
-          </div>
-        );
-      case "ai_response":
-        return (
-          <div className="flex items-center gap-2 min-w-0">
-            <MessageCircle size={14} style={{ color }} className="shrink-0" />
-            <span className="text-xs font-medium text-text truncate">{node.label || "AI Response"}</span>
-          </div>
-        );
-      case "task":
-        return (
-          <div className="flex items-center gap-2 min-w-0">
-            <Check size={14} style={{ color }} className="shrink-0" />
-            <span className="text-xs font-medium text-text truncate">{node.label || "Task"}</span>
-          </div>
-        );
-      default:
-        return <span className="text-xs text-text">{node.label || "Unknown"}</span>;
-    }
-  };
+function NodeCard({ node, obj, isSelected, connectionMode, onSelect, onDragStart, onDelete, onConnect, onOpenReader, onOpenSummarizer, onOpenUrl, isPinned, onTogglePin, onEditNote }) {
+  const type = node.object_type;
+  const color = node.color || NODE_COLORS[type] || "#666";
+  const w = node.width || NODE_DIMS[type]?.w || 200;
+  const h = node.height || NODE_DIMS[type]?.h || 120;
+  const domain = getHostname(obj?.url || "");
 
   return (
     <div
-      className={`absolute rounded-lg border-2 bg-panel shadow-md cursor-grab active:cursor-grabbing transition-shadow hover:shadow-lg overflow-hidden ${
-        isSelected ? "ring-2 ring-text" : connectionMode === node.id ? "ring-2 ring-text/60" : ""
+      className={`canvas-node absolute rounded-lg bg-panel border border-border overflow-hidden transition-all hover:border-text/40 hover:shadow-lg ${
+        isSelected ? "ring-2 ring-text" : connectionMode === node.id ? "ring-2 ring-text/60" : "shadow-sm"
       }`}
-      style={{
-        left: node.x, top: node.y, width: node.width || 200,
-        zIndex: node.z_index || 0,
-      }}
+      style={{ left: node.x, top: node.y, width: w, height: h, zIndex: node.z_index || 0 }}
       onMouseDown={(e) => { e.stopPropagation(); onDragStart(node.id, e); }}
-      onClick={(e) => { e.stopPropagation(); onClick(node.id); }}
+      onClick={(e) => { e.stopPropagation(); onSelect(node.id, e); }}
     >
-      <div className="h-1" style={{ backgroundColor: color }} />
-      <div className="px-3 py-2 space-y-1">
-        {content()}
-      </div>
-      <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 hover:opacity-100 transition-opacity">
-        {onConnect && (
-          <button
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={(e) => { e.stopPropagation(); onConnect(node.id); }}
-            className="p-0.5 rounded text-dim hover:text-text hover:bg-hover transition-colors"
-            title="Connect"
-          >
-            <Plus size={10} />
-          </button>
-        )}
-        <button
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); onDelete(node.id); }}
-          className="p-0.5 rounded text-dim hover:text-text hover:bg-hover transition-colors"
-          title="Remove"
-        >
-          <Trash2 size={10} />
-        </button>
-      </div>
+      <div className="h-0.5 shrink-0" style={{ backgroundColor: color }} />
+
+      {(type === "image" || type === "video") ? (
+        <div className="h-full flex flex-col">
+          <div className="relative flex-1 min-h-0 bg-hover overflow-hidden">
+            {(type === "video" ? obj?.thumbnail : obj?.url) ? (
+              <img src={type === "video" ? obj?.thumbnail : obj?.url} alt=""
+                className="w-full h-full object-cover"
+                onError={(e) => { e.target.style.display = "none"; }}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                {type === "image" ? <Image size={22} className="text-dim opacity-40" /> : <Video size={22} className="text-dim opacity-40" />}
+              </div>
+            )}
+            <div className="absolute top-1 right-1 flex gap-0.5">
+              {onConnect && <IconBtn title="Connect"><Plus size={10} /></IconBtn>}
+              <IconBtn title="Remove from canvas" onClick={() => onDelete(node.id)}><Trash2 size={10} /></IconBtn>
+            </div>
+          </div>
+          <div className="shrink-0 px-2.5 py-1.5 border-t border-border/50">
+            <p className="text-xs text-text truncate">{obj?.title || obj?.caption || node.label || TYPE_LABELS[type] || "Untitled"}</p>
+            <div className="flex items-center gap-1 mt-0.5">
+              {obj?.url ? (
+                <>
+                  <Favicon domain={getHostname(obj.url)} />
+                  <span className="text-[10px] text-muted truncate flex-1">{getHostname(obj.url)}</span>
+                  <IconBtn title="Open" onClick={() => onOpenUrl(obj.url)}><ExternalLink size={9} /></IconBtn>
+                </>
+              ) : (
+                <span className="text-[10px] text-muted truncate flex-1">{obj?.platform || ""}</span>
+              )}
+              {type === "video" && obj?.url && (
+                <IconBtn title="Summarize" onClick={() => onOpenSummarizer(obj.url, obj.title)}><Sparkles size={9} /></IconBtn>
+              )}
+              <IconBtn title={isPinned ? "Unpin" : "Pin"} onClick={() => onTogglePin(type, obj?.id || node.object_id)}>
+                <Pin size={9} className={isPinned ? "text-text" : ""} />
+              </IconBtn>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="h-full flex flex-col px-2.5 py-2 min-h-0">
+          <div className="flex items-center gap-1.5 mb-1">
+            {type === "source" && (domain ? <Favicon domain={domain} /> : <Layers size={11} style={{ color }} />)}
+            {type === "note" && <FileText size={11} style={{ color }} />}
+            {type === "comparison" && <Scale size={11} style={{ color }} />}
+            {type === "ai_response" && <MessageCircle size={11} style={{ color }} />}
+            {type === "task" && <Check size={11} style={{ color }} />}
+            {type === "source"
+              ? <span className="text-[10px] text-muted truncate flex-1">{domain || "Source"}</span>
+              : <span className="text-[10px] uppercase tracking-wider text-dim">{TYPE_LABELS[type]}</span>}
+            {onConnect && <IconBtn title="Connect"><Plus size={10} /></IconBtn>}
+            <IconBtn title="Remove from canvas" onClick={() => onDelete(node.id)}><Trash2 size={10} /></IconBtn>
+          </div>
+          <p className="text-xs font-medium text-text truncate">{obj?.title || node.label || "Untitled"}</p>
+          {type === "source" && obj?.snippet && <p className="text-[10px] text-muted mt-0.5 line-clamp-2 leading-relaxed">{obj.snippet}</p>}
+          {type === "note" && obj?.content && <p className="text-[10px] text-muted mt-0.5 line-clamp-3 leading-relaxed whitespace-pre-line">{obj.content}</p>}
+          {type === "comparison" && obj?.data?.sources?.length === 2 && (
+            <p className="text-[10px] text-muted mt-0.5 truncate">{(obj.data.sources[0].title || "A")} vs {(obj.data.sources[1].title || "B")}</p>
+          )}
+          {type === "ai_response" && obj?.response_text && <p className="text-[10px] text-muted mt-0.5 line-clamp-2 leading-relaxed">{obj.response_text}</p>}
+          {type === "task" && obj?.name && <p className="text-[10px] text-muted mt-0.5 truncate">{obj.name}</p>}
+          {type === "source" && (
+            <div className="flex items-center gap-0.5 mt-auto pt-1.5">
+              <IconBtn title="Reader" onClick={() => obj?.url && onOpenReader(obj.url, obj.title)}><Book size={10} /></IconBtn>
+              <IconBtn title="Summarize" onClick={() => obj?.url && onOpenSummarizer(obj.url, obj.title)}><Sparkles size={10} /></IconBtn>
+              <IconBtn title="Open" onClick={() => obj?.url && onOpenUrl(obj.url)}><ExternalLink size={10} /></IconBtn>
+              <div className="flex-1" />
+              <IconBtn title={isPinned ? "Unpin" : "Pin"} onClick={() => onTogglePin("source", obj?.id || node.object_id)}>
+                <Pin size={10} className={isPinned ? "text-text" : ""} />
+              </IconBtn>
+            </div>
+          )}
+          {type === "note" && (
+            <div className="flex items-center gap-0.5 mt-auto pt-1.5">
+              <IconBtn title="Edit note" onClick={() => onEditNote(node)}><Pencil size={10} /></IconBtn>
+              <div className="flex-1" />
+              <IconBtn title={isPinned ? "Unpin" : "Pin"} onClick={() => onTogglePin("note", obj?.id || node.object_id)}>
+                <Pin size={10} className={isPinned ? "text-text" : ""} />
+              </IconBtn>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Connection Lines (SVG) ───────────────────────────────────────────────
 
-function ConnectionLines({ connections, nodes }) {
+function ConnectionLines({ connections, nodes, onDelete }) {
   if (connections.length === 0) return null;
   return (
     <svg className="absolute inset-0 pointer-events-none" style={{ overflow: "visible" }}>
@@ -161,15 +189,26 @@ function ConnectionLines({ connections, nodes }) {
         const s = centerOf(src);
         const t = centerOf(tgt);
         const dash = conn.style === "dashed" ? "6,3" : conn.style === "dotted" ? "2,3" : undefined;
+        const mx = (s.x + t.x) / 2;
+        const my = (s.y + t.y) / 2;
         return (
-          <line
-            key={conn.id}
-            x1={s.x} y1={s.y} x2={t.x} y2={t.y}
-            stroke={conn.color || "#666"}
-            strokeWidth={2}
-            strokeDasharray={dash}
-            className="transition-all"
-          />
+          <g key={conn.id}>
+            <line x1={s.x} y1={s.y} x2={t.x} y2={t.y}
+              stroke="transparent" strokeWidth={10}
+              style={{ pointerEvents: "stroke", cursor: "pointer" }}
+              onClick={() => onDelete && onDelete(conn.id)}
+            />
+            <line x1={s.x} y1={s.y} x2={t.x} y2={t.y}
+              stroke={conn.color || "#666"} strokeWidth={2}
+              strokeDasharray={dash}
+              className="transition-all"
+            />
+            {conn.label && (
+              <text x={mx} y={my - 4} textAnchor="middle" fontSize="10" fill="var(--color-muted)" style={{ pointerEvents: "none" }}>
+                {conn.label}
+              </text>
+            )}
+          </g>
         );
       })}
     </svg>
@@ -188,28 +227,254 @@ function Minimap({ nodes, viewport }) {
   const ys = nodesArr.map((n) => n.y);
   const minX = Math.min(...xs) - 50;
   const minY = Math.min(...ys) - 50;
-  const maxX = Math.max(...xs.map((x) => x + (nodesArr.find((n) => n.x === x)?.width || 200))) + 50;
-  const maxY = Math.max(...ys.map((y) => y + (nodesArr.find((n) => n.y === y)?.height || 80))) + 50;
+  const maxX = Math.max(...xs.map((x, i) => x + (nodesArr[i].width || NODE_DIMS[nodesArr[i].object_type]?.w || 200))) + 50;
+  const maxY = Math.max(...ys.map((y, i) => y + (nodesArr[i].height || NODE_DIMS[nodesArr[i].object_type]?.h || 80))) + 50;
   const areaW = maxX - minX || 400;
   const areaH = maxY - minY || 400;
   const scale = Math.min((MINIMAP_SIZE - PAD * 2) / areaW, (MINIMAP_SIZE - PAD * 2) / areaH);
 
   return (
-    <div className="absolute bottom-2 right-2 size-[120px] rounded border border-border bg-surface/80 backdrop-blur-sm overflow-hidden shadow-md z-10">
+    <div className="canvas-ui absolute bottom-2 right-2 size-[120px] rounded border border-border bg-surface/80 backdrop-blur-sm overflow-hidden shadow-md z-10">
       <svg width={MINIMAP_SIZE} height={MINIMAP_SIZE}>
         {nodesArr.map((n) => {
-          const cx = PAD + (n.x + (n.width || 200) / 2 - minX) * scale;
-          const cy = PAD + (n.y + (n.height || 80) / 2 - minY) * scale;
-          return <circle key={n.id} cx={cx} cy={cy} r={2} fill="#888" />;
+          const cx = PAD + (n.x + (n.width || NODE_DIMS[n.object_type]?.w || 200) / 2 - minX) * scale;
+          const cy = PAD + (n.y + (n.height || NODE_DIMS[n.object_type]?.h || 80) / 2 - minY) * scale;
+          return <circle key={n.id} cx={cx} cy={cy} r={2} fill="var(--color-dim)" />;
         })}
         <rect
           x={PAD + (-viewport.x / viewport.zoom - minX) * scale}
           y={PAD + (-viewport.y / viewport.zoom - minY) * scale}
           width={(window.innerWidth || 800) / viewport.zoom * scale}
           height={(window.innerHeight || 600) / viewport.zoom * scale}
-          fill="none" stroke="#666" strokeWidth={1} rx={2}
+          fill="none" stroke="var(--color-muted)" strokeWidth={1} rx={2}
         />
       </svg>
+    </div>
+  );
+}
+
+// ── Legend ────────────────────────────────────────────────────────────────
+
+function Legend({ counts }) {
+  const entries = Object.keys(NODE_COLORS).filter((t) => counts[t] > 0);
+  if (entries.length === 0) return null;
+  return (
+    <div className="canvas-ui absolute bottom-2 left-2 z-10 rounded border border-border bg-surface/80 backdrop-blur-sm px-2 py-1.5 shadow-md">
+      {entries.map((t) => (
+        <div key={t} className="flex items-center gap-1.5 py-0.5">
+          <span className="size-1.5 rounded-full shrink-0" style={{ backgroundColor: NODE_COLORS[t] }} />
+          <span className="text-[10px] text-muted capitalize">{TYPE_LABELS[t]}</span>
+          <span className="text-[10px] text-dim ml-1">{counts[t]}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Inspector Panel ───────────────────────────────────────────────────────
+
+function InspectorBtn({ onClick, children, primary }) {
+  return (
+    <button onClick={onClick}
+      className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded transition-colors ${
+        primary ? "bg-text text-surface hover:opacity-80" : "border border-border text-text hover:bg-hover"
+      }`}
+    >{children}</button>
+  );
+}
+
+function InspectorPanel({ node, obj, isPinned, onTogglePin, onDeleteNode, onDeleteObject, onOpenReader, onOpenSummarizer, onOpenUrl, onUpdateNote, onClose }) {
+  const type = node.object_type;
+  const color = node.color || NODE_COLORS[type] || "#666";
+  const [draft, setDraft] = useState({ title: "", content: "" });
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setDraft({ title: obj?.title || node.label || "", content: obj?.content || "" });
+    setSaved(false);
+  }, [node.id]);
+
+  const data = obj?.data;
+
+  const renderBody = () => {
+    switch (type) {
+      case "source":
+        return (
+          <div className="space-y-2">
+            {obj?.url && (
+              <div className="flex items-center gap-1.5">
+                <Favicon domain={getHostname(obj.url)} />
+                <span className="text-[10px] text-muted truncate flex-1">{getHostname(obj.url)}</span>
+              </div>
+            )}
+            <p className="text-xs font-medium text-text">{obj?.title || node.label || "Untitled"}</p>
+            {obj?.snippet && <p className="text-xs text-muted leading-relaxed">{obj.snippet}</p>}
+            {obj?.summary && (
+              <div>
+                <div className="flex items-center gap-1 text-[10px] text-dim uppercase tracking-wide font-medium mb-0.5">
+                  <Sparkles size={10} /> Summary
+                </div>
+                <p className="text-xs text-muted leading-relaxed whitespace-pre-line">{obj.summary}</p>
+              </div>
+            )}
+            {obj?.notes && (
+              <div>
+                <div className="text-[10px] text-dim uppercase tracking-wide font-medium mb-0.5">Notes</div>
+                <p className="text-xs text-muted leading-relaxed whitespace-pre-line">{obj.notes}</p>
+              </div>
+            )}
+            <div className="flex items-center gap-1 pt-1">
+              {obj?.url && <InspectorBtn primary onClick={() => onOpenReader(obj.url, obj.title)}><Book size={10} /> Reader</InspectorBtn>}
+              {obj?.url && <InspectorBtn onClick={() => onOpenSummarizer(obj.url, obj.title)}><Sparkles size={10} /> Summarize</InspectorBtn>}
+              {obj?.url && <InspectorBtn onClick={() => onOpenUrl(obj.url)}><ExternalLink size={10} /> Open</InspectorBtn>}
+              <InspectorBtn onClick={() => onTogglePin("source", obj?.id || node.object_id)}><Pin size={10} /> {isPinned ? "Unpin" : "Pin"}</InspectorBtn>
+            </div>
+          </div>
+        );
+      case "note":
+        return (
+          <div className="space-y-2">
+            <input type="text" value={draft.title}
+              onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
+              placeholder="Title" maxLength={500}
+              className="w-full bg-hover border border-border rounded px-2 py-1.5 text-xs text-text outline-none placeholder:text-dim"
+            />
+            <textarea value={draft.content} rows={5}
+              onChange={(e) => setDraft((d) => ({ ...d, content: e.target.value }))}
+              placeholder="Content..."
+              className="w-full bg-hover border border-border rounded px-2 py-1.5 text-xs text-text outline-none placeholder:text-dim resize-none"
+            />
+            <div className="flex items-center gap-1">
+              <InspectorBtn primary onClick={async () => { await onUpdateNote(draft); setSaved(true); }}>
+                <Check size={10} /> Save
+              </InspectorBtn>
+              {saved && <span className="text-[10px] text-dim">Saved</span>}
+              <div className="flex-1" />
+              <InspectorBtn onClick={() => onTogglePin("note", obj?.id || node.object_id)}><Pin size={10} /> {isPinned ? "Unpin" : "Pin"}</InspectorBtn>
+            </div>
+          </div>
+        );
+      case "image":
+      case "video":
+        return (
+          <div className="space-y-2">
+            {(type === "video" ? obj?.thumbnail : obj?.url) && (
+              <img src={type === "video" ? obj?.thumbnail : obj?.url} alt=""
+                className="w-full h-24 object-cover rounded"
+                onError={(e) => { e.target.style.display = "none"; }}
+              />
+            )}
+            <p className="text-xs font-medium text-text">{obj?.title || obj?.caption || node.label || "Untitled"}</p>
+            {obj?.platform && <p className="text-[10px] text-muted">{obj.platform}</p>}
+            <div className="flex items-center gap-1 pt-1">
+              {obj?.url && <InspectorBtn primary onClick={() => onOpenUrl(obj.url)}><ExternalLink size={10} /> Open</InspectorBtn>}
+              {type === "video" && obj?.url && <InspectorBtn onClick={() => onOpenSummarizer(obj.url, obj.title)}><Sparkles size={10} /> Summarize</InspectorBtn>}
+              <InspectorBtn onClick={() => onTogglePin(type, obj?.id || node.object_id)}><Pin size={10} /> {isPinned ? "Unpin" : "Pin"}</InspectorBtn>
+            </div>
+          </div>
+        );
+      case "comparison":
+        return (
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-text">{node.label || obj?.title || "Comparison"}</p>
+            {data?.type === "two-way" && data.sources?.length === 2 ? (
+              <div className="grid grid-cols-2 gap-2">
+                {data.sources.map((s, i) => (
+                  <div key={i} className="space-y-1 min-w-0">
+                    <p className="text-[10px] font-medium text-text truncate">{s.title || "Untitled"}</p>
+                    <p className="text-[10px] text-dim">{s.url ? getHostname(s.url) : s._type}</p>
+                    {s.snippet && <p className="text-[10px] text-muted leading-relaxed line-clamp-3">{s.snippet}</p>}
+                    {s.summary && <p className="text-[10px] text-text leading-relaxed line-clamp-3">{s.summary}</p>}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted leading-relaxed whitespace-pre-line">{JSON.stringify(data ?? {})}</p>
+            )}
+          </div>
+        );
+      case "ai_response":
+        return <p className="text-xs text-muted leading-relaxed whitespace-pre-line">{obj?.response_text || node.label || "No content"}</p>;
+      case "task":
+        return <p className="text-xs text-muted leading-relaxed whitespace-pre-line">{obj?.description || node.label || "No content"}</p>;
+      default:
+        return <p className="text-xs text-muted">{node.label || "No content"}</p>;
+    }
+  };
+
+  return (
+    <div className="canvas-ui absolute top-2 right-2 z-20 w-64 max-h-[75%] overflow-y-auto rounded-lg border border-border bg-elevated/95 backdrop-blur-sm shadow-xl flex flex-col">
+      <div className="shrink-0 flex items-center justify-between px-3 py-2 border-b border-border sticky top-0 bg-elevated/95 backdrop-blur-sm">
+        <div className="flex items-center gap-1.5">
+          <span className="size-1.5 rounded-full" style={{ backgroundColor: color }} />
+          <span className="text-[11px] font-semibold text-text">{TYPE_LABELS[type] || "Node"}</span>
+        </div>
+        <IconBtn title="Close" onClick={onClose}><X size={12} /></IconBtn>
+      </div>
+      <div className="p-3">
+        {renderBody()}
+      </div>
+      <div className="shrink-0 px-3 py-2 border-t border-border flex items-center gap-1.5 sticky bottom-0 bg-elevated/95 backdrop-blur-sm">
+        <InspectorBtn onClick={() => onDeleteNode(node.id)}><Trash2 size={10} /> Remove</InspectorBtn>
+        <div className="flex-1" />
+        {onDeleteObject && (
+          <InspectorBtn onClick={onDeleteObject}><Trash2 size={10} /> Delete {TYPE_LABELS[type] || "Object"}</InspectorBtn>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Compare Dialog ────────────────────────────────────────────────────────
+
+function snapshotSource(s) {
+  return {
+    _type: s._type, id: s.id, title: s.title, url: s.url, snippet: s.snippet,
+    summary: s.summary, notes: s.notes, caption: s.caption, thumbnail: s.thumbnail,
+  };
+}
+
+function CompareDialog({ sources, onClose, onCreate }) {
+  const [a, setA] = useState("");
+  const [b, setB] = useState("");
+
+  const srcA = sources.find((s) => s.id === a);
+  const srcB = sources.find((s) => s.id === b);
+
+  const handleCreate = () => {
+    if (!srcA || !srcB || srcA.id === srcB.id) return;
+    const title = `${srcA.title || "Untitled"} vs ${srcB.title || "Untitled"}`;
+    const data = { type: "two-way", sources: [snapshotSource(srcA), snapshotSource(srcB)] };
+    onCreate(title, data);
+  };
+
+  return (
+    <div className="absolute inset-0 z-30 flex items-center justify-center bg-text/20" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()}
+        className="w-80 max-w-[90%] rounded-lg bg-elevated border border-border shadow-xl p-3">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs font-semibold text-text">Compare Sources</h3>
+          <IconBtn title="Close" onClick={onClose}><X size={12} /></IconBtn>
+        </div>
+        <div className="flex items-center gap-2 mb-2">
+          <select value={a} onChange={(e) => setA(e.target.value)}
+            className="flex-1 min-w-0 truncate bg-hover border border-border rounded px-2 py-1 text-xs text-text outline-none"
+          >
+            <option value="">Source A...</option>
+            {sources.map((s) => <option key={s.id} value={s.id}>{s.title || s.id?.slice(0, 12)}</option>)}
+          </select>
+          <span className="text-[10px] text-dim shrink-0">vs</span>
+          <select value={b} onChange={(e) => setB(e.target.value)}
+            className="flex-1 min-w-0 truncate bg-hover border border-border rounded px-2 py-1 text-xs text-text outline-none"
+          >
+            <option value="">Source B...</option>
+            {sources.map((s) => <option key={s.id} value={s.id}>{s.title || s.id?.slice(0, 12)}</option>)}
+          </select>
+        </div>
+        <button onClick={handleCreate} disabled={!srcA || !srcB || srcA.id === srcB.id}
+          className="w-full flex items-center justify-center gap-1 text-xs px-3 py-1.5 rounded bg-text text-surface hover:opacity-80 transition-opacity disabled:opacity-30"
+        ><Scale size={12} /> Create Comparison</button>
+      </div>
     </div>
   );
 }
@@ -219,6 +484,23 @@ function Minimap({ nodes, viewport }) {
 export default function CanvasView() {
   const sessionId = useSessionStore((s) => s.sessionId);
   const activeId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const workspaces = useWorkspaceStore((s) => s.workspaces);
+  const items = useWorkspaceStore((s) => s.items);
+  const notes = useWorkspaceStationStore((s) => s.notes);
+  const images = useWorkspaceStationStore((s) => s.images);
+  const videos = useWorkspaceStationStore((s) => s.videos);
+  const comparisons = useWorkspaceStationStore((s) => s.comparisons);
+  const pins = useWorkspaceStationStore((s) => s.pins);
+  const createNote = useWorkspaceStationStore((s) => s.createNote);
+  const updateNote = useWorkspaceStationStore((s) => s.updateNote);
+  const deleteNote = useWorkspaceStationStore((s) => s.deleteNote);
+  const createPin = useWorkspaceStationStore((s) => s.createPin);
+  const deletePin = useWorkspaceStationStore((s) => s.deletePin);
+  const createComparison = useWorkspaceStationStore((s) => s.createComparison);
+  const deleteComparison = useWorkspaceStationStore((s) => s.deleteComparison);
+  const openReader = useUIStore((s) => s.openReader);
+  const openSummarizer = useUIStore((s) => s.openSummarizer);
+
   const [nodes, setNodes] = useState({});
   const [connections, setConnections] = useState([]);
   const [viewport, setViewport] = useState({ x: 0, y: 0, zoom: 1 });
@@ -227,7 +509,12 @@ export default function CanvasView() {
 
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [connectionMode, setConnectionMode] = useState(null);
-  const [noteInput, setNoteInput] = useState("");
+  const [chatOpen, setChatOpen] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [addMenu, setAddMenu] = useState(false);
+  const [noteComposer, setNoteComposer] = useState(null);
+  const [noteTitle, setNoteTitle] = useState("");
+  const [noteContent, setNoteContent] = useState("");
 
   const containerRef = useRef(null);
   const draggingRef = useRef(null);
@@ -253,64 +540,54 @@ export default function CanvasView() {
         if (cancelled) return;
 
         const nodeMap = {};
-        for (const n of nodeList) {
-          nodeMap[`${n.object_type}:${n.object_id}`] = n;
-          nodeMap[n.id] = n;
-        }
+        for (const n of nodeList) nodeMap[n.id] = n;
 
-        // Load station data to find items without canvas nodes
+        // Load station data (best-effort)
+        const wsStore = useWorkspaceStore.getState();
+        const stationStore = useWorkspaceStationStore.getState();
         try {
-          const wsStore = useWorkspaceStore.getState();
-          const stationStore = useWorkspaceStationStore.getState();
           await Promise.all([
             wsStore.loadItems(sessionId, activeId),
             stationStore.loadAll(sessionId, activeId),
           ]);
-          const wsItems = useWorkspaceStore.getState().items;
-          const { notes, images, videos } = useWorkspaceStationStore.getState();
+        } catch { /* station load is best-effort */ }
+        if (cancelled) return;
 
+        // Auto-populate only when the canvas is brand new (so deleted nodes stay deleted)
+        if (nodeList.length === 0) {
+          const wsItems = useWorkspaceStore.getState().items;
+          const st = useWorkspaceStationStore.getState();
           const stationItems = [
             ...wsItems.map((i) => ({ type: "source", id: i.id, label: i.title })),
-            ...notes.map((n) => ({ type: "note", id: n.id, label: n.title })),
-            ...images.map((img) => ({ type: "image", id: img.id, label: img.caption })),
-            ...videos.map((v) => ({ type: "video", id: v.id, label: v.title })),
+            ...st.notes.map((n) => ({ type: "note", id: n.id, label: n.title })),
+            ...st.images.map((img) => ({ type: "image", id: img.id, label: img.caption })),
+            ...st.videos.map((v) => ({ type: "video", id: v.id, label: v.title })),
+            ...st.comparisons.map((c) => ({ type: "comparison", id: c.id, label: c.title })),
           ];
-
-          const toCreate = stationItems.filter((si) => !nodeMap[`${si.type}:${si.id}`]);
-
-          if (toCreate.length > 0) {
-            const gridCols = Math.ceil(Math.sqrt(toCreate.length));
+          if (stationItems.length > 0) {
+            const gridCols = Math.ceil(Math.sqrt(stationItems.length));
             const created = await Promise.all(
-              toCreate.map((si, i) => {
+              stationItems.map((si, i) => {
                 const dims = NODE_DIMS[si.type] || { w: 200, h: 80 };
                 const col = i % gridCols;
                 const row = Math.floor(i / gridCols);
                 return canvasApi.createNode(sessionId, activeId, {
                   object_type: si.type,
                   object_id: si.id,
-                  x: col * 260 + 50,
-                  y: row * 180 + 50,
+                  x: col * 280 + 40,
+                  y: row * 220 + 40,
                   width: dims.w,
                   height: dims.h,
                   label: si.label || "",
                 });
               })
             );
-            for (const cn of created) {
-              if (cn) {
-                nodeMap[cn.id] = cn;
-                nodeMap[`${cn.object_type}:${cn.object_id}`] = cn;
-              }
-            }
+            for (const cn of created) if (cn) nodeMap[cn.id] = cn;
           }
-        } catch { /* station load is best-effort */ }
-
-        // Build final node map (by id only)
-        const m = {};
-        for (const key in nodeMap) {
-          if (nodeMap[key].id) m[nodeMap[key].id] = nodeMap[key];
         }
-        setNodes(m);
+
+        if (cancelled) return;
+        setNodes(nodeMap);
         setConnections(connList);
         setLoading(false);
       } catch (err) {
@@ -324,10 +601,52 @@ export default function CanvasView() {
     return () => { cancelled = true; };
   }, [activeId, sessionId]);
 
+  // ── Lookups ───────────────────────────────────────────────────────
+
+  const objectMap = useMemo(() => {
+    const m = {};
+    for (const i of items) m[`source:${i.id}`] = i;
+    for (const n of notes) m[`note:${n.id}`] = n;
+    for (const im of images) m[`image:${im.id}`] = im;
+    for (const v of videos) m[`video:${v.id}`] = v;
+    for (const c of comparisons) m[`comparison:${c.id}`] = c;
+    return m;
+  }, [items, notes, images, videos, comparisons]);
+
+  const allSources = useMemo(() => [
+    ...items.map((i) => ({ ...i, _type: "page" })),
+    ...images.map((img) => ({ ...img, _type: "image" })),
+    ...videos.map((v) => ({ ...v, _type: "video" })),
+  ], [items, images, videos]);
+
+  const unplaced = useMemo(() => {
+    const placed = new Set(Object.values(nodes).map((n) => `${n.object_type}:${n.object_id}`));
+    const list = [];
+    for (const i of items) list.push({ key: `source:${i.id}`, type: "source", label: i.title || getHostname(i.url) || "Untitled", id: i.id });
+    for (const n of notes) list.push({ key: `note:${n.id}`, type: "note", label: n.title || "Untitled", id: n.id });
+    for (const im of images) list.push({ key: `image:${im.id}`, type: "image", label: im.caption || "Image", id: im.id });
+    for (const v of videos) list.push({ key: `video:${v.id}`, type: "video", label: v.title || "Video", id: v.id });
+    for (const c of comparisons) list.push({ key: `comparison:${c.id}`, type: "comparison", label: c.title || "Comparison", id: c.id });
+    return list.filter((x) => !placed.has(x.key));
+  }, [nodes, items, notes, images, videos, comparisons]);
+
+  const isPinned = useCallback((type, id) => {
+    const t = type === "source" ? "item" : type;
+    return pins.some((p) => p.pinnable_type === t && p.pinnable_id === id);
+  }, [pins]);
+
+  const togglePin = useCallback(async (type, id) => {
+    if (!activeId) return;
+    const t = type === "source" ? "item" : type;
+    const existing = pins.find((p) => p.pinnable_type === t && p.pinnable_id === id);
+    if (existing) await deletePin(sessionId, activeId, existing.id);
+    else await createPin(sessionId, activeId, t, id);
+  }, [activeId, sessionId, pins, deletePin, createPin]);
+
   // ── Node CRUD ─────────────────────────────────────────────────────
 
   const addNode = useCallback(async (objectType, objectId, label, x, y) => {
-    if (!activeId) return;
+    if (!activeId) return null;
     const dims = NODE_DIMS[objectType] || { w: 200, h: 80 };
     const node = await canvasApi.createNode(sessionId, activeId, {
       object_type: objectType, object_id: objectId || crypto.randomUUID(),
@@ -335,6 +654,7 @@ export default function CanvasView() {
       width: dims.w, height: dims.h, label: label || "",
     });
     if (node) setNodes((prev) => ({ ...prev, [node.id]: node }));
+    return node;
   }, [sessionId, activeId]);
 
   const updateNode = useCallback(async (nodeId, data) => {
@@ -354,8 +674,9 @@ export default function CanvasView() {
       await canvasApi.deleteNode(sessionId, activeId, nodeId);
       setNodes((prev) => { const { [nodeId]: _, ...rest } = prev; return rest; });
       setConnections((prev) => prev.filter((c) => c.source_node_id !== nodeId && c.target_node_id !== nodeId));
+      setSelectedIds((prev) => { const next = new Set(prev); next.delete(nodeId); return next; });
     } catch {}
-  }, [sessionId, activeId]);
+  }, [activeId, sessionId]);
 
   // ── Connections ───────────────────────────────────────────────────
 
@@ -367,7 +688,7 @@ export default function CanvasView() {
       });
       if (conn) setConnections((prev) => [...prev, conn]);
     } catch {}
-  }, [sessionId, activeId]);
+  }, [activeId, sessionId]);
 
   const deleteConnection = useCallback(async (connId) => {
     if (!activeId) return;
@@ -375,7 +696,56 @@ export default function CanvasView() {
       await canvasApi.deleteConnection(sessionId, activeId, connId);
       setConnections((prev) => prev.filter((c) => c.id !== connId));
     } catch {}
-  }, [sessionId, activeId]);
+  }, [activeId, sessionId]);
+
+  // ── Station ↔ canvas sync ─────────────────────────────────────────
+
+  const handleCreateNote = useCallback(async (title, content, x, y) => {
+    const note = await createNote(sessionId, activeId, title, content);
+    if (note) await addNode("note", note.id, note.title, x, y);
+    return note;
+  }, [createNote, sessionId, activeId, addNode]);
+
+  const handleUpdateNote = useCallback(async (noteId, draft) => {
+    const updated = await updateNote(sessionId, activeId, noteId, draft);
+    if (updated) {
+      const node = Object.values(nodes).find((n) => n.object_type === "note" && n.object_id === noteId);
+      if (node) updateNode(node.id, { label: updated.title });
+    }
+    return updated;
+  }, [updateNote, sessionId, activeId, nodes, updateNode]);
+
+  const handleDeleteNote = useCallback(async (noteId) => {
+    await deleteNote(sessionId, activeId, noteId);
+    const node = Object.values(nodes).find((n) => n.object_type === "note" && n.object_id === noteId);
+    if (node) deleteNode(node.id);
+  }, [deleteNote, sessionId, activeId, nodes, deleteNode]);
+
+  const handleCreateComparison = useCallback(async (title, data) => {
+    const comp = await createComparison(sessionId, activeId, title, data);
+    if (comp) {
+      const rect = containerRef.current?.getBoundingClientRect();
+      const x = rect ? (rect.width / 2 - viewport.x) / viewport.zoom - 130 : 200;
+      const y = rect ? (rect.height / 2 - viewport.y) / viewport.zoom - 60 : 200;
+      await addNode("comparison", comp.id, comp.title, x, y);
+    }
+    setCompareOpen(false);
+    return comp;
+  }, [createComparison, sessionId, activeId, addNode, viewport]);
+
+  const handleDeleteComparison = useCallback(async (compId) => {
+    await deleteComparison(sessionId, activeId, compId);
+    const node = Object.values(nodes).find((n) => n.object_type === "comparison" && n.object_id === compId);
+    if (node) deleteNode(node.id);
+  }, [deleteComparison, sessionId, activeId, nodes, deleteNode]);
+
+  const placeNode = useCallback(async (u) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    const x = rect ? (rect.width / 2 - viewport.x) / viewport.zoom - 120 + Math.random() * 40 : 200;
+    const y = rect ? (rect.height / 2 - viewport.y) / viewport.zoom - 60 + Math.random() * 40 : 200;
+    await addNode(u.type, u.id, u.label, x, y);
+    setAddMenu(false);
+  }, [addNode, viewport]);
 
   // ── Pan ───────────────────────────────────────────────────────────
 
@@ -386,23 +756,27 @@ export default function CanvasView() {
     panningRef.current = { startX: e.clientX, startY: e.clientY, origX: viewport.x, origY: viewport.y };
   }, [viewport]);
 
-  // ── Zoom ──────────────────────────────────────────────────────────
+  // ── Zoom + scroll pan ─────────────────────────────────────────────
 
   const handleWheel = useCallback((e) => {
-    if (!e.ctrlKey && !e.metaKey) return;
+    if (e.target.closest(".canvas-ui")) return;
     e.preventDefault();
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    const delta = -e.deltaY * 0.001;
-    const newZoom = Math.max(0.1, Math.min(5, viewport.zoom * (1 + delta)));
-    const scale = newZoom / viewport.zoom;
-    setViewport((v) => ({
-      x: mx - scale * (mx - v.x),
-      y: my - scale * (my - v.y),
-      zoom: newZoom,
-    }));
+    if (e.ctrlKey || e.metaKey) {
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const delta = -e.deltaY * 0.001;
+      const newZoom = Math.max(0.1, Math.min(5, viewport.zoom * (1 + delta)));
+      const scale = newZoom / viewport.zoom;
+      setViewport((v) => ({
+        x: mx - scale * (mx - v.x),
+        y: my - scale * (my - v.y),
+        zoom: newZoom,
+      }));
+    } else {
+      setViewport((v) => ({ x: v.x - e.deltaX, y: v.y - e.deltaY }));
+    }
   }, [viewport]);
 
   // ── Window mouse events (drag/pan) ───────────────────────────────
@@ -456,13 +830,17 @@ export default function CanvasView() {
 
   // ── Select ────────────────────────────────────────────────────────
 
-  const handleNodeClick = useCallback((nodeId) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(nodeId)) next.delete(nodeId);
-      else next.add(nodeId);
-      return next;
-    });
+  const handleNodeClick = useCallback((nodeId, e) => {
+    if (e.shiftKey) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(nodeId)) next.delete(nodeId);
+        else next.add(nodeId);
+        return next;
+      });
+    } else {
+      setSelectedIds(new Set([nodeId]));
+    }
   }, []);
 
   // ── Connection mode ───────────────────────────────────────────────
@@ -478,13 +856,52 @@ export default function CanvasView() {
     }
   }, [connectionMode, addConnection]);
 
-  // ── Create inline note ────────────────────────────────────────────
+  // ── Keyboard shortcuts ────────────────────────────────────────────
 
-  const handleCreateNote = useCallback(() => {
-    const title = noteInput.trim() || "New Note";
-    addNode("note", null, title, Math.random() * 400, Math.random() * 300);
-    setNoteInput("");
-  }, [noteInput, addNode]);
+  useEffect(() => {
+    const onKey = (e) => {
+      const tag = e.target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable) return;
+      if (e.key === "Escape") {
+        setConnectionMode(null);
+        setSelectedIds(new Set());
+        setAddMenu(false);
+        setCompareOpen(false);
+        setNoteComposer(null);
+        return;
+      }
+      if (e.key === "Delete" || e.key === "Backspace") {
+        if (selectedIds.size > 0) {
+          e.preventDefault();
+          for (const id of selectedIds) deleteNode(id);
+          setSelectedIds(new Set());
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedIds, deleteNode]);
+
+  // ── Double-click background → create note ─────────────────────────
+
+  const handleDoubleClick = useCallback((e) => {
+    if (e.target !== e.currentTarget && !e.target.closest(".canvas-bg")) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setNoteComposer({ px: e.clientX - rect.left, py: e.clientY - rect.top });
+    setNoteTitle("");
+    setNoteContent("");
+  }, []);
+
+  const createNoteAt = useCallback(async () => {
+    if (!noteTitle.trim() || !noteComposer) return;
+    const x = (noteComposer.px - viewport.x) / viewport.zoom;
+    const y = (noteComposer.py - viewport.y) / viewport.zoom;
+    await handleCreateNote(noteTitle.trim(), noteContent, x, y);
+    setNoteComposer(null);
+    setNoteTitle("");
+    setNoteContent("");
+  }, [noteTitle, noteContent, noteComposer, viewport, handleCreateNote]);
 
   // ── Fit to screen ─────────────────────────────────────────────────
 
@@ -495,8 +912,8 @@ export default function CanvasView() {
     const ys = values.map((n) => n.y);
     const minX = Math.min(...xs);
     const minY = Math.min(...ys);
-    const maxX = Math.max(...xs.map((x, i) => x + (values[i].width || 200)));
-    const maxY = Math.max(...ys.map((y, i) => y + (values[i].height || 80)));
+    const maxX = Math.max(...xs.map((x, i) => x + (values[i].width || NODE_DIMS[values[i].object_type]?.w || 200)));
+    const maxY = Math.max(...ys.map((y, i) => y + (values[i].height || NODE_DIMS[values[i].object_type]?.h || 80)));
     const areaW = maxX - minX + 100;
     const areaH = maxY - minY + 100;
     const rect = containerRef.current?.getBoundingClientRect();
@@ -508,6 +925,18 @@ export default function CanvasView() {
       zoom,
     });
   }, [nodes]);
+
+  // ── Derived render state ──────────────────────────────────────────
+
+  const counts = useMemo(() => {
+    const c = {};
+    for (const n of Object.values(nodes)) c[n.object_type] = (c[n.object_type] || 0) + 1;
+    return c;
+  }, [nodes]);
+
+  const selectedNode = selectedIds.size === 1 ? nodes[[...selectedIds][0]] : null;
+  const selectedObj = selectedNode ? objectMap[`${selectedNode.object_type}:${selectedNode.object_id}`] : null;
+  const workspaceName = workspaces.find((w) => w.id === activeId)?.name;
 
   // ── Render ────────────────────────────────────────────────────────
 
@@ -545,6 +974,7 @@ export default function CanvasView() {
   }
 
   const transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`;
+  const gridSize = 24 * viewport.zoom;
 
   return (
     <div className="h-full flex">
@@ -553,31 +983,39 @@ export default function CanvasView() {
         ref={containerRef}
         onMouseDown={handleMouseDown}
         onWheel={handleWheel}
+        onDoubleClick={handleDoubleClick}
       >
         {/* Grid background */}
         <div className="absolute inset-0 canvas-bg"
           style={{
-            backgroundImage: "radial-gradient(circle, #e5e5e5 1px, transparent 1px)",
-            backgroundSize: `${20 * viewport.zoom}px ${20 * viewport.zoom}px`,
-            transform: `translate(${viewport.x % (20 * viewport.zoom)}px, ${viewport.y % (20 * viewport.zoom)}px)`,
+            backgroundImage: `linear-gradient(to right, ${GRID_LINE} 1px, transparent 1px), linear-gradient(to bottom, ${GRID_LINE} 1px, transparent 1px)`,
+            backgroundSize: `${gridSize}px ${gridSize}px`,
+            transform: `translate(${viewport.x % gridSize}px, ${viewport.y % gridSize}px)`,
           }}
         />
 
         {/* Connection SVG */}
         <div style={{ transform, transformOrigin: "0 0", position: "absolute", top: 0, left: 0 }}>
-          <ConnectionLines connections={connections} nodes={nodes} />
+          <ConnectionLines connections={connections} nodes={nodes} onDelete={deleteConnection} />
         </div>
 
         {/* Nodes */}
         <div style={{ transform, transformOrigin: "0 0", position: "absolute", top: 0, left: 0 }}>
           {Object.values(nodes).map((node) => (
             <NodeCard key={node.id} node={node}
+              obj={objectMap[`${node.object_type}:${node.object_id}`]}
               isSelected={selectedIds.has(node.id)}
               connectionMode={connectionMode}
-              onClick={handleNodeClick}
+              onSelect={handleNodeClick}
               onDragStart={handleNodeDragStart}
               onDelete={deleteNode}
               onConnect={handleConnect}
+              onOpenReader={openReader}
+              onOpenSummarizer={openSummarizer}
+              onOpenUrl={(url) => window.open(url, "_blank")}
+              isPinned={isPinned(node.object_type, node.object_id)}
+              onTogglePin={togglePin}
+              onEditNote={(n) => setSelectedIds(new Set([n.id]))}
             />
           ))}
         </div>
@@ -589,9 +1027,9 @@ export default function CanvasView() {
               <div className="size-8 rounded bg-hover border border-border flex items-center justify-center mx-auto mb-3">
                 <Layers size={16} className="text-dim" />
               </div>
-              <p className="text-xs text-muted max-w-xs mb-3">Canvas is empty — add sources from Search Assist or create a note</p>
+              <p className="text-xs text-muted max-w-xs mb-3">Canvas is empty — double-click anywhere to add a note, use the Add menu, or add sources from Search Assist</p>
               <div className="flex items-center justify-center gap-2">
-                <button onClick={() => { const name = prompt("Note title:"); if (name) addNode("note", null, name, 100, 100); }}
+                <button onClick={() => { const r = containerRef.current?.getBoundingClientRect(); setNoteComposer(r ? { px: r.width / 2 - 80, py: r.height / 2 - 60 } : { px: 200, py: 200 }); }}
                   className="pointer-events-auto text-xs px-3 py-1.5 rounded border border-border text-text hover:bg-hover transition-colors"
                 >+ New Note</button>
               </div>
@@ -599,11 +1037,100 @@ export default function CanvasView() {
           </div>
         )}
 
+        {/* Legend */}
+        <Legend counts={counts} />
+
         {/* Minimap */}
         <Minimap nodes={nodes} viewport={viewport} />
 
+        {/* Inspector */}
+        {selectedNode && (
+          <InspectorPanel
+            node={selectedNode}
+            obj={selectedObj}
+            isPinned={selectedObj ? isPinned(selectedNode.object_type, selectedObj.id) : false}
+            onTogglePin={togglePin}
+            onDeleteNode={deleteNode}
+            onDeleteObject={selectedNode.object_type === "note"
+              ? () => handleDeleteNote(selectedNode.object_id)
+              : selectedNode.object_type === "comparison"
+                ? () => handleDeleteComparison(selectedNode.object_id)
+                : null}
+            onOpenReader={openReader}
+            onOpenSummarizer={openSummarizer}
+            onOpenUrl={(url) => window.open(url, "_blank")}
+            onUpdateNote={(draft) => handleUpdateNote(selectedNode.object_id, draft)}
+            onClose={() => setSelectedIds(new Set())}
+          />
+        )}
+
+        {/* Note composer */}
+        {noteComposer && (
+          <div className="canvas-ui absolute z-30 w-56 rounded-lg border border-border bg-elevated shadow-xl p-2"
+            style={{ left: noteComposer.px, top: noteComposer.py }}
+          >
+            <input type="text" value={noteTitle} onChange={(e) => setNoteTitle(e.target.value)}
+              placeholder="Title..." maxLength={120} autoFocus
+              className="w-full bg-hover border border-border rounded px-2 py-1.5 text-xs text-text outline-none placeholder:text-dim mb-1.5"
+              onKeyDown={(e) => { if (e.key === "Enter") createNoteAt(); if (e.key === "Escape") setNoteComposer(null); }}
+            />
+            <input type="text" value={noteContent} onChange={(e) => setNoteContent(e.target.value)}
+              placeholder="Content (optional)" maxLength={500}
+              className="w-full bg-hover border border-border rounded px-2 py-1.5 text-xs text-text outline-none placeholder:text-dim mb-1.5"
+            />
+            <div className="flex items-center gap-1">
+              <button onClick={createNoteAt} disabled={!noteTitle.trim()}
+                className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-text text-surface hover:opacity-80 transition-opacity disabled:opacity-30"
+              ><Plus size={10} /> Add</button>
+              <button onClick={() => setNoteComposer(null)}
+                className="text-[10px] px-2 py-1 rounded border border-border text-dim hover:text-text transition-colors"
+              >Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {/* Compare dialog */}
+        {compareOpen && (
+          <CompareDialog sources={allSources}
+            onClose={() => setCompareOpen(false)}
+            onCreate={handleCreateComparison}
+          />
+        )}
+
         {/* Toolbar */}
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-1.5 rounded-lg bg-surface/90 backdrop-blur-sm border border-border shadow-md z-10">
+        <div className="canvas-ui absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-1.5 rounded-lg bg-surface/90 backdrop-blur-sm border border-border shadow-md z-10">
+          <button onClick={() => { const r = containerRef.current?.getBoundingClientRect(); setNoteComposer(r ? { px: r.width / 2 - 80, py: r.height / 2 - 60 } : { px: 200, py: 200 }); setNoteTitle(""); setNoteContent(""); }}
+            className="flex items-center gap-1 px-2 py-1 rounded text-[11px] text-text hover:bg-hover transition-colors" title="Create a note on the canvas"
+          ><FileText size={12} /> Note</button>
+          <button onClick={() => setCompareOpen(true)}
+            className="flex items-center gap-1 px-2 py-1 rounded text-[11px] text-text hover:bg-hover transition-colors" title="Compare two sources"
+          ><Scale size={12} /> Compare</button>
+          <button onClick={() => setChatOpen(true)}
+            className="flex items-center gap-1 px-2 py-1 rounded text-[11px] text-text hover:bg-hover transition-colors" title="Chat about the workspace"
+          ><MessageCircle size={12} /> Chat</button>
+          <div className="relative">
+            <button onClick={() => setAddMenu(!addMenu)}
+              className="flex items-center gap-1 px-2 py-1 rounded text-[11px] text-text hover:bg-hover transition-colors" title="Add a station item to the canvas"
+            ><Plus size={12} /> Add{unplaced.length > 0 ? ` (${unplaced.length})` : ""}</button>
+            {addMenu && (
+              <div className="absolute bottom-full left-0 mb-1 w-64 max-h-64 overflow-y-auto rounded-lg bg-elevated border border-border shadow-xl z-20">
+                <div className="px-3 py-1.5 text-[10px] text-muted font-medium border-b border-border">Add from station</div>
+                {unplaced.length === 0 && (
+                  <div className="px-3 py-3 text-[10px] text-dim text-center">All station items are already on the canvas</div>
+                )}
+                {unplaced.map((u) => (
+                  <button key={u.key} onClick={() => placeNode(u)}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-xs text-text hover:bg-hover transition-colors"
+                  >
+                    <span className="size-1.5 rounded-full shrink-0" style={{ backgroundColor: NODE_COLORS[u.type] || "#666" }} />
+                    <span className="truncate">{u.label}</span>
+                    <span className="text-[10px] text-dim shrink-0 capitalize">{u.type}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="w-px h-4 bg-border mx-1" />
           <button onClick={() => setViewport((v) => ({ ...v, zoom: Math.max(0.1, v.zoom - 0.2) }))}
             className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors" title="Zoom out"
           ><ZoomOut size={14} /></button>
@@ -611,23 +1138,13 @@ export default function CanvasView() {
           <button onClick={() => setViewport((v) => ({ ...v, zoom: Math.min(5, v.zoom + 0.2) }))}
             className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors" title="Zoom in"
           ><ZoomIn size={14} /></button>
-          <div className="w-px h-4 bg-border mx-1" />
           <button onClick={fitToScreen}
             className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors" title="Fit to screen"
-          ><Minus size={14} /></button>
-          <div className="flex items-center gap-1 ml-2">
-            <input type="text" value={noteInput} onChange={(e) => setNoteInput(e.target.value)}
-              placeholder="Note..." maxLength={100}
-              className="w-20 bg-hover border border-border rounded px-1.5 py-0.5 text-[10px] text-text outline-none placeholder:text-dim"
-              onKeyDown={(e) => { if (e.key === "Enter") handleCreateNote(); }}
-            />
-            <button onClick={handleCreateNote}
-              className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors" title="Add note"
-            ><Plus size={12} /></button>
-          </div>
+          ><Maximize2 size={13} /></button>
         </div>
       </div>
+
+      {chatOpen && <ChatModal workspaceId={activeId} workspaceName={workspaceName} onClose={() => setChatOpen(false)} />}
     </div>
   );
 }
-

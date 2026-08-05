@@ -93,12 +93,24 @@ The Station tab organizes each workspace's material into collections:
 
 ## Canvas
 
-The Canvas tab renders your workspace as a visual mind-map:
+The Canvas tab renders your workspace as a visual mind-map on a subtle grid background:
 
-- **Nodes** are created automatically from station items (sources, notes, images, videos).
-- **Drag** nodes to position them, **pan** the viewport, **wheel** to zoom.
-- **Connect** nodes to show relationships; add inline notes directly on the canvas.
-- Use the minimap and **fit-to-screen** to navigate.
+- **Cards match the Station view** — sources show favicon, hostname, title, snippet, and
+  reader/summarize/open/pin actions; images and videos show thumbnails; notes and comparisons
+  render their content inline.
+- **Navigate** — drag nodes to position them, pan with mouse or scroll, zoom with Ctrl+wheel,
+  and use the minimap and **fit-to-screen**.
+- **Connect** nodes to show relationships (click a connection line to delete it); **Shift-click**
+  to select several nodes and press **Delete** to remove them.
+- **Notes** — click **Note** in the toolbar, double-click the background, or use the empty-state
+  button to create one. Notes created on the canvas appear in the Station tab and can be edited
+  in the inspector panel.
+- **Compare** — click **Compare** and pick two sources to persist a side-by-side comparison. It
+  becomes a comparison node on the canvas and shows up under **Saved Comparisons** in the
+  Station tab (created there too via the Compare panel's **Save** button).
+- **Chat** — the toolbar **Chat** button opens the same workspace chat as the Station tab.
+- Click any node to open the **inspector** with details and actions (Reader, Summarize, Open,
+  Pin, edit note, delete). The **Add** menu places station items that are not yet on the canvas.
 
 ![Canvas view](../assets/screenshots/canvas.png)
 *<TBD: screenshot>*

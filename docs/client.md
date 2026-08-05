@@ -85,10 +85,18 @@ category filters, pagination, and bulk transfer; media/news/infobox render in `D
 
 ### Workspace, station, canvas
 - **Station** — item cards with pin / summarize / read / open actions, inline summaries, notes
-  section, and a compare panel. Reads, highlights, comparisons, tags, and timeline have API
-  coverage but limited UI today.
-- **Canvas** — `CanvasView` auto-populates nodes from station items on load, then supports custom
-  mouse-based drag, pan, wheel zoom, connections, inline notes, minimap, and fit-to-screen.
+  section, and a compare panel. The compare panel can persist a comparison ("Save"), and a
+  **Saved Comparisons** section lists them for viewing and deleting. Comparisons created on the
+  canvas also appear here (both share the station comparison API).
+- **Canvas** — `CanvasView` renders station objects as rich cards styled like the Station view
+  (favicon/hostname/title/snippet, media thumbnails, note previews) over a subtle grid
+  background instead of dots. Nodes are auto-populated only when the canvas is brand new; after
+  that the "Add" menu places station items onto the canvas. Interactions: mouse drag/pan,
+  scroll-to-pan, Ctrl+wheel zoom, connections (click a line to delete), a per-node **inspector**
+  with type-specific actions (Reader, Summarize, Open, Pin, inline note editing), a note
+  composer (double-click the background), a compare dialog persisted through the station API,
+  the shared workspace chat modal, legend, minimap, and fit-to-screen. Delete/Backspace removes
+  selected nodes; Shift-click multi-selects; Escape cancels connection mode.
 
 ![Canvas view](../assets/screenshots/canvas.png)
 *<TBD: screenshot>*

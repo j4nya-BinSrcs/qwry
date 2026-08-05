@@ -31,7 +31,7 @@ docs.
 |---|---|---|
 | Medium | **Drag-and-drop ignores the drop target** — dropping a search result anywhere adds it to the active workspace; the `workspace-drop` droppable is never checked. | `client/src/App.jsx:49` |
 | Medium | **Reader/Summarizer re-add deleted entries** — deleting the currently-open read/summary removes it from the store, the load effect re-runs and re-fetches it, so deletion appears to do nothing. | `ReaderView.jsx:50`, `SummarizerView.jsx:52` |
-| Medium | **Canvas nodes resurrect** — auto-created nodes are recreated on every load after the underlying object is deleted (deleting a node doesn't delete the object). | `client/src/context/CanvasView.jsx:279` |
+| Low | **Canvas node removal** — deleting a node removes it from the canvas only; the underlying station object is kept. Auto-populate now runs only when the canvas is empty, so removed nodes no longer resurrect on reload. | `client/src/context/CanvasView.jsx` |
 | Low | N+1 drag-reorder: one PATCH per item in a loop. | `client/src/App.jsx:43` |
 | Low | `SummarizerView.jsx:102` calls `.delete` on a ref holding a string (no-op). | `SummarizerView.jsx:102` |
 | Low | Search input placeholder is leftover gibberish (`"Cofftset"`). | `client/src/components/TopBar.jsx:125` |
