@@ -20,7 +20,7 @@ function generateId() {
   return crypto.randomUUID();
 }
 
-export const useSessionStore = create((set, get) => ({
+export const useSessionStore = create((set) => ({
   sessionId: loadSession() || (() => {
     const id = generateId();
     saveSession(id);

@@ -2,7 +2,7 @@ import { apiFetch } from "./client";
 
 const BASE = "/api";
 
-export async function llmGenerate(query, results, mode = "short") {
+export async function llmGenerate(query, results = [], mode = "short") {
   const res = await apiFetch(`${BASE}/llm/generate`, {
     method: "POST",
     body: JSON.stringify({ query, results, mode }),

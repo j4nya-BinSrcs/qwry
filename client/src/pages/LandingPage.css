@@ -1,0 +1,128 @@
+.landing-page-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: var(--bg-deepest);
+}
+
+/* AURORA MESH BACKGROUND */
+.aurora-mesh-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: var(--z-base);
+  overflow: hidden;
+}
+
+.aurora-blob {
+  position: absolute;
+  width: 55vw;
+  height: 55vw;
+  max-width: 700px;
+  max-height: 700px;
+  border-radius: 50%;
+  filter: blur(130px);
+  opacity: 0.35;
+}
+
+[data-theme="light"] .aurora-blob {
+  opacity: 0.12;
+  filter: blur(160px);
+}
+
+.blob-amber {
+  top: 10%;
+  left: 20%;
+  background: var(--accent-primary);
+  animation: aurora-drift-1 45s infinite ease-in-out;
+}
+
+.blob-teal {
+  bottom: 15%;
+  right: 15%;
+  background: var(--accent-secondary);
+  animation: aurora-drift-2 50s infinite ease-in-out;
+}
+
+.blob-violet {
+  top: 40%;
+  right: 25%;
+  background: #a855f7;
+  animation: aurora-drift-3 55s infinite ease-in-out;
+}
+
+.blob-rose {
+  bottom: 25%;
+  left: 10%;
+  background: var(--accent-tertiary);
+  animation: aurora-drift-4 40s infinite ease-in-out;
+}
+
+/* MAIN LANDING CONTENT */
+.landing-main-content {
+  position: relative;
+  z-index: var(--z-elevated);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 800px;
+  padding: 0 var(--space-4);
+}
+
+.landing-logo-box {
+  margin-bottom: var(--space-8);
+}
+
+.landing-logo-text {
+  font-size: var(--text-6xl);
+  letter-spacing: -1.5px;
+  line-height: 1;
+}
+
+.landing-search-wrapper {
+  position: relative;
+  z-index: 100;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-6);
+}
+
+.landing-border-glow-container {
+  position: relative;
+  z-index: 100;
+  max-width: 620px;
+  width: 90%;
+  border-radius: var(--radius-full);
+}
+
+.landing-pills-row {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* TOP CORNER CONTROLS */
+.landing-top-right {
+  position: absolute;
+  top: var(--space-6);
+  right: var(--space-6);
+  z-index: var(--z-elevated);
+}
+
+/* BOTTOM CORNER CONTROLS */
+.landing-bottom-controls {
+  position: absolute;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: var(--z-elevated);
+}
