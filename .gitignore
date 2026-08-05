@@ -45,3 +45,6 @@ tmp/
 .fastembed_cache/
 engine/.fastembed_cache/
 engine/indexer/.fastembed_cache/
+
+# obsidian
+.obsidian/
