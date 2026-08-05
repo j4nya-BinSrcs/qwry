@@ -76,7 +76,10 @@ erDiagram
         uuid id PK
         text object_type
         uuid object_id
-        float x, y, w, h
+        float x
+        float y
+        float w
+        float h
         int z_index
         boolean pinned
     }
