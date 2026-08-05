@@ -42,6 +42,11 @@
   transition: border-color var(--transition-fast);
 }
 
+.profile-select option {
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
 .profile-input:focus, .profile-select:focus {
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 2px var(--accent-primary-glow);

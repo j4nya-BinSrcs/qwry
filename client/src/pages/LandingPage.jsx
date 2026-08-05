@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SearchBar } from '../components/SearchBar/SearchBar';
 import { ProfileMenu } from '../components/Profile/ProfileMenu';
+import { ProfileSettingsModal } from '../components/Profile/ProfileSettingsModal';
 import { Pill } from '../components/common/Common';
 import { BorderGlow } from '../components/common/BorderGlow';
 import { useSearch } from '../context/SearchContext';
@@ -12,8 +13,16 @@ import './LandingPage.css';
 
 export const LandingPage = () => {
   const navigate = useNavigate();
-  const { executeSearch, setActiveCategory } = useSearch();
+  const { executeSearch } = useSearch();
   const { theme, cycleTheme } = useTheme();
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalTab, setModalTab] = useState('settings');
+
+  const openSettingsModal = (tabName = 'settings') => {
+    setModalTab(tabName);
+    setIsModalOpen(true);
+  };
 
   const handleLandingSearch = (queryText) => {
     executeSearch(queryText);
@@ -39,7 +48,7 @@ export const LandingPage = () => {
 
       {/* Top Right Corner Profile Menu */}
       <div className="landing-top-right">
-        <ProfileMenu />
+        <ProfileMenu onOpenSettingsModal={openSettingsModal} />
       </div>
 
       {/* Main Centered Content */}
@@ -96,14 +105,18 @@ export const LandingPage = () => {
         <button
           type="button"
           className="pill"
-          onClick={() => {
-            setActiveCategory('Settings');
-            navigate('/search?category=settings');
-          }}
+          onClick={() => openSettingsModal('settings')}
         >
           <Settings size={14} /> Settings
         </button>
       </div>
+
+      {/* Floating Profile & Settings Modal */}
+      <ProfileSettingsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        initialTab={modalTab}
+      />
     </div>
   );
 };

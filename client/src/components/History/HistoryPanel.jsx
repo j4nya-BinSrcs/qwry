@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, BookOpen, FileText, Activity, ExternalLink, Clock } from 'lucide-react';
 import { fetchSearchHistory, fetchReads, fetchSummaries, fetchActivity } from '../../api/history';
 import { useSearch } from '../../context/SearchContext';
+import { motion, AnimatePresence } from 'framer-motion';
 import './HistoryPanel.css';
 
 export const HistoryPanel = () => {
@@ -9,6 +10,13 @@ export const HistoryPanel = () => {
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const { executeSearch } = useSearch();
+
+  const tabs = [
+    { id: 'search', label: 'Searches', icon: Search },
+    { id: 'reads', label: 'Reading List', icon: BookOpen },
+    { id: 'summaries', label: 'AI Summaries', icon: FileText },
+    { id: 'activity', label: 'Activity Log', icon: Activity },
+  ];
 
   useEffect(() => {
     let isMounted = true;
@@ -39,39 +47,31 @@ export const HistoryPanel = () => {
 
   return (
     <div className="history-panel-container">
-      {/* Sub-tabs header */}
+      {/* Sub-tabs header with animated pill indicator */}
       <div className="history-subtabs">
-        <button
-          className={`history-tab-btn ${activeTab === 'search' ? 'active' : ''}`}
-          onClick={() => setActiveTab('search')}
-        >
-          <Search size={12} style={{ display: 'inline', marginRight: '4px' }} />
-          Searches ({activeTab === 'search' ? items.length : '•'})
-        </button>
-
-        <button
-          className={`history-tab-btn ${activeTab === 'reads' ? 'active' : ''}`}
-          onClick={() => setActiveTab('reads')}
-        >
-          <BookOpen size={12} style={{ display: 'inline', marginRight: '4px' }} />
-          Reading List ({activeTab === 'reads' ? items.length : '•'})
-        </button>
-
-        <button
-          className={`history-tab-btn ${activeTab === 'summaries' ? 'active' : ''}`}
-          onClick={() => setActiveTab('summaries')}
-        >
-          <FileText size={12} style={{ display: 'inline', marginRight: '4px' }} />
-          AI Summaries ({activeTab === 'summaries' ? items.length : '•'})
-        </button>
-
-        <button
-          className={`history-tab-btn ${activeTab === 'activity' ? 'active' : ''}`}
-          onClick={() => setActiveTab('activity')}
-        >
-          <Activity size={12} style={{ display: 'inline', marginRight: '4px' }} />
-          Activity Log ({activeTab === 'activity' ? items.length : '•'})
-        </button>
+        {tabs.map((tab) => {
+          const IconComponent = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              className={`history-tab-btn ${isActive ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {isActive && (
+                <motion.div
+                  layoutId="activeHistoryTab"
+                  className="history-active-pill"
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                />
+              )}
+              <IconComponent size={13} className="history-tab-icon" style={{ zIndex: 1 }} />
+              <span style={{ zIndex: 1 }}>
+                {tab.label} ({isActive ? items.length : '•'})
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Content area */}

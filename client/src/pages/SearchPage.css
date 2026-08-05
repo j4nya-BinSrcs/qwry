@@ -59,6 +59,10 @@
   min-height: 0;
 }
 
+.zone-expanded {
+  grid-column: 1 / span 3;
+}
+
 .mobile-tabs-bar {
   display: none;
 }

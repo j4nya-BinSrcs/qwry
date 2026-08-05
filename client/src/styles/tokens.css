@@ -1,8 +1,9 @@
-:root {
+:root, [data-theme="dark"] {
   /* === BACKGROUNDS — Deep Space Midnight === */
   --bg-deepest: #070814;          /* Page background */
   --bg-base: #0c0e22;             /* Main surface */
   --bg-elevated: #131635;         /* Cards, panels */
+  --bg-surface: #181b3d;          /* Sub-surfaces, input fields, active pills */
   --bg-hover: #1b2048;            /* Hover states */
 
   /* === GLASS SURFACES — High Contrast Readability === */
@@ -92,10 +93,11 @@
 [data-theme="light"] {
   --bg-deepest: #f4f3fa;
   --bg-base: #ffffff;
-  --bg-elevated: #f8f7ff;
-  --bg-hover: #eee9fe;
+  --bg-elevated: #ffffff;
+  --bg-surface: #f0edfe;
+  --bg-hover: #e4ddff;
 
-  --glass-bg: rgba(255, 255, 255, 0.95);
+  --glass-bg: rgba(255, 255, 255, 0.92);
   --glass-bg-hover: #ffffff;
   --glass-bg-active: #ffffff;
   --glass-border: rgba(124, 58, 237, 0.2);
@@ -119,9 +121,9 @@
   --text-link: #0284c7;
   --text-link-hover: #0369a1;
 
-  --border-subtle: rgba(124, 58, 237, 0.12);
-  --border-default: rgba(124, 58, 237, 0.22);
-  --border-strong: rgba(124, 58, 237, 0.38);
+  --border-subtle: rgba(124, 58, 237, 0.14);
+  --border-default: rgba(124, 58, 237, 0.25);
+  --border-strong: rgba(124, 58, 237, 0.45);
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
   --shadow-md: 0 4px 16px rgba(124, 58, 237, 0.08);
   --shadow-lg: 0 8px 32px rgba(124, 58, 237, 0.12);

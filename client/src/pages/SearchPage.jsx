@@ -20,14 +20,15 @@ export const SearchPage = () => {
   const qParam = searchParams.get('q');
   const catParam = searchParams.get('category');
 
-  // Sync URL query params with state
+  // Sync URL query params with state cleanly without triggering unwanted auto-searches
   useEffect(() => {
     if (qParam && qParam !== query) {
       executeSearch(qParam);
-    } else if (!qParam && !query) {
+    } else if (!qParam && !query && (!catParam || catParam === 'all')) {
+      // Only execute default fallback search if user lands directly on /search without query or category
       executeSearch('web design');
     }
-  }, [qParam, executeSearch, query]);
+  }, [qParam, catParam, executeSearch, query]);
 
   useEffect(() => {
     if (catParam) {
@@ -43,11 +44,19 @@ export const SearchPage = () => {
 
   const handleTabChange = (catId) => {
     setActiveCategory(catId);
-    setSearchParams({ q: query || 'web design', category: catId.toLowerCase() });
+    const params = { category: catId.toLowerCase() };
+    if (query) params.q = query;
+    setSearchParams(params);
   };
 
   return (
-    <div className="search-page-container">
+    <motion.div
+      className="search-page-container"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+    >
       {/* Top Navigation Bar */}
       <header className="search-topbar">
         <motion.div
@@ -127,6 +136,6 @@ export const SearchPage = () => {
           </nav>
         </main>
       )}
-    </div>
+    </motion.div>
   );
 };

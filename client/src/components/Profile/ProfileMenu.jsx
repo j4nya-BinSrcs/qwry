@@ -9,10 +9,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import './ProfileMenu.css';
 
-export const ProfileMenu = () => {
+export const ProfileMenu = ({ onOpenSettingsModal }) => {
   const navigate = useNavigate();
   const sessionId = useSessionStore((state) => state.sessionId);
-  const { setActiveCategory } = useSearch();
+  const { query, setActiveCategory } = useSearch();
   const { theme, cycleTheme } = useTheme();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -52,9 +52,16 @@ export const ProfileMenu = () => {
   }, []);
 
   const handleNavigateCategory = (categoryName) => {
-    setActiveCategory(categoryName);
     setIsOpen(false);
-    navigate(`/search?category=${categoryName.toLowerCase()}`);
+    if (onOpenSettingsModal) {
+      onOpenSettingsModal(categoryName.toLowerCase());
+      return;
+    }
+    setActiveCategory(categoryName);
+    const targetUrl = query
+      ? `/search?q=${encodeURIComponent(query)}&category=${categoryName.toLowerCase()}`
+      : `/search?category=${categoryName.toLowerCase()}`;
+    navigate(targetUrl);
   };
 
   const copySessionId = () => {
