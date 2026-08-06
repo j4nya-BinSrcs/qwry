@@ -1,9 +1,10 @@
-import { Clock, ExternalLink, ImageIcon, Loader2, Play, BookOpen, ChevronDown, ChevronRight, X } from "lucide-react";
+import { Clock, ExternalLink, ImageIcon, Play, BookOpen, ChevronDown, ChevronRight, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { readUrl } from "../api/reader";
 import { useContentStore } from "../stores/contentStore";
 import { useUIStore } from "../stores/uiStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
+import { SkeletonArticle } from "../components/Skeleton";
 
 let _readerId = 0;
 
@@ -172,7 +173,7 @@ export default function ReaderView() {
               {openId === r.id && (
                 <div className="px-3 py-2">
                   {r.loading && (
-                    <div className="flex items-center justify-center py-8"><Loader2 size={18} className="animate-spin text-text" /></div>
+                    <SkeletonArticle />
                   )}
 
                   {r.error && (

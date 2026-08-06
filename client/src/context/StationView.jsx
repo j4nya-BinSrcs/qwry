@@ -8,6 +8,7 @@ import { useSessionStore } from "../stores/sessionStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import { useWorkspaceStationStore } from "../stores/workspaceStationStore";
 import { useUIStore } from "../stores/uiStore";
+import { SkeletonTallCard } from "../components/Skeleton";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -33,10 +34,6 @@ function EmptyState({ icon: Icon, message }) {
       <p className="text-xs text-muted max-w-xs">{message}</p>
     </div>
   );
-}
-
-function Spinner() {
-  return <div className="flex items-center justify-center py-12"><div className="size-4 border-2 border-text border-t-transparent rounded-full animate-spin" /></div>;
 }
 
 // ── Workspace Header ─────────────────────────────────────────────────────
@@ -604,7 +601,7 @@ export default function StationView() {
         {activeTab === "sources" && (
           <>
             {loading && allSources.length === 0 ? (
-              <Spinner />
+              <SkeletonTallCard count={6} />
             ) : searchQuery.trim() && filteredSources.length === 0 ? (
               <div className="px-3 py-6"><EmptyState icon={Search} message="No sources match your search" /></div>
             ) : filteredSources.length > 0 ? (

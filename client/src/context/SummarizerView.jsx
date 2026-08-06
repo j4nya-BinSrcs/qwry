@@ -1,10 +1,11 @@
-import { ExternalLink, Loader2, Sparkles, X, ChevronDown, ChevronRight } from "lucide-react";
+import { ExternalLink, Sparkles, X, ChevronDown, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "../api/client";
 import { useContentStore } from "../stores/contentStore";
 import { useUIStore } from "../stores/uiStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import MarkdownRenderer from "../components/MarkdownRenderer";
+import { SkeletonText } from "../components/Skeleton";
 
 function getHostname(url) {
   try { return new URL(url).hostname; } catch { return url || ""; }
@@ -179,10 +180,7 @@ export default function SummarizerView() {
             {expanded.has(s.id) && (
               <div className="px-3 py-2">
                 {s.loading && (
-                  <div className="flex items-center gap-1.5 text-xs text-muted">
-                    <Loader2 size={12} className="animate-spin text-text" />
-                    Summarizing...
-                  </div>
+                  <SkeletonText lines={4} />
                 )}
                 {s.error && (
                   <div className="py-3 text-center space-y-2">

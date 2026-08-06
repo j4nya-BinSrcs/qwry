@@ -5,6 +5,7 @@ import { useSearchStore } from "../stores/searchStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import { useSessionStore } from "../stores/sessionStore";
 import { useUIStore } from "../stores/uiStore";
+import { SkeletonRow } from "../components/Skeleton";
 
 const FILTERS = [
   { id: "all", label: "All", icon: Search },
@@ -285,9 +286,7 @@ export default function SourcesPanel() {
           {/* Results */}
           <div className="flex-1 overflow-y-auto">
             {loading && (
-              <div className="flex items-center justify-center py-12">
-                <div className="size-4 border-2 border-text border-t-transparent rounded-full animate-spin" />
-              </div>
+              <SkeletonRow count={8} />
             )}
             {error && (
               <div className="px-4 py-3 text-sm text-text bg-hover rounded-md mx-2 mt-2">

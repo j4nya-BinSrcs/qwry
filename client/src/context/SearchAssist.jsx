@@ -4,6 +4,7 @@ import { fetchOverview, llmGenerate } from "../api/llm";
 import { useContentStore } from "../stores/contentStore";
 import { useSearchStore } from "../stores/searchStore";
 import MarkdownRenderer from "../components/MarkdownRenderer";
+import Skeleton, { SkeletonOverview } from "../components/Skeleton";
 
 const ELABORATE_KEY = (q) => q + "__elaborate";
 const STUDY_KEY = (q) => q + "__study";
@@ -13,6 +14,7 @@ export default function SearchAssist() {
   const results = useSearchStore((s) => s.results);
   const suggestions = useSearchStore((s) => s.suggestions);
   const search = useSearchStore((s) => s.search);
+  const searchLoading = useSearchStore((s) => s.loading);
 
   const storeOverviews = useContentStore((s) => s.overviews);
   const setOverviewInStore = useContentStore((s) => s.setOverview);
@@ -33,6 +35,7 @@ export default function SearchAssist() {
     setElaborateExtension(null);
     setStudyExtension(null);
     setError(null);
+    setShortOverview(null);
 
     const shortCached = storeOverviews[query];
     if (shortCached) {
@@ -129,10 +132,7 @@ export default function SearchAssist() {
     <div className="h-full overflow-y-auto p-3 space-y-3">
       {/* Short overview loading */}
       {loadingShort && !shortOverview && (
-        <div className="flex items-center gap-2 px-3 py-2.5 rounded border border-border bg-panel text-xs text-muted">
-          <Loader2 size={12} className="animate-spin" />
-          Generating overview...
-        </div>
+        <SkeletonOverview />
       )}
 
       {/* Error */}
@@ -225,7 +225,15 @@ export default function SearchAssist() {
           Related Searches
         </div>
         <div className="space-y-1">
-          {suggestions.length > 0 ? suggestions.slice(0, 6).map((s, i) => (
+          {searchLoading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border border-border bg-panel">
+                <Skeleton className="size-3.5 rounded-full shrink-0" />
+                <Skeleton className="h-3 flex-1" />
+                <Skeleton className="size-3.5 shrink-0" />
+              </div>
+            ))
+          ) : suggestions.length > 0 ? suggestions.slice(0, 6).map((s, i) => (
             <button
               key={i}
               onClick={() => search(s)}
@@ -235,17 +243,7 @@ export default function SearchAssist() {
               <span className="text-sm text-text flex-1 truncate">{s}</span>
               <ChevronRight size={14} className="text-dim shrink-0" />
             </button>
-          )) : (
-            <>
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border border-border bg-panel text-left opacity-40">
-                  <Search size={14} className="text-dim shrink-0" />
-                  <span className="text-sm text-muted flex-1 truncate">Search related to your query</span>
-                  <ChevronRight size={14} className="text-dim shrink-0" />
-                </div>
-              ))}
-            </>
-          )}
+          )) : null}
         </div>
       </div>
     </div>

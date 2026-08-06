@@ -6,6 +6,7 @@ import { useUIStore, applyThemeClass, getAccentColor } from "../stores/uiStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import SettingsPopup from "../components/SettingsPopup";
 import PixelBlast from "../components/PixelBlast";
+import { SkeletonWsCard } from "../components/Skeleton";
 
 function getHostname(url) {
   try { return new URL(url).hostname; } catch { return ""; }
@@ -176,6 +177,7 @@ export default function HomeView() {
   const sessionId = useSessionStore((s) => s.sessionId);
 
   const workspaces = useWorkspaceStore((s) => s.workspaces);
+  const wsLoading = useWorkspaceStore((s) => s.loading);
   const itemsByWorkspace = useWorkspaceStore((s) => s.itemsByWorkspace);
   const loadWorkspaces = useWorkspaceStore((s) => s.loadWorkspaces);
   const loadAllItems = useWorkspaceStore((s) => s.loadAllItems);
@@ -301,7 +303,9 @@ export default function HomeView() {
             </div>
 
             <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-3 pb-5">
-              {workspaces.length === 0 ? (
+              {wsLoading && workspaces.length === 0 ? (
+                <SkeletonWsCard count={6} />
+              ) : workspaces.length === 0 ? (
                 <div className="text-center py-10 rounded-xl border border-dashed border-border">
                   <Layers size={24} className="text-dim mx-auto mb-3" />
                   <p className="text-sm text-muted">No workspaces yet</p>

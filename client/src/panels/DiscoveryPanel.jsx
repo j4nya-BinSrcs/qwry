@@ -6,6 +6,7 @@ import { useUIStore } from "../stores/uiStore";
 import { useSessionStore } from "../stores/sessionStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import InfoBoxCard from "../components/InfoBoxCard";
+import { SkeletonDiscovery } from "../components/Skeleton";
 
 const FILTERS = [
   { id: "all", label: "All" },
@@ -327,7 +328,9 @@ export default function DiscoveryPanel() {
       </div>
 
       <div className="flex-1 overflow-y-auto py-1">
-        {!query ? (
+        {loading ? (
+          <SkeletonDiscovery />
+        ) : !query ? (
           <div className="px-4 py-12 text-center text-sm text-muted">
             Search to see related content here
           </div>
