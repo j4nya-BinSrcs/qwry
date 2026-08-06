@@ -1,4 +1,4 @@
-import { ExternalLink, GripVertical, Plus, BookOpen, Sparkles, Search, MessageCircle, Globe } from "lucide-react";
+import { ExternalLink, Plus, BookOpen, Sparkles, Search, MessageCircle, Globe, Link, Check } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { useSearchStore } from "../stores/searchStore";
@@ -18,26 +18,16 @@ function getHostname(url) {
   try { return new URL(url).hostname; } catch { return ""; }
 }
 
-function Favicon({ domain }) {
-  return (
-    <img
-      src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
-      alt=""
-      className="size-4 rounded shrink-0"
-      onError={(e) => (e.target.style.display = "none")}
-    />
-  );
-}
-
-function DraggableResultCard({ result }) {
+function DraggableResultCard({ result, selected, onSelect }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: `result-${result.url}`,
       data: { type: "search-result", result },
+      activationConstraint: { distance: 5 },
     });
 
   const style = transform
-    ? { transform: `translate(${transform.x}px, ${transform.y}px)` }
+    ? { transform: `translate(${transform.x}px, ${transform.y}px)`, zIndex: 50 }
     : undefined;
 
   const sessionId = useSessionStore((s) => s.sessionId);
@@ -45,23 +35,30 @@ function DraggableResultCard({ result }) {
   const addItem = useWorkspaceStore((s) => s.addItem);
   const openReader = useUIStore((s) => s.openReader);
   const openSummarizer = useUIStore((s) => s.openSummarizer);
+  const setContextMode = useUIStore((s) => s.setContextMode);
 
-  const handleAdd = useCallback(
+  const [copied, setCopied] = useState(false);
+
+  const domain = getHostname(result.url);
+  const imgSrc = result.img_src || result.thumbnail;
+  const engine = result.engine && result.engine !== result.source ? result.engine : null;
+
+  const handleAddToWorkspace = useCallback(
     (e) => {
       e.stopPropagation();
-      if (activeId) {
-        addItem(sessionId, activeId, result.url, result.title, result.snippet, result.source, result.img_src || result.thumbnail);
-      }
+      if (!activeId) return;
+      addItem(sessionId, activeId, result.url, result.title, result.snippet, result.source, imgSrc);
+      setContextMode("workspace");
     },
-    [sessionId, activeId, result, addItem]
+    [sessionId, activeId, result, addItem, imgSrc, setContextMode]
   );
 
   const handleReader = useCallback(
     (e) => {
       e.stopPropagation();
-      openReader(result.url, result.title, result.img_src);
+      openReader(result.url, result.title, imgSrc);
     },
-    [result, openReader]
+    [result, openReader, imgSrc]
   );
 
   const handleSummarizer = useCallback(
@@ -72,96 +69,129 @@ function DraggableResultCard({ result }) {
     [result, openSummarizer]
   );
 
+  const handleCopy = useCallback(
+    (e) => {
+      e.stopPropagation();
+      navigator.clipboard?.writeText(result.url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    },
+    [result.url]
+  );
+
   return (
     <div
       ref={setNodeRef}
+      {...listeners}
+      {...attributes}
       style={style}
-      className={`group relative flex items-start gap-2.5 px-3 py-2.5 rounded-md transition-all cursor-default ${
+      onClick={() => onSelect?.(result.url)}
+      className={`group relative rounded-xl bg-elevated shadow-surface px-3.5 pt-3.5 cursor-grab active:cursor-grabbing transition-all duration-slow ease-out ${
         isDragging
-          ? "opacity-50"
-          : "hover:bg-hover border border-transparent hover:border-border"
+          ? "opacity-50 shadow-pop"
+          : selected
+            ? "bg-accent/[0.06] shadow-raised ring-1 ring-accent/30"
+            : "hover:-translate-y-0.5 hover:shadow-raised"
       }`}
     >
-      <button
-        {...listeners}
-        className="mt-0.5 shrink-0 text-dim cursor-grab active:cursor-grabbing hover:text-text transition-colors"
-      >
-        <GripVertical size={14} />
-      </button>
-
-      {result.img_src ? (
-        <img
-          src={`/api/image-proxy?url=${encodeURIComponent(result.img_src)}`}
-          alt=""
-          className="size-8 rounded object-cover shrink-0 mt-0.5"
-          onError={(e) => (e.target.style.display = "none")}
-        />
-      ) : (
-        <Favicon domain={getHostname(result.url)} />
-      )}
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-text truncate">
-            {result.title}
-          </span>
-          {result.category && result.category !== "general" && (
-            <span className="text-[14px] font-medium px-1.5 py-0.5 rounded-full bg-hover text-text shrink-0">
-              {result.category}
-            </span>
+      <div className="flex items-start gap-3">
+        {/* Large media / favicon */}
+        <div
+          className={`size-11 shrink-0 rounded-lg overflow-hidden bg-hover flex items-center justify-center transition-transform duration-slow ease-out group-hover:scale-[1.05] ${
+            selected ? "ring-1 ring-accent/40" : ""
+          }`}
+        >
+          {imgSrc ? (
+            <img
+              src={`/api/image-proxy?url=${encodeURIComponent(imgSrc)}`}
+              alt=""
+              className="w-full h-full object-cover"
+              onError={(e) => (e.target.style.display = "none")}
+            />
+          ) : (
+            <img
+              src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
+              alt=""
+              className="size-7"
+              onError={(e) => (e.target.style.display = "none")}
+            />
           )}
         </div>
-        <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-xs text-muted truncate">
-            {getHostname(result.url)}
-          </span>
-          {result.source && (
-            <span className="text-[14px] font-medium px-1.5 py-0.5 rounded-full bg-hover text-text">
-              {result.source}
-            </span>
-          )}
-          {result.relevance_score && (
-            <span className="text-xs text-dim font-mono">
-              {Math.round(result.relevance_score * 100)}%
-            </span>
-          )}
-        </div>
-        {result.snippet && (
-          <p className="text-xs text-muted mt-1 line-clamp-2 leading-relaxed">
-            {result.snippet}
-          </p>
-        )}
-      </div>
 
-      <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={handleReader}
-          className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
-          title="Reader view"
-        >
-          <BookOpen size={13} />
-        </button>
-        <button
-          onClick={handleSummarizer}
-          className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
-          title="Summarize"
-        >
-          <Sparkles size={13} />
-        </button>
-        <button
-          onClick={() => window.open(result.url, "_blank")}
-          className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
-          title="Open"
-        >
-          <ExternalLink size={13} />
-        </button>
-        <button
-          onClick={handleAdd}
-          className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
-          title="Add to workspace"
-        >
-          <Plus size={13} />
-        </button>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-base font-semibold text-text leading-snug">{result.title}</h3>
+
+          {/* Meta: publisher · category · engine */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5">
+            <a
+              href={result.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1 text-xs font-medium text-accent hover:underline truncate max-w-44"
+              title="Open in new tab"
+            >
+              <ExternalLink size={12} className="shrink-0" />
+              <span className="truncate">{domain}</span>
+            </a>
+            {result.category && result.category !== "general" && (
+              <span className="text-xs text-muted px-1.5 py-0.5 rounded-md bg-hover">
+                {result.category}
+              </span>
+            )}
+            {engine && (
+              <span className="flex items-center gap-1 text-xs text-muted px-1.5 py-0.5 rounded-md bg-hover">
+                <Search size={12} />
+                {engine}
+              </span>
+            )}
+          </div>
+
+          {result.snippet && (
+            <p className="text-sm text-muted leading-relaxed mt-2 line-clamp-3">{result.snippet}</p>
+          )}
+
+          {/* Accordion actions — expand on hover */}
+          <div className="grid grid-rows-[0fr] group-hover:grid-rows-[1fr] transition-[grid-template-rows] duration-slow ease-out">
+            <div className="overflow-hidden min-h-0">
+              <div className="pt-3 mt-3 border-t border-border/60 flex items-center gap-0.5 pb-1">
+                <button
+                  onClick={handleAddToWorkspace}
+                  disabled={!activeId}
+                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-muted hover:text-text hover:bg-hover transition-colors disabled:opacity-30"
+                  title="Add to active workspace"
+                >
+                  <Plus size={14} />
+                  Workspace
+                </button>
+                <button
+                  onClick={handleReader}
+                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-muted hover:text-text hover:bg-hover transition-colors"
+                  title="Open Reader"
+                >
+                  <BookOpen size={14} />
+                  Read
+                </button>
+                <button
+                  onClick={handleSummarizer}
+                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-muted hover:text-text hover:bg-hover transition-colors"
+                  title="Summarize this page"
+                >
+                  <Sparkles size={14} />
+                  Summarize
+                </button>
+                <button
+                  onClick={handleCopy}
+                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-muted hover:text-text hover:bg-hover transition-colors"
+                  title="Copy link"
+                >
+                  {copied ? <Check size={14} className="text-accent" /> : <Link size={14} />}
+                  {copied ? "Copied" : "Copy"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -213,6 +243,7 @@ export default function SourcesPanel() {
   const uniqueCount = new Set(results.map((r) => r.url)).size;
   const hasMore = results.length < totalResults;
   const [transferMsg, setTransferMsg] = useState("");
+  const [selectedUrl, setSelectedUrl] = useState(null);
 
   const handleTransferAll = useCallback(async () => {
     if (!activeId) return;
@@ -240,80 +271,79 @@ export default function SourcesPanel() {
   }, [loadMorePages]);
 
   return (
-    <div className="h-full flex flex-col p-3">
-      <div className="flex-1 rounded-xl border border-border bg-panel overflow-hidden flex flex-col">
-        <div className="shrink-0 px-4 py-3 border-b border-border flex items-center justify-between">
-          <h2 className="text-xs font-semibold text-text uppercase tracking-wider">
-            Pages
-          </h2>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-dim">{uniqueCount} pages</span>
-            {hasMore && (
-              <button
-                onClick={handleLoadMore}
-                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md border border-border text-text hover:bg-hover hover:border-text transition-all"
-              >
-                Load more
-              </button>
-            )}
-          </div>
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="shrink-0 px-4 pt-4 pb-3 flex items-center justify-between">
+        <div className="flex items-baseline gap-2 min-w-0">
+          <h2 className="text-base font-semibold text-text tracking-tight">Pages</h2>
+          <span className="text-sm text-dim">{uniqueCount} result{uniqueCount !== 1 ? "s" : ""}</span>
         </div>
+        {hasMore && (
+          <button
+            onClick={handleLoadMore}
+            className="flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md text-text hover:bg-hover transition-colors shrink-0"
+          >
+            Load more
+          </button>
+        )}
+      </div>
 
-        <div className="flex-1 flex min-h-0">
-          {/* Filter sidebar */}
-          <div className="shrink-0 w-fit flex flex-col items-center gap-3 py-3 px-1.5 border-r border-border">
-            {FILTERS.map((f) => {
-              const isActive = activeFilter === f.id;
-              const Icon = f.icon;
-              return (
-                <button
-                  key={f.id}
-                  onClick={() => setActiveFilter(f.id)}
-                  className={`flex flex-col items-center gap-0.5 p-1.5 rounded-lg transition-colors ${
-                    isActive
-                      ? "bg-text text-surface"
-                      : "text-text hover:bg-hover"
-                  }`}
-                  title={f.label}
-                >
-                  <Icon size={14} />
-                  <span className="text-[12px] leading-tight font-medium">{f.label}</span>
-                </button>
-              );
-            })}
-          </div>
+      {/* Filters */}
+      <div className="shrink-0 flex items-center gap-1 px-4 pb-3 overflow-x-auto scrollbar-none">
+        {FILTERS.map((f) => {
+          const isActive = activeFilter === f.id;
+          const Icon = f.icon;
+          return (
+            <button
+              key={f.id}
+              onClick={() => setActiveFilter(f.id)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-fast shrink-0 ${
+                isActive
+                  ? "bg-elevated text-text shadow-surface"
+                  : "text-muted hover:text-text hover:bg-hover"
+              }`}
+            >
+              <Icon size={14} />
+              {f.label}
+            </button>
+          );
+        })}
+      </div>
 
-          {/* Results */}
-          <div className="flex-1 overflow-y-auto">
-            {loading && (
-              <SkeletonRow count={8} />
-            )}
-            {error && (
-              <div className="px-4 py-3 text-sm text-text bg-hover rounded-md mx-2 mt-2">
-                {error}
-              </div>
-            )}
-            {!loading && !error && results.length === 0 && query && (
-              <div className="px-4 py-12 text-center text-sm text-muted">
-                No results found
-              </div>
-            )}
-            {!loading && !error && results.length === 0 && !query && (
-              <div className="px-4 py-12 text-center text-sm text-muted">
-                Search the web to see results here
-              </div>
-            )}
-            {!loading && !error && results.length > 0 && filtered.length === 0 && (
-              <div className="px-4 py-12 text-center text-sm text-muted">
-                No results match the selected filter
-              </div>
-            )}
-            <div className="space-y-0.5 px-1">
-              {filtered.map((result, i) => (
-                <DraggableResultCard key={`${result.url}-${i}`} result={result} />
-              ))}
-            </div>
+      {/* Results */}
+       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 pb-4 space-y-2">
+        {loading && (
+          <SkeletonRow count={6} />
+        )}
+        {error && (
+          <div className="px-4 py-3 text-sm text-text bg-hover rounded-lg mx-1">
+            {error}
           </div>
+        )}
+        {!loading && !error && results.length === 0 && query && (
+          <div className="px-4 py-16 text-center text-sm text-muted">
+            No results found
+          </div>
+        )}
+        {!loading && !error && results.length === 0 && !query && (
+          <div className="px-4 py-16 text-center text-sm text-muted">
+            Search the web to see results here
+          </div>
+        )}
+        {!loading && !error && results.length > 0 && filtered.length === 0 && (
+          <div className="px-4 py-16 text-center text-sm text-muted">
+            No results match the selected filter
+          </div>
+        )}
+        <div key={activeFilter} className="animate-fade-in">
+          {filtered.map((result, i) => (
+            <DraggableResultCard
+              key={`${result.url}-${i}`}
+              result={result}
+              selected={selectedUrl === result.url}
+              onSelect={setSelectedUrl}
+            />
+          ))}
         </div>
       </div>
     </div>

@@ -42,7 +42,7 @@ export default function MediaCard({ result, compact }) {
       <div
         ref={setNodeRef}
         style={style}
-        className={`group flex items-center gap-2 px-2 py-1.5 rounded border border-transparent transition-all cursor-default ${
+        className={`group flex items-center gap-2 px-2 py-2 rounded-md border border-transparent transition-all cursor-default ${
           isDragging ? "opacity-50" : "hover:bg-hover hover:border-border"
         }`}
       >
@@ -50,9 +50,9 @@ export default function MediaCard({ result, compact }) {
           {...listeners}
           className="shrink-0 text-dim cursor-grab active:cursor-grabbing hover:text-text transition-colors"
         >
-          <GripVertical size={11} />
+          <GripVertical size={16} />
         </button>
-        <div className="size-8 shrink-0 rounded bg-hover overflow-hidden">
+        <div className="size-8 shrink-0 rounded-md bg-hover overflow-hidden">
           {imgSrc ? (
             <img
               src={`/api/image-proxy?url=${encodeURIComponent(imgSrc)}`}
@@ -61,7 +61,7 @@ export default function MediaCard({ result, compact }) {
               onError={(e) => (e.target.style.display = "none")}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-dim text-[14px]">
+            <div className="w-full h-full flex items-center justify-center text-dim text-base">
               {isVideo ? "▶" : "🖼"}
             </div>
           )}
@@ -70,37 +70,37 @@ export default function MediaCard({ result, compact }) {
           <div className="text-xs text-text truncate font-medium">
             {result.title}
           </div>
-          <div className="text-[14px] text-dim truncate">
+          <div className="text-base text-dim truncate">
             {result.engine || result.source || result.category}
           </div>
         </div>
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={(e) => { e.stopPropagation(); openReader(result.url, result.title, imgSrc); }}
-            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
+            className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-all"
             title="Reader"
           >
-            <BookOpen size={11} />
+            <BookOpen size={16} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); openSummarizer(result.url, result.title); }}
-            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
+            className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-all"
             title="Summarize"
           >
-            <Sparkles size={11} />
+            <Sparkles size={16} />
           </button>
           <button onClick={handleSave} disabled={!activeWsId}
-            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all disabled:opacity-30"
+            className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-all disabled:opacity-30"
             title={activeWsId ? "Save to workspace" : "No active workspace"}
           >
-            {saved ? <Check size={11} /> : <Plus size={11} />}
+            {saved ? <Check size={16} /> : <Plus size={16} />}
           </button>
           <button
             onClick={() => window.open(result.url, "_blank")}
-            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
+            className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-all"
             title="Open source"
           >
-            <ExternalLink size={11} />
+            <ExternalLink size={16} />
           </button>
         </div>
       </div>
@@ -111,7 +111,7 @@ export default function MediaCard({ result, compact }) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-center gap-2.5 px-2.5 py-2 rounded-md transition-all cursor-default ${
+      className={`group flex items-center gap-3 px-3 py-2 rounded-md transition-all cursor-default ${
         isDragging
           ? "opacity-50"
           : "hover:bg-hover border border-transparent hover:border-border"
@@ -121,10 +121,10 @@ export default function MediaCard({ result, compact }) {
         {...listeners}
         className="shrink-0 text-dim cursor-grab active:cursor-grabbing hover:text-text transition-colors"
       >
-        <GripVertical size={12} />
+        <GripVertical size={16} />
       </button>
 
-      <div className="size-10 shrink-0 rounded bg-hover overflow-hidden">
+      <div className="size-10 shrink-0 rounded-md bg-hover overflow-hidden">
         {imgSrc ? (
           <img
             src={`/api/image-proxy?url=${encodeURIComponent(imgSrc)}`}
@@ -143,40 +143,40 @@ export default function MediaCard({ result, compact }) {
         <div className="text-xs font-medium text-text truncate">
           {result.title}
         </div>
-        <div className="flex items-center gap-1.5 mt-0.5">
-          <span className="text-[14px] text-dim capitalize">
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-base text-dim capitalize">
             {result.engine || result.source || result.category}
           </span>
         </div>
       </div>
 
-      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={(e) => { e.stopPropagation(); openReader(result.url, result.title, imgSrc); }}
-            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
+            className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-all"
             title="Reader"
           >
-            <BookOpen size={12} />
+            <BookOpen size={16} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); openSummarizer(result.url, result.title); }}
-            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
+            className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-all"
             title="Summarize"
           >
-            <Sparkles size={12} />
+            <Sparkles size={16} />
           </button>
           <button onClick={handleSave} disabled={!activeWsId}
-            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all disabled:opacity-30"
+            className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-all disabled:opacity-30"
           title={activeWsId ? "Save to workspace" : "No active workspace"}
         >
-          {saved ? <Check size={12} /> : <Plus size={12} />}
+          {saved ? <Check size={16} /> : <Plus size={16} />}
         </button>
         <button
           onClick={() => window.open(result.url, "_blank")}
-          className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
+          className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-all"
           title="Open source"
         >
-          <ExternalLink size={12} />
+          <ExternalLink size={16} />
         </button>
       </div>
     </div>

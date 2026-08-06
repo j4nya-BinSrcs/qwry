@@ -22,31 +22,31 @@ export default function ContextPanel() {
   return (
     <div className="h-full flex flex-col">
       {/* Mode tabs */}
-      <div className="shrink-0 flex items-center border-b border-border">
-        <div className="flex-1 flex">
+      <div className="shrink-0 flex items-center px-3 pt-2">
+        <div className="flex-1 flex gap-1">
           {MODES.map((m) => (
             <button
               key={m.id}
               onClick={() => setContextMode(m.id)}
-              className={`px-3 py-2 text-xs font-medium transition-colors relative ${
+              className={`px-3 py-2 text-sm font-medium transition-colors relative rounded-md ${
                 contextMode === m.id
-                  ? "text-text"
-                  : "text-muted hover:text-text"
+                  ? "text-text bg-elevated shadow-surface"
+                  : "text-muted hover:text-text hover:bg-hover"
               }`}
             >
               {m.label}
               {contextMode === m.id && (
-                <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-text" />
+                <span className="absolute bottom-0.5 left-2 right-2 h-0.5 rounded-full bg-accent" />
               )}
             </button>
           ))}
         </div>
         <button
           onClick={() => toggleExpand("context")}
-          className="p-1.5 mr-1 rounded text-dim hover:text-text hover:bg-hover transition-colors"
+          className="p-2 mr-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors"
           title={isExpanded ? "Collapse" : "Expand"}
         >
-          {isExpanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+          {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
         </button>
       </div>
 

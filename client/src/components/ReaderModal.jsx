@@ -67,13 +67,13 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-xs text-text hover:text-muted"
                 >
-                  <ExternalLink size={11} />
+                  <ExternalLink size={16} />
                   {hostname}
                 </a>
               )}
               {data?.content_type === "article" && mins > 0 && (
                 <span className="flex items-center gap-1 text-xs text-dim">
-                  <Clock size={11} />
+                  <Clock size={16} />
                   {mins} min read
                 </span>
               )}
@@ -84,13 +84,13 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
               )}
               {data?.content_type === "image" && (
                 <span className="flex items-center gap-1 text-xs text-dim">
-                  <ImageIcon size={11} />
+                  <ImageIcon size={16} />
                   Image
                 </span>
               )}
               {data?.content_type === "video" && (
                 <span className="flex items-center gap-1 text-xs text-dim">
-                  <Play size={11} />
+                  <Play size={16} />
                   Video
                 </span>
               )}
@@ -98,7 +98,7 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-md text-dim hover:text-text hover:bg-hover transition-all"
+            className="p-2 rounded-md text-dim hover:text-text hover:bg-hover transition-all"
           >
             <X size={16} />
           </button>
@@ -113,30 +113,30 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
           )}
 
           {error && (
-            <div className="py-10 text-center space-y-4">
+            <div className="py-12 text-center space-y-4">
               <p className="text-sm text-text">{error}</p>
               <a
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-text text-surface hover:bg-text/80 transition-colors"
+                className="inline-flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-text text-surface hover:bg-text/80 transition-colors"
               >
-                <ExternalLink size={12} />
+                <ExternalLink size={16} />
                 Open in browser instead
               </a>
             </div>
           )}
 
           {!loading && !error && data?.success === false && (
-            <div className="py-10 text-center space-y-4">
+            <div className="py-12 text-center space-y-4">
               <p className="text-sm text-muted">{data.error || "Could not extract content from this page."}</p>
               <a
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-text text-surface hover:bg-text/80 transition-colors"
+                className="inline-flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-text text-surface hover:bg-text/80 transition-colors"
               >
-                <ExternalLink size={12} />
+                <ExternalLink size={16} />
                 Open in browser instead
               </a>
             </div>
@@ -168,9 +168,9 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-text text-surface hover:bg-text/80 transition-colors"
+                className="inline-flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-text text-surface hover:bg-text/80 transition-colors"
               >
-                <ExternalLink size={12} />
+                <ExternalLink size={16} />
                 Open in browser instead
               </a>
               </div>
@@ -209,9 +209,9 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-text text-surface hover:bg-text/80 transition-colors"
+                className="inline-flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-text text-surface hover:bg-text/80 transition-colors"
               >
-                <Play size={12} />
+                <Play size={16} />
                 Watch on YouTube
               </a>
               </div>
@@ -237,7 +237,7 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
           )}
 
           {!loading && !error && data?.success !== false && data?.content_type === "article" && !data?.content && (
-            <div className="py-10 text-center">
+            <div className="py-12 text-center">
               <p className="text-sm text-muted">No content extracted.</p>
             </div>
           )}

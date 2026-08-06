@@ -33,13 +33,25 @@ export const useSearchStore = create((set, get) => ({
   search: async (q, page = 1, provider) => {
     useUIStore.getState().setContextMode("search-assist");
     const resolvedProvider = provider ?? get().provider;
-    set({ loading: true, error: null, query: q, page, provider: resolvedProvider });
+    set({
+      loading: true, error: null, query: q, page, provider: resolvedProvider,
+      results: [],
+      imageResults: [],
+      videoResults: [],
+      newsResults: [],
+      suggestions: [],
+      infobox: null,
+      totalResults: 0,
+      hasMoreImages: true,
+      hasMoreVideos: true,
+      hasMoreNews: true,
+    });
     try {
       const [mainData, imageData, videoData, newsData, suggestions] = await Promise.all([
-        searchQuery(q, page, 50, resolvedProvider),
-        searchQuery(q, 1, 8, resolvedProvider, "images").catch(() => null),
-        searchQuery(q, 1, 8, resolvedProvider, "videos").catch(() => null),
-        searchQuery(q, 1, 8, resolvedProvider, "news").catch(() => null),
+        searchQuery(q, page, 52, resolvedProvider),
+        searchQuery(q, 1, 24, resolvedProvider, "images").catch(() => null),
+        searchQuery(q, 1, 24, resolvedProvider, "videos").catch(() => null),
+        searchQuery(q, 1, 24, resolvedProvider, "news").catch(() => null),
         fetchSuggestions(q, resolvedProvider).catch(() => []),
       ]);
       const images = imageData?.results?.filter((r) => r.img_src) || [];
@@ -58,9 +70,9 @@ export const useSearchStore = create((set, get) => ({
         imagePage: 1,
         videoPage: 1,
         newsPage: 1,
-        hasMoreImages: images.length >= 8,
-        hasMoreVideos: videos.length >= 8,
-        hasMoreNews: news.length >= 8,
+        hasMoreImages: images.length >= 24,
+        hasMoreVideos: videos.length >= 24,
+        hasMoreNews: news.length >= 24,
       });
     } catch (err) {
       set({ error: err.message, loading: false });
@@ -86,12 +98,12 @@ export const useSearchStore = create((set, get) => ({
     if (!query) return;
     const nextPage = imagePage + 1;
     try {
-      const data = await searchQuery(query, nextPage, 8, provider, "images");
+      const data = await searchQuery(query, nextPage, 24, provider, "images");
       const newResults = data.results || [];
       set((s) => ({
         imageResults: [...s.imageResults, ...newResults.filter((r) => r.img_src)],
         imagePage: data.page || nextPage,
-        hasMoreImages: newResults.length >= 8,
+        hasMoreImages: newResults.length >= 24,
       }));
     } catch {
       set({ error: "Failed to load more images" });
@@ -102,12 +114,12 @@ export const useSearchStore = create((set, get) => ({
     if (!query) return;
     const nextPage = videoPage + 1;
     try {
-      const data = await searchQuery(query, nextPage, 8, provider, "videos");
+      const data = await searchQuery(query, nextPage, 24, provider, "videos");
       const newResults = data.results || [];
       set((s) => ({
         videoResults: [...s.videoResults, ...newResults],
         videoPage: data.page || nextPage,
-        hasMoreVideos: newResults.length >= 8,
+        hasMoreVideos: newResults.length >= 24,
       }));
     } catch {
       set({ error: "Failed to load more videos" });
@@ -118,12 +130,12 @@ export const useSearchStore = create((set, get) => ({
     if (!query) return;
     const nextPage = newsPage + 1;
     try {
-      const data = await searchQuery(query, nextPage, 8, provider, "news");
+      const data = await searchQuery(query, nextPage, 24, provider, "news");
       const newResults = data.results || [];
       set((s) => ({
         newsResults: [...s.newsResults, ...newResults],
         newsPage: data.page || nextPage,
-        hasMoreNews: newResults.length >= 8,
+        hasMoreNews: newResults.length >= 24,
       }));
     } catch {
       set({ error: "Failed to load more news" });

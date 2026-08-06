@@ -26,7 +26,7 @@ function centerOf(node) {
 function Favicon({ domain }) {
   return (
     <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`} alt=""
-      className="size-4 rounded shrink-0"
+      className="size-4 rounded-md shrink-0"
       onError={(e) => { e.target.style.display = "none"; }}
     />
   );
@@ -86,7 +86,7 @@ function IconBtn({ title, onClick, children, className }) {
     <button title={title}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => { e.stopPropagation(); onClick && onClick(e); }}
-      className={`p-0.5 rounded text-dim hover:text-text hover:bg-hover transition-colors shrink-0 ${className || ""}`}
+      className={`p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors shrink-0 ${className || ""}`}
     >{children}</button>
   );
 }
@@ -101,8 +101,8 @@ function NodeCard({ node, obj, isSelected, connectionMode, onSelect, onDragStart
 
   return (
     <div
-      className={`canvas-node absolute rounded-lg bg-panel border border-border overflow-hidden transition-all hover:border-text/40 hover:shadow-lg ${
-        isSelected ? "ring-2 ring-text" : connectionMode === node.id ? "ring-2 ring-text/60" : "shadow-sm"
+      className={`canvas-node absolute rounded-lg bg-elevated overflow-hidden transition-all hover:shadow-pop ${
+        isSelected ? "ring-2 ring-text" : connectionMode === node.id ? "ring-2 ring-text/60" : "shadow-surface"
       }`}
       style={{ left: node.x, top: node.y, width: w, height: h, zIndex: node.z_index || 0 }}
       onMouseDown={(e) => { e.stopPropagation(); onDragStart(node.id, e); }}
@@ -120,74 +120,74 @@ function NodeCard({ node, obj, isSelected, connectionMode, onSelect, onDragStart
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                {type === "image" ? <Image size={22} className="text-dim opacity-40" /> : <Video size={22} className="text-dim opacity-40" />}
+                {type === "image" ? <Image size={24} className="text-dim opacity-40" /> : <Video size={24} className="text-dim opacity-40" />}
               </div>
             )}
-            <div className="absolute top-1 right-1 flex gap-0.5">
-              {onConnect && <IconBtn title="Connect"><Plus size={10} /></IconBtn>}
-              <IconBtn title="Remove from canvas" onClick={() => onDelete(node.id)}><Trash2 size={10} /></IconBtn>
+            <div className="absolute top-1 right-1 flex gap-1">
+              {onConnect && <IconBtn title="Connect"><Plus size={16} /></IconBtn>}
+              <IconBtn title="Remove from canvas" onClick={() => onDelete(node.id)}><Trash2 size={16} /></IconBtn>
             </div>
           </div>
-          <div className="shrink-0 px-2.5 py-1.5 border-t border-border/50">
+          <div className="shrink-0 px-3 py-2 border-t border-border/50">
             <p className="text-xs text-text truncate">{obj?.title || obj?.caption || node.label || TYPE_LABELS[type] || "Untitled"}</p>
-            <div className="flex items-center gap-1 mt-0.5">
+            <div className="flex items-center gap-1 mt-1">
               {obj?.url ? (
                 <>
                   <Favicon domain={getHostname(obj.url)} />
-                  <span className="text-[14px] text-muted truncate flex-1">{getHostname(obj.url)}</span>
-                  <IconBtn title="Open" onClick={() => onOpenUrl(obj.url)}><ExternalLink size={9} /></IconBtn>
+                  <span className="text-base text-muted truncate flex-1">{getHostname(obj.url)}</span>
+                  <IconBtn title="Open" onClick={() => onOpenUrl(obj.url)}><ExternalLink size={16} /></IconBtn>
                 </>
               ) : (
-                <span className="text-[14px] text-muted truncate flex-1">{obj?.platform || ""}</span>
+                <span className="text-base text-muted truncate flex-1">{obj?.platform || ""}</span>
               )}
               {type === "video" && obj?.url && (
-                <IconBtn title="Summarize" onClick={() => onOpenSummarizer(obj.url, obj.title)}><Sparkles size={9} /></IconBtn>
+                <IconBtn title="Summarize" onClick={() => onOpenSummarizer(obj.url, obj.title)}><Sparkles size={16} /></IconBtn>
               )}
               <IconBtn title={isPinned ? "Unpin" : "Pin"} onClick={() => onTogglePin(type, obj?.id || node.object_id)}>
-                <Pin size={9} className={isPinned ? "text-text" : ""} />
+                <Pin size={16} className={isPinned ? "text-text" : ""} />
               </IconBtn>
             </div>
           </div>
         </div>
       ) : (
-        <div className="h-full flex flex-col px-2.5 py-2 min-h-0">
-          <div className="flex items-center gap-1.5 mb-1">
-            {type === "source" && (domain ? <Favicon domain={domain} /> : <Layers size={11} style={{ color }} />)}
-            {type === "note" && <FileText size={11} style={{ color }} />}
-            {type === "comparison" && <Scale size={11} style={{ color }} />}
-            {type === "ai_response" && <MessageCircle size={11} style={{ color }} />}
-            {type === "task" && <Check size={11} style={{ color }} />}
+        <div className="h-full flex flex-col px-3 py-2 min-h-0">
+          <div className="flex items-center gap-2 mb-1">
+            {type === "source" && (domain ? <Favicon domain={domain} /> : <Layers size={16} style={{ color }} />)}
+            {type === "note" && <FileText size={16} style={{ color }} />}
+            {type === "comparison" && <Scale size={16} style={{ color }} />}
+            {type === "ai_response" && <MessageCircle size={16} style={{ color }} />}
+            {type === "task" && <Check size={16} style={{ color }} />}
             {type === "source"
-              ? <span className="text-[14px] text-muted truncate flex-1">{domain || "Source"}</span>
-              : <span className="text-[14px] uppercase tracking-wider text-dim">{TYPE_LABELS[type]}</span>}
-            {onConnect && <IconBtn title="Connect"><Plus size={10} /></IconBtn>}
-            <IconBtn title="Remove from canvas" onClick={() => onDelete(node.id)}><Trash2 size={10} /></IconBtn>
+              ? <span className="text-base text-muted truncate flex-1">{domain || "Source"}</span>
+              : <span className="text-base uppercase tracking-wider text-dim">{TYPE_LABELS[type]}</span>}
+            {onConnect && <IconBtn title="Connect"><Plus size={16} /></IconBtn>}
+            <IconBtn title="Remove from canvas" onClick={() => onDelete(node.id)}><Trash2 size={16} /></IconBtn>
           </div>
           <p className="text-xs font-medium text-text truncate">{obj?.title || node.label || "Untitled"}</p>
-          {type === "source" && obj?.snippet && <p className="text-[14px] text-muted mt-0.5 line-clamp-3 leading-relaxed">{obj.snippet}</p>}
-          {type === "note" && obj?.content && <p className="text-[14px] text-muted mt-0.5 line-clamp-5 leading-relaxed whitespace-pre-line">{obj.content}</p>}
+          {type === "source" && obj?.snippet && <p className="text-base text-muted mt-1 line-clamp-3 leading-relaxed">{obj.snippet}</p>}
+          {type === "note" && obj?.content && <p className="text-base text-muted mt-1 line-clamp-5 leading-relaxed whitespace-pre-line">{obj.content}</p>}
           {type === "comparison" && obj?.data?.sources?.length === 2 && (
-            <p className="text-[14px] text-muted mt-0.5 truncate">{(obj.data.sources[0].title || "A")} vs {(obj.data.sources[1].title || "B")}</p>
+            <p className="text-base text-muted mt-1 truncate">{(obj.data.sources[0].title || "A")} vs {(obj.data.sources[1].title || "B")}</p>
           )}
-          {type === "ai_response" && obj?.response_text && <p className="text-[14px] text-muted mt-0.5 line-clamp-4 leading-relaxed">{obj.response_text}</p>}
-          {type === "task" && obj?.name && <p className="text-[14px] text-muted mt-0.5 truncate">{obj.name}</p>}
+          {type === "ai_response" && obj?.response_text && <p className="text-base text-muted mt-1 line-clamp-4 leading-relaxed">{obj.response_text}</p>}
+          {type === "task" && obj?.name && <p className="text-base text-muted mt-1 truncate">{obj.name}</p>}
           {type === "source" && (
-            <div className="flex items-center gap-0.5 mt-auto pt-1.5">
-              <IconBtn title="Reader" onClick={() => obj?.url && onOpenReader(obj.url, obj.title)}><Book size={10} /></IconBtn>
-              <IconBtn title="Summarize" onClick={() => obj?.url && onOpenSummarizer(obj.url, obj.title)}><Sparkles size={10} /></IconBtn>
-              <IconBtn title="Open" onClick={() => obj?.url && onOpenUrl(obj.url)}><ExternalLink size={10} /></IconBtn>
+            <div className="flex items-center gap-1 mt-auto pt-2">
+              <IconBtn title="Reader" onClick={() => obj?.url && onOpenReader(obj.url, obj.title)}><Book size={16} /></IconBtn>
+              <IconBtn title="Summarize" onClick={() => obj?.url && onOpenSummarizer(obj.url, obj.title)}><Sparkles size={16} /></IconBtn>
+              <IconBtn title="Open" onClick={() => obj?.url && onOpenUrl(obj.url)}><ExternalLink size={16} /></IconBtn>
               <div className="flex-1" />
               <IconBtn title={isPinned ? "Unpin" : "Pin"} onClick={() => onTogglePin("source", obj?.id || node.object_id)}>
-                <Pin size={10} className={isPinned ? "text-text" : ""} />
+                <Pin size={16} className={isPinned ? "text-text" : ""} />
               </IconBtn>
             </div>
           )}
           {type === "note" && (
-            <div className="flex items-center gap-0.5 mt-auto pt-1.5">
-              <IconBtn title="Edit note" onClick={() => onEditNote(node)}><Pencil size={10} /></IconBtn>
+            <div className="flex items-center gap-1 mt-auto pt-2">
+              <IconBtn title="Edit note" onClick={() => onEditNote(node)}><Pencil size={16} /></IconBtn>
               <div className="flex-1" />
               <IconBtn title={isPinned ? "Unpin" : "Pin"} onClick={() => onTogglePin("note", obj?.id || node.object_id)}>
-                <Pin size={10} className={isPinned ? "text-text" : ""} />
+                <Pin size={16} className={isPinned ? "text-text" : ""} />
               </IconBtn>
             </div>
           )}
@@ -255,7 +255,7 @@ function Minimap({ nodes, viewport }) {
   const scale = Math.min((MINIMAP_SIZE - PAD * 2) / areaW, (MINIMAP_SIZE - PAD * 2) / areaH);
 
   return (
-    <div className="canvas-ui absolute bottom-2 right-2 size-[120px] rounded border border-border bg-surface/80 backdrop-blur-sm overflow-hidden shadow-md z-10">
+    <div className="canvas-ui absolute bottom-2 right-2 size-[120px] rounded-md border border-border bg-surface/80 backdrop-blur-sm overflow-hidden shadow-md z-10">
       <svg width={MINIMAP_SIZE} height={MINIMAP_SIZE}>
         {nodesArr.map((n) => {
           const s = nodeSize(n);
@@ -281,12 +281,12 @@ function Legend({ counts }) {
   const entries = Object.keys(NODE_COLORS).filter((t) => counts[t] > 0);
   if (entries.length === 0) return null;
   return (
-    <div className="canvas-ui absolute bottom-2 left-2 z-10 rounded border border-border bg-surface/80 backdrop-blur-sm px-2 py-1.5 shadow-md">
+    <div className="canvas-ui absolute bottom-2 left-2 z-10 rounded-md border border-border bg-surface/80 backdrop-blur-sm px-2 py-2 shadow-md">
       {entries.map((t) => (
-        <div key={t} className="flex items-center gap-1.5 py-0.5">
+        <div key={t} className="flex items-center gap-2 py-1">
           <span className="size-1.5 rounded-full shrink-0" style={{ backgroundColor: NODE_COLORS[t] }} />
-          <span className="text-[14px] text-muted capitalize">{TYPE_LABELS[t]}</span>
-          <span className="text-[14px] text-dim ml-1">{counts[t]}</span>
+          <span className="text-base text-muted capitalize">{TYPE_LABELS[t]}</span>
+          <span className="text-base text-dim ml-1">{counts[t]}</span>
         </div>
       ))}
     </div>
@@ -298,7 +298,7 @@ function Legend({ counts }) {
 function InspectorBtn({ onClick, children, primary }) {
   return (
     <button onClick={onClick}
-      className={`flex items-center gap-1 text-[14px] px-2 py-1 rounded transition-colors ${
+      className={`flex items-center gap-1 text-base px-2 py-1 rounded-md transition-colors ${
         primary ? "bg-text text-surface hover:opacity-80" : "border border-border text-text hover:bg-hover"
       }`}
     >{children}</button>
@@ -326,32 +326,32 @@ function InspectorPanel({ node, obj, isPinned, onTogglePin, onDeleteNode, onDele
         return (
           <div className="space-y-2">
             {obj?.url && (
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <Favicon domain={getHostname(obj.url)} />
-                <span className="text-[14px] text-muted truncate flex-1">{getHostname(obj.url)}</span>
+                <span className="text-base text-muted truncate flex-1">{getHostname(obj.url)}</span>
               </div>
             )}
             <p className="text-xs font-medium text-text">{obj?.title || node.label || "Untitled"}</p>
             {obj?.snippet && <p className="text-xs text-muted leading-relaxed">{obj.snippet}</p>}
             {obj?.summary && (
               <div>
-                <div className="flex items-center gap-1 text-[14px] text-dim uppercase tracking-wide font-medium mb-0.5">
-                  <Sparkles size={10} /> Summary
+                <div className="flex items-center gap-1 text-base text-dim uppercase tracking-wide font-medium mb-1">
+                  <Sparkles size={16} /> Summary
                 </div>
                 <p className="text-xs text-muted leading-relaxed whitespace-pre-line">{obj.summary}</p>
               </div>
             )}
             {obj?.notes && (
               <div>
-                <div className="text-[14px] text-dim uppercase tracking-wide font-medium mb-0.5">Notes</div>
+                <div className="text-base text-dim uppercase tracking-wide font-medium mb-1">Notes</div>
                 <p className="text-xs text-muted leading-relaxed whitespace-pre-line">{obj.notes}</p>
               </div>
             )}
             <div className="flex items-center gap-1 pt-1">
-              {obj?.url && <InspectorBtn primary onClick={() => onOpenReader(obj.url, obj.title)}><Book size={10} /> Reader</InspectorBtn>}
-              {obj?.url && <InspectorBtn onClick={() => onOpenSummarizer(obj.url, obj.title)}><Sparkles size={10} /> Summarize</InspectorBtn>}
-              {obj?.url && <InspectorBtn onClick={() => onOpenUrl(obj.url)}><ExternalLink size={10} /> Open</InspectorBtn>}
-              <InspectorBtn onClick={() => onTogglePin("source", obj?.id || node.object_id)}><Pin size={10} /> {isPinned ? "Unpin" : "Pin"}</InspectorBtn>
+              {obj?.url && <InspectorBtn primary onClick={() => onOpenReader(obj.url, obj.title)}><Book size={16} /> Reader</InspectorBtn>}
+              {obj?.url && <InspectorBtn onClick={() => onOpenSummarizer(obj.url, obj.title)}><Sparkles size={16} /> Summarize</InspectorBtn>}
+              {obj?.url && <InspectorBtn onClick={() => onOpenUrl(obj.url)}><ExternalLink size={16} /> Open</InspectorBtn>}
+              <InspectorBtn onClick={() => onTogglePin("source", obj?.id || node.object_id)}><Pin size={16} /> {isPinned ? "Unpin" : "Pin"}</InspectorBtn>
             </div>
           </div>
         );
@@ -361,20 +361,20 @@ function InspectorPanel({ node, obj, isPinned, onTogglePin, onDeleteNode, onDele
             <input type="text" value={draft.title}
               onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
               placeholder="Title" maxLength={500}
-              className="w-full bg-hover border border-border rounded px-2 py-1.5 text-xs text-text outline-none placeholder:text-dim"
+              className="w-full bg-hover border border-border rounded-md px-2 py-2 text-xs text-text outline-none placeholder:text-dim"
             />
             <textarea value={draft.content} rows={5}
               onChange={(e) => setDraft((d) => ({ ...d, content: e.target.value }))}
               placeholder="Content..."
-              className="w-full bg-hover border border-border rounded px-2 py-1.5 text-xs text-text outline-none placeholder:text-dim resize-none"
+              className="w-full bg-hover border border-border rounded-md px-2 py-2 text-xs text-text outline-none placeholder:text-dim resize-none"
             />
             <div className="flex items-center gap-1">
               <InspectorBtn primary onClick={async () => { await onUpdateNote(draft); setSaved(true); }}>
-                <Check size={10} /> Save
+                <Check size={16} /> Save
               </InspectorBtn>
-              {saved && <span className="text-[14px] text-dim">Saved</span>}
+              {saved && <span className="text-base text-dim">Saved</span>}
               <div className="flex-1" />
-              <InspectorBtn onClick={() => onTogglePin("note", obj?.id || node.object_id)}><Pin size={10} /> {isPinned ? "Unpin" : "Pin"}</InspectorBtn>
+              <InspectorBtn onClick={() => onTogglePin("note", obj?.id || node.object_id)}><Pin size={16} /> {isPinned ? "Unpin" : "Pin"}</InspectorBtn>
             </div>
           </div>
         );
@@ -384,16 +384,16 @@ function InspectorPanel({ node, obj, isPinned, onTogglePin, onDeleteNode, onDele
           <div className="space-y-2">
             {(type === "video" ? obj?.thumbnail : obj?.url) && (
               <img src={type === "video" ? obj?.thumbnail : obj?.url} alt=""
-                className="w-full h-24 object-cover rounded"
+                className="w-full h-24 object-cover rounded-md"
                 onError={(e) => { e.target.style.display = "none"; }}
               />
             )}
             <p className="text-xs font-medium text-text">{obj?.title || obj?.caption || node.label || "Untitled"}</p>
-            {obj?.platform && <p className="text-[14px] text-muted">{obj.platform}</p>}
+            {obj?.platform && <p className="text-base text-muted">{obj.platform}</p>}
             <div className="flex items-center gap-1 pt-1">
-              {obj?.url && <InspectorBtn primary onClick={() => onOpenUrl(obj.url)}><ExternalLink size={10} /> Open</InspectorBtn>}
-              {type === "video" && obj?.url && <InspectorBtn onClick={() => onOpenSummarizer(obj.url, obj.title)}><Sparkles size={10} /> Summarize</InspectorBtn>}
-              <InspectorBtn onClick={() => onTogglePin(type, obj?.id || node.object_id)}><Pin size={10} /> {isPinned ? "Unpin" : "Pin"}</InspectorBtn>
+              {obj?.url && <InspectorBtn primary onClick={() => onOpenUrl(obj.url)}><ExternalLink size={16} /> Open</InspectorBtn>}
+              {type === "video" && obj?.url && <InspectorBtn onClick={() => onOpenSummarizer(obj.url, obj.title)}><Sparkles size={16} /> Summarize</InspectorBtn>}
+              <InspectorBtn onClick={() => onTogglePin(type, obj?.id || node.object_id)}><Pin size={16} /> {isPinned ? "Unpin" : "Pin"}</InspectorBtn>
             </div>
           </div>
         );
@@ -405,10 +405,10 @@ function InspectorPanel({ node, obj, isPinned, onTogglePin, onDeleteNode, onDele
               <div className="grid grid-cols-2 gap-2">
                 {data.sources.map((s, i) => (
                   <div key={i} className="space-y-1 min-w-0">
-                    <p className="text-[14px] font-medium text-text truncate">{s.title || "Untitled"}</p>
-                    <p className="text-[14px] text-dim">{s.url ? getHostname(s.url) : s._type}</p>
-                    {s.snippet && <p className="text-[14px] text-muted leading-relaxed line-clamp-3">{s.snippet}</p>}
-                    {s.summary && <p className="text-[14px] text-text leading-relaxed line-clamp-3">{s.summary}</p>}
+                    <p className="text-base font-medium text-text truncate">{s.title || "Untitled"}</p>
+                    <p className="text-base text-dim">{s.url ? getHostname(s.url) : s._type}</p>
+                    {s.snippet && <p className="text-base text-muted leading-relaxed line-clamp-3">{s.snippet}</p>}
+                    {s.summary && <p className="text-base text-text leading-relaxed line-clamp-3">{s.summary}</p>}
                   </div>
                 ))}
               </div>
@@ -427,22 +427,22 @@ function InspectorPanel({ node, obj, isPinned, onTogglePin, onDeleteNode, onDele
   };
 
   return (
-    <div className="canvas-ui absolute top-2 right-2 z-20 w-64 max-h-[75%] overflow-y-auto rounded-lg border border-border bg-elevated/95 backdrop-blur-sm shadow-xl flex flex-col">
+    <div className="canvas-ui absolute top-2 right-2 z-20 w-64 max-h-[75%] overflow-y-auto rounded-lg border border-border bg-elevated/95 backdrop-blur-sm shadow-pop flex flex-col">
       <div className="shrink-0 flex items-center justify-between px-3 py-2 border-b border-border sticky top-0 bg-elevated/95 backdrop-blur-sm">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <span className="size-1.5 rounded-full" style={{ backgroundColor: color }} />
-          <span className="text-[15px] font-semibold text-text">{TYPE_LABELS[type] || "Node"}</span>
+          <span className="text-base font-semibold text-text">{TYPE_LABELS[type] || "Node"}</span>
         </div>
-        <IconBtn title="Close" onClick={onClose}><X size={12} /></IconBtn>
+        <IconBtn title="Close" onClick={onClose}><X size={16} /></IconBtn>
       </div>
       <div className="p-3">
         {renderBody()}
       </div>
-      <div className="shrink-0 px-3 py-2 border-t border-border flex items-center gap-1.5 sticky bottom-0 bg-elevated/95 backdrop-blur-sm">
-        <InspectorBtn onClick={() => onDeleteNode(node.id)}><Trash2 size={10} /> Remove</InspectorBtn>
+      <div className="shrink-0 px-3 py-2 border-t border-border flex items-center gap-2 sticky bottom-0 bg-elevated/95 backdrop-blur-sm">
+        <InspectorBtn onClick={() => onDeleteNode(node.id)}><Trash2 size={16} /> Remove</InspectorBtn>
         <div className="flex-1" />
         {onDeleteObject && (
-          <InspectorBtn onClick={onDeleteObject}><Trash2 size={10} /> Delete {TYPE_LABELS[type] || "Object"}</InspectorBtn>
+          <InspectorBtn onClick={onDeleteObject}><Trash2 size={16} /> Delete {TYPE_LABELS[type] || "Object"}</InspectorBtn>
         )}
       </div>
     </div>
@@ -475,29 +475,29 @@ function CompareDialog({ sources, onClose, onCreate }) {
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center bg-text/20" onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()}
-        className="w-80 max-w-[90%] rounded-lg bg-elevated border border-border shadow-xl p-3">
+        className="w-80 max-w-[90%] rounded-lg bg-elevated border border-border shadow-pop p-3">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-xs font-semibold text-text">Compare Sources</h3>
-          <IconBtn title="Close" onClick={onClose}><X size={12} /></IconBtn>
+          <IconBtn title="Close" onClick={onClose}><X size={16} /></IconBtn>
         </div>
         <div className="flex items-center gap-2 mb-2">
           <select value={a} onChange={(e) => setA(e.target.value)}
-            className="flex-1 min-w-0 truncate bg-hover border border-border rounded px-2 py-1 text-xs text-text outline-none"
+            className="flex-1 min-w-0 truncate bg-hover border border-border rounded-md px-2 py-1 text-xs text-text outline-none"
           >
             <option value="">Source A...</option>
             {sources.map((s) => <option key={s.id} value={s.id}>{s.title || s.id?.slice(0, 12)}</option>)}
           </select>
-          <span className="text-[14px] text-dim shrink-0">vs</span>
+          <span className="text-base text-dim shrink-0">vs</span>
           <select value={b} onChange={(e) => setB(e.target.value)}
-            className="flex-1 min-w-0 truncate bg-hover border border-border rounded px-2 py-1 text-xs text-text outline-none"
+            className="flex-1 min-w-0 truncate bg-hover border border-border rounded-md px-2 py-1 text-xs text-text outline-none"
           >
             <option value="">Source B...</option>
             {sources.map((s) => <option key={s.id} value={s.id}>{s.title || s.id?.slice(0, 12)}</option>)}
           </select>
         </div>
         <button onClick={handleCreate} disabled={!srcA || !srcB || srcA.id === srcB.id}
-          className="w-full flex items-center justify-center gap-1 text-xs px-3 py-1.5 rounded bg-text text-surface hover:opacity-80 transition-opacity disabled:opacity-30"
-        ><Scale size={12} /> Create Comparison</button>
+          className="w-full flex items-center justify-center gap-1 text-xs px-3 py-2 rounded-md bg-text text-surface hover:opacity-80 transition-opacity disabled:opacity-30"
+        ><Scale size={16} /> Create Comparison</button>
       </div>
     </div>
   );
@@ -983,7 +983,7 @@ export default function CanvasView() {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center px-8">
-          <div className="size-8 rounded bg-hover border border-border flex items-center justify-center mx-auto mb-3">
+          <div className="size-8 rounded-lg bg-elevated flex items-center justify-center mx-auto mb-3">
             <Layers size={16} className="text-text" />
           </div>
           <p className="text-sm text-muted">Create or select a workspace to use Canvas</p>
@@ -1006,7 +1006,7 @@ export default function CanvasView() {
     return (
       <div className="h-full flex items-center justify-center p-6">
         <div className="text-center max-w-xs">
-          <p className="text-xs text-text bg-hover rounded px-3 py-2">{error}</p>
+          <p className="text-xs text-text bg-hover rounded-md px-3 py-2">{error}</p>
         </div>
       </div>
     );
@@ -1064,13 +1064,13 @@ export default function CanvasView() {
         {Object.keys(nodes).length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="text-center pointer-events-auto">
-              <div className="size-8 rounded bg-hover border border-border flex items-center justify-center mx-auto mb-3">
+              <div className="size-8 rounded-lg bg-elevated flex items-center justify-center mx-auto mb-3">
                 <Layers size={16} className="text-dim" />
               </div>
               <p className="text-xs text-muted max-w-xs mb-3">Canvas is empty — double-click anywhere to add a note, use the Add menu, or add sources from Search Assist</p>
               <div className="flex items-center justify-center gap-2">
                 <button onClick={() => { const r = containerRef.current?.getBoundingClientRect(); setNoteComposer(r ? { px: r.width / 2 - 80, py: r.height / 2 - 60 } : { px: 200, py: 200 }); }}
-                  className="pointer-events-auto text-xs px-3 py-1.5 rounded border border-border text-text hover:bg-hover transition-colors"
+                  className="pointer-events-auto text-xs px-3 py-2 rounded-md border border-border text-text hover:bg-hover transition-colors"
                 >+ New Note</button>
               </div>
             </div>
@@ -1106,24 +1106,24 @@ export default function CanvasView() {
 
         {/* Note composer */}
         {noteComposer && (
-          <div className="canvas-ui absolute z-30 w-56 rounded-lg border border-border bg-elevated shadow-xl p-2"
+          <div className="canvas-ui absolute z-30 w-56 rounded-lg border border-border bg-elevated shadow-pop p-2"
             style={{ left: noteComposer.px, top: noteComposer.py }}
           >
             <input type="text" value={noteTitle} onChange={(e) => setNoteTitle(e.target.value)}
               placeholder="Title..." maxLength={120} autoFocus
-              className="w-full bg-hover border border-border rounded px-2 py-1.5 text-xs text-text outline-none placeholder:text-dim mb-1.5"
+              className="w-full bg-hover border border-border rounded-md px-2 py-2 text-xs text-text outline-none placeholder:text-dim mb-2"
               onKeyDown={(e) => { if (e.key === "Enter") createNoteAt(); if (e.key === "Escape") setNoteComposer(null); }}
             />
             <input type="text" value={noteContent} onChange={(e) => setNoteContent(e.target.value)}
               placeholder="Content (optional)" maxLength={500}
-              className="w-full bg-hover border border-border rounded px-2 py-1.5 text-xs text-text outline-none placeholder:text-dim mb-1.5"
+              className="w-full bg-hover border border-border rounded-md px-2 py-2 text-xs text-text outline-none placeholder:text-dim mb-2"
             />
             <div className="flex items-center gap-1">
               <button onClick={createNoteAt} disabled={!noteTitle.trim()}
-                className="flex items-center gap-1 text-[14px] px-2 py-1 rounded bg-text text-surface hover:opacity-80 transition-opacity disabled:opacity-30"
-              ><Plus size={10} /> Add</button>
+                className="flex items-center gap-1 text-base px-2 py-1 rounded-md bg-text text-surface hover:opacity-80 transition-opacity disabled:opacity-30"
+              ><Plus size={16} /> Add</button>
               <button onClick={() => setNoteComposer(null)}
-                className="text-[14px] px-2 py-1 rounded border border-border text-dim hover:text-text transition-colors"
+                className="text-base px-2 py-1 rounded-md border border-border text-dim hover:text-text transition-colors"
               >Cancel</button>
             </div>
           </div>
@@ -1138,30 +1138,30 @@ export default function CanvasView() {
         )}
 
         {/* Toolbar */}
-        <div className="canvas-ui absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-1.5 rounded-lg bg-surface/90 backdrop-blur-sm border border-border shadow-md z-10">
+        <div className="canvas-ui absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-2 rounded-lg bg-surface/90 backdrop-blur-sm border border-border shadow-md z-10">
           <button onClick={() => { const r = containerRef.current?.getBoundingClientRect(); setNoteComposer(r ? { px: r.width / 2 - 80, py: r.height / 2 - 60 } : { px: 200, py: 200 }); setNoteTitle(""); setNoteContent(""); }}
-            className="flex items-center gap-1 px-2 py-1 rounded text-[15px] text-text hover:bg-hover transition-colors" title="Create a note on the canvas"
-          ><FileText size={12} /> Note</button>
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-base text-text hover:bg-hover transition-colors" title="Create a note on the canvas"
+          ><FileText size={16} /> Note</button>
           <button onClick={() => setCompareOpen(true)}
-            className="flex items-center gap-1 px-2 py-1 rounded text-[14px] text-text hover:bg-hover transition-colors" title="Compare two sources"
-          ><Scale size={12} /> Compare</button>
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-base text-text hover:bg-hover transition-colors" title="Compare two sources"
+          ><Scale size={16} /> Compare</button>
           <div className="relative">
             <button onClick={() => setAddMenu(!addMenu)}
-              className="flex items-center gap-1 px-2 py-1 rounded text-[15px] text-text hover:bg-hover transition-colors" title="Add a station item to the canvas"
-            ><Plus size={12} /> Add{unplaced.length > 0 ? ` (${unplaced.length})` : ""}</button>
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-base text-text hover:bg-hover transition-colors" title="Add a station item to the canvas"
+            ><Plus size={16} /> Add{unplaced.length > 0 ? ` (${unplaced.length})` : ""}</button>
             {addMenu && (
-              <div className="absolute bottom-full left-0 mb-1 w-64 max-h-64 overflow-y-auto rounded-lg bg-elevated border border-border shadow-xl z-20">
-                <div className="px-3 py-1.5 text-[14px] text-muted font-medium border-b border-border">Add from station</div>
+              <div className="absolute bottom-full left-0 mb-1 w-64 max-h-64 overflow-y-auto rounded-lg bg-elevated border border-border shadow-pop z-20">
+                <div className="px-3 py-2 text-base text-muted font-medium border-b border-border">Add from station</div>
                 {unplaced.length === 0 && (
-                  <div className="px-3 py-3 text-[14px] text-dim text-center">All station items are already on the canvas</div>
+                  <div className="px-3 py-3 text-base text-dim text-center">All station items are already on the canvas</div>
                 )}
                 {unplaced.map((u) => (
                   <button key={u.key} onClick={() => placeNode(u)}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-xs text-text hover:bg-hover transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs text-text hover:bg-hover transition-colors"
                   >
                     <span className="size-1.5 rounded-full shrink-0" style={{ backgroundColor: NODE_COLORS[u.type] || "#666" }} />
                     <span className="truncate">{u.label}</span>
-                    <span className="text-[14px] text-dim shrink-0 capitalize">{u.type}</span>
+                    <span className="text-base text-dim shrink-0 capitalize">{u.type}</span>
                   </button>
                 ))}
               </div>
@@ -1169,15 +1169,15 @@ export default function CanvasView() {
           </div>
           <div className="w-px h-4 bg-border mx-1" />
           <button onClick={() => setViewport((v) => sanitizeViewport({ ...v, zoom: v.zoom - 0.2 }))}
-            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors" title="Zoom out"
-          ><ZoomOut size={14} /></button>
-          <span className="text-[14px] text-dim w-10 text-center font-mono">{zoomPct}%</span>
+            className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Zoom out"
+          ><ZoomOut size={16} /></button>
+          <span className="text-base text-dim w-10 text-center font-mono">{zoomPct}%</span>
           <button onClick={() => setViewport((v) => sanitizeViewport({ ...v, zoom: v.zoom + 0.2 }))}
-            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors" title="Zoom in"
-          ><ZoomIn size={14} /></button>
+            className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Zoom in"
+          ><ZoomIn size={16} /></button>
           <button onClick={fitToScreen}
-            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors" title="Fit to screen"
-          ><Maximize2 size={13} /></button>
+            className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Fit to screen"
+          ><Maximize2 size={16} /></button>
         </div>
       </div>
     </div>

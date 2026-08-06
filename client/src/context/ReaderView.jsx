@@ -13,7 +13,7 @@ function WorkspaceBadge() {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const ws = workspaces.find((w) => w.id === activeId);
   if (!ws) return null;
-  return <span className="text-[14px] px-1.5 py-0.5 bg-hover rounded text-dim truncate max-w-28">{ws.name}</span>;
+  return <span className="text-base px-2 py-1 bg-hover rounded-md text-dim truncate max-w-28">{ws.name}</span>;
 }
 
 export default function ReaderView() {
@@ -108,7 +108,7 @@ export default function ReaderView() {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center px-8">
-          <div className="size-8 rounded bg-hover border border-border flex items-center justify-center mx-auto mb-3">
+          <div className="size-8 rounded-lg bg-elevated flex items-center justify-center mx-auto mb-3">
             <BookOpen size={16} className="text-text" />
           </div>
           <p className="text-sm text-muted">Select a result to read</p>
@@ -119,55 +119,55 @@ export default function ReaderView() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="shrink-0 px-3 py-2 border-b border-border flex items-center justify-between">
+      <div className="shrink-0 px-4 pt-4 pb-2 flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-text">Reader</h2>
-          <p className="text-[14px] text-muted">{reads.length} read{reads.length !== 1 ? "s" : ""}</p>
+          <h2 className="text-base font-semibold text-text tracking-tight">Reader</h2>
+          <p className="text-sm text-muted mt-0.5">{reads.length} read{reads.length !== 1 ? "s" : ""}</p>
         </div>
         <WorkspaceBadge />
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+      <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
         {reads.map((r) => {
           const data = r.data;
           const hostname = data ? getHostname(data.url) : getHostname(r.url);
           const mins = data ? Math.round((data.reading_time_seconds || 0) / 60) : 0;
 
           return (
-            <div key={r.id} className="rounded bg-panel border border-border overflow-hidden">
+            <div key={r.id} className="rounded-lg bg-elevated shadow-raised overflow-hidden">
               <div
                 className="flex items-center gap-2 px-3 py-2 border-b border-border cursor-pointer hover:bg-hover transition-colors"
                 onClick={() => toggleRead(r.id)}
               >
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-medium text-text truncate">{r.title || hostname}</div>
-                  <div className="flex items-center gap-2 mt-0.5">
+                  <div className="flex items-center gap-2 mt-1">
                     <a href={r.url} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-[14px] text-text hover:text-muted"
+                      className="flex items-center gap-1 text-base text-text hover:text-muted"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <ExternalLink size={10} />
+                      <ExternalLink size={16} />
                       {hostname}
                     </a>
                     {data && data.content_type === "article" && mins > 0 && (
-                      <span className="flex items-center gap-1 text-[14px] text-dim"><Clock size={10} />{mins} min</span>
+                      <span className="flex items-center gap-1 text-base text-dim"><Clock size={16} />{mins} min</span>
                     )}
                     {data && data.content_type === "image" && (
-                      <span className="flex items-center gap-1 text-[14px] text-dim"><ImageIcon size={10} />Image</span>
+                      <span className="flex items-center gap-1 text-base text-dim"><ImageIcon size={16} />Image</span>
                     )}
                     {data && data.content_type === "video" && (
-                      <span className="flex items-center gap-1 text-[14px] text-dim"><Play size={10} />Video</span>
+                      <span className="flex items-center gap-1 text-base text-dim"><Play size={16} />Video</span>
                     )}
                   </div>
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); removeRead(r.id, r.url); }}
-                  className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all shrink-0"
+                  className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-all shrink-0"
                   title="Remove"
                 >
-                  <X size={11} />
+                  <X size={16} />
                 </button>
-                {openId === r.id ? <ChevronDown size={12} className="text-dim shrink-0" /> : <ChevronRight size={12} className="text-dim shrink-0" />}
+                {openId === r.id ? <ChevronDown size={16} className="text-dim shrink-0" /> : <ChevronRight size={16} className="text-dim shrink-0" />}
               </div>
 
               {openId === r.id && (
@@ -179,27 +179,27 @@ export default function ReaderView() {
                   {r.error && (
                     <div className="py-4 text-center space-y-2">
                       <p className="text-xs text-text">Unable to load this page.</p>
-                      <p className="text-[14px] text-muted">{r.error}</p>
+                      <p className="text-base text-muted">{r.error}</p>
                       <a href={r.url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-text text-surface hover:bg-text/80 transition-colors"
-                      ><ExternalLink size={11} /> Open in browser</a>
+                        className="inline-flex items-center gap-1 text-xs px-3 py-2 rounded-md bg-text text-surface hover:bg-text/80 transition-colors"
+                      ><ExternalLink size={16} /> Open in browser</a>
                     </div>
                   )}
 
                   {!r.loading && !r.error && data?.success === false && (
                     <div className="py-4 text-center space-y-2">
                       <p className="text-xs text-muted">Could not read this page automatically.</p>
-                      <p className="text-[14px] text-dim">{data.error}</p>
+                      <p className="text-base text-dim">{data.error}</p>
                       <a href={r.url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-text text-surface hover:bg-text/80 transition-colors"
-                      ><ExternalLink size={11} /> Open in browser</a>
+                        className="inline-flex items-center gap-1 text-xs px-3 py-2 rounded-md bg-text text-surface hover:bg-text/80 transition-colors"
+                      ><ExternalLink size={16} /> Open in browser</a>
                     </div>
                   )}
 
                   {!r.loading && !r.error && data?.success !== false && data?.content_type === "image" && (
                     <div className="space-y-3">
                       {data.media_url && (
-                        <div className="rounded bg-hover flex items-center justify-center overflow-hidden">
+                        <div className="rounded-md bg-hover flex items-center justify-center overflow-hidden">
                           <img src={`/api/image-proxy?url=${encodeURIComponent(data.media_url)}`} alt={data.title || ""}
                             className="max-w-full max-h-[60vh] object-contain"
                             onError={(e) => { e.target.style.display = "none"; }} />
@@ -213,13 +213,13 @@ export default function ReaderView() {
                     <div className="space-y-3">
                       {data.media_url && (
                         <a href={r.url} target="_blank" rel="noopener noreferrer">
-                          <div className="relative rounded overflow-hidden bg-text aspect-video flex items-center justify-center group cursor-pointer">
+                          <div className="relative rounded-md overflow-hidden bg-text aspect-video flex items-center justify-center group cursor-pointer">
                             <img src={`/api/image-proxy?url=${encodeURIComponent(data.media_url)}`} alt=""
                               className="w-full h-full object-cover"
                               onError={(e) => { e.target.style.display = "none"; }} />
                             <div className="absolute inset-0 flex items-center justify-center">
                               <div className="size-12 rounded-full bg-text/60 flex items-center justify-center group-hover:bg-text/80 transition-colors">
-                                <Play size={22} className="text-surface ml-0.5" />
+                                <Play size={24} className="text-surface ml-1" />
                               </div>
                             </div>
                           </div>
@@ -237,8 +237,8 @@ export default function ReaderView() {
                       <div className="py-4 text-center space-y-2">
                         <p className="text-xs text-muted">No readable content was found on this page.</p>
                         <a href={r.url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-text text-surface hover:bg-text/80 transition-colors"
-                      ><ExternalLink size={11} /> Open in browser</a>
+                        className="inline-flex items-center gap-1 text-xs px-3 py-2 rounded-md bg-text text-surface hover:bg-text/80 transition-colors"
+                      ><ExternalLink size={16} /> Open in browser</a>
                       </div>
                     )
                   )}
@@ -247,8 +247,8 @@ export default function ReaderView() {
                     <div className="py-4 text-center space-y-2">
                       <p className="text-xs text-muted">This content type could not be displayed.</p>
                       <a href={r.url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-text text-surface hover:bg-text/80 transition-colors"
-                      ><ExternalLink size={11} /> Open in browser</a>
+                        className="inline-flex items-center gap-1 text-xs px-3 py-2 rounded-md bg-text text-surface hover:bg-text/80 transition-colors"
+                      ><ExternalLink size={16} /> Open in browser</a>
                     </div>
                   )}
                 </div>

@@ -56,7 +56,7 @@ function GradientTile({ seed }) {
 }
 
 function GradientSquare({ seed, size }) {
-  return <div style={{ width: size, height: size, borderRadius: 4, ...gradientStyle(seed) }} />;
+  return <div style={{ width: size, height: size, borderRadius: 8, ...gradientStyle(seed) }} />;
 }
 
 function FaviconTile({ domain, size }) {
@@ -67,7 +67,7 @@ function FaviconTile({ domain, size }) {
       src={faviconUrl(domain)}
       alt=""
       loading="lazy"
-      className="rounded-[3px]"
+      className="rounded-md"
       style={{ width: size, height: size }}
       onError={() => setFailed(true)}
     />
@@ -98,7 +98,7 @@ function WorkspaceThumb({ ws, items, cat }) {
       <div className="w-full relative flex-1 min-h-0 overflow-hidden">
         <GradientTile seed={ws.id} />
         <div className="absolute inset-0 flex items-center justify-center">
-          <Layers size={12} className="text-surface/80" />
+          <Layers size={16} className="text-surface/80" />
         </div>
       </div>
     );
@@ -119,7 +119,7 @@ function WorkspaceThumb({ ws, items, cat }) {
         </div>
       </div>
       {extra > 0 && (
-        <span className="absolute bottom-1 right-1 bg-accent text-surface text-[14px] font-semibold px-1 py-px rounded-full">
+        <span className="absolute bottom-1 right-1 bg-accent text-surface text-base font-semibold px-1 py-px rounded-full">
           +{extra}
         </span>
       )}
@@ -269,23 +269,23 @@ export default function HomeView() {
 
       <div className="relative z-10 flex-1 min-h-0 flex flex-col">
         {/* Top: brand + search */}
-        <div className="flex-[2] flex items-end justify-center px-8 pb-10">
+        <div className="flex-[2] flex items-end justify-center px-8 pb-12">
           <div className="mx-auto w-full max-w-xl">
-            <div className="flex items-center justify-center gap-2.5 mb-2">
-              <div className="size-10 rounded-2xl bg-accent flex items-center justify-center shadow-lg shadow-accent/25">
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <div className="size-10 rounded-xl bg-accent flex items-center justify-center shadow-lg shadow-accent/25">
                 <span className="text-surface text-base font-bold">Q</span>
               </div>
-              <h1 className="text-xl font-semibold text-text tracking-wide">QWRY</h1>
+              <h1 className="text-2xl font-semibold text-text tracking-wide">QWRY</h1>
             </div>
-            <p className="text-[15px] text-muted text-center mb-4">Search, save, summarize, and organize your research.</p>
+            <p className="text-base text-muted text-center mb-4">Search, save, summarize, and organize your research.</p>
 
             <form onSubmit={handleQuickSearch}>
               <div className="relative">
-                <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-dim" />
+                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-dim" />
                 <input type="text" value={quickQuery} onChange={(e) => setQuickQuery(e.target.value)}
                   onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
                   placeholder={placeholder}
-                  className="w-full h-10 pl-10 pr-4 rounded-2xl bg-elevated border border-border text-sm text-text outline-none placeholder:text-dim focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all shadow-sm"
+                  className="w-full h-10 pl-12 pr-4 rounded-xl bg-elevated border border-border text-sm text-text outline-none placeholder:text-dim focus:border-accent focus:ring-2 focus:ring-accent/20 shadow-surface"
                 />
               </div>
             </form>
@@ -294,19 +294,19 @@ export default function HomeView() {
 
         {/* Bottom: workspace selector */}
         <div className="flex-[8] min-h-0 flex items-start justify-center">
-          <div className="flex flex-col h-[90%] w-[50%] border border-border rounded-2xl overflow-hidden bg-surface/60">
-            <div className="flex items-center justify-between px-5 pt-3.5 pb-2.5">
+          <div className="flex flex-col h-[90%] w-[50%] rounded-xl overflow-hidden bg-surface/60 shadow-raised">
+            <div className="flex items-center justify-between px-5 pt-4 pb-3">
               <h2 className="text-sm font-semibold text-text uppercase tracking-wider">Workspaces</h2>
               <button onClick={handleCreateWs}
-                className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md text-accent hover:bg-accent hover:text-surface transition-colors"
-              ><Plus size={12} /> New</button>
+                className="flex items-center gap-2 text-xs px-3 py-1 rounded-md text-accent hover:bg-accent hover:text-surface transition-colors"
+              ><Plus size={16} /> New</button>
             </div>
 
             <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-3 pb-5">
               {wsLoading && workspaces.length === 0 ? (
                 <SkeletonWsCard count={6} />
               ) : workspaces.length === 0 ? (
-                <div className="text-center py-10 rounded-xl border border-dashed border-border">
+                <div className="text-center py-12 rounded-xl bg-panel/50">
                   <Layers size={24} className="text-dim mx-auto mb-3" />
                   <p className="text-sm text-muted">No workspaces yet</p>
                   <button onClick={handleCreateWs}
@@ -324,20 +324,20 @@ export default function HomeView() {
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") handleWsClick(ws.id);
                         }}
-                        className="ws-card group w-full text-left bg-panel border border-border rounded-lg overflow-hidden cursor-pointer flex flex-col"
+                        className="ws-card group w-full text-left bg-elevated border border-border rounded-lg overflow-hidden cursor-pointer flex flex-col"
                         style={{ "--rows": span, "--rows-hover": span + HOVER_GROW }}
                       >
                         <WorkspaceThumb ws={ws} items={items} cat={cat} />
-                        <div className="px-2 py-1.5 flex items-center justify-between gap-1.5">
+                        <div className="px-2 py-2 flex items-center justify-between gap-2">
                           <div className="min-w-0 flex items-baseline gap-1">
-                            <p className="text-[15px] font-medium text-text truncate">{ws.name}</p>
-                            <span className="text-[14px] font-normal text-dim shrink-0">{ws.item_count ?? items.length}</span>
+                            <p className="text-base font-medium text-text truncate">{ws.name}</p>
+                            <span className="text-base font-normal text-dim shrink-0">{ws.item_count ?? items.length}</span>
                           </div>
                           <button type="button" onClick={(e) => handleDeleteWs(e, ws.id)}
                             className="flex items-center justify-center size-5 rounded-md text-dim hover:text-red-400 hover:bg-red-400/10 transition-colors shrink-0"
                             title="Delete workspace"
                           >
-                            <Trash2 size={11} />
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </div>

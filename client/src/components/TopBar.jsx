@@ -97,8 +97,8 @@ export default function TopBar() {
     <div className="relative z-50 flex items-center gap-4 px-4 py-3 bg-surface border-b border-border">
       {/* Logo */}
       <div className="flex items-center gap-2 shrink-0">
-        <div className="size-6 rounded bg-text flex items-center justify-center">
-          <span className="text-surface text-[14px] font-bold">Q</span>
+        <div className="size-6 rounded-lg bg-text flex items-center justify-center">
+          <span className="text-surface text-base font-bold">Q</span>
         </div>
         <span className="text-sm font-semibold tracking-tight text-text">
           QWRY
@@ -121,11 +121,11 @@ export default function TopBar() {
             onFocus={handleFocus}
             onBlur={handleBlur}
             placeholder="Cofftset"
-            className="w-full h-11 pl-11 pr-4 rounded-full bg-elevated border border-border text-text text-sm placeholder:text-dim outline-none focus:border-text transition-colors"
+            className="w-full h-11 pl-12 pr-4 rounded-xl bg-elevated border border-border text-text text-sm placeholder:text-dim outline-none focus:border-text transition-colors"
           />
         </div>
         {showSuggestions && (
-          <div className="absolute top-full left-0 right-0 mt-1.5 rounded-lg bg-elevated border border-border overflow-hidden">
+          <div className="absolute top-full left-0 right-0 mt-2 rounded-lg bg-elevated border border-border shadow-pop overflow-hidden">
             {suggestions.map((s, i) => (
               <button
                 key={i}
@@ -145,10 +145,10 @@ export default function TopBar() {
       {/* Home */}
       <button
         onClick={() => setContextMode("home")}
-        className="flex items-center justify-center size-7 rounded text-dim hover:text-text hover:bg-hover transition-colors"
+        className="flex items-center justify-center size-7 rounded-md text-dim hover:text-text hover:bg-hover transition-colors"
         title="Home"
       >
-        <Home size={14} />
+        <Home size={16} />
       </button>
 
       {/* Settings */}

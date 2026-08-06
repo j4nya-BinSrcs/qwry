@@ -7,9 +7,9 @@ import ContextPanel from "../panels/ContextPanel";
 import DiscoveryPanel from "../panels/DiscoveryPanel";
 import { useUIStore } from "../stores/uiStore";
 
-const PANEL_DEFAULTS = { sources: 30, context: 40, discovery: 30 };
-const PANEL_MINS = { sources: 12, context: 20, discovery: 12 };
-const PANEL_MAXS = { sources: 40, context: 70, discovery: 40 };
+const PANEL_DEFAULTS = { sources: 26, context: 42, discovery: 32 };
+const PANEL_MINS = { sources: 10, context: 20, discovery: 10 };
+const PANEL_MAXS = { sources: 36, context: 70, discovery: 40 };
 
 function PanelContent({ id }) {
   switch (id) {
@@ -27,7 +27,7 @@ function PanelContent({ id }) {
       );
     case "discovery":
       return (
-        <div className="h-full bg-surface border-l border-border">
+        <div className="h-full bg-surface">
           <DiscoveryPanel />
         </div>
       );
@@ -56,7 +56,11 @@ export default function AppLayout() {
             <PanelGroup direction="horizontal">
               {panelOrder.map((id, index) => (
                 <Fragment key={id}>
-                  {index > 0 && <PanelResizeHandle />}
+                  {index > 0 && (
+                    <PanelResizeHandle className="group relative w-1 bg-transparent shrink-0">
+                      <div className="absolute inset-y-0 left-0 w-px bg-border/25 group-hover:bg-accent/60 transition-colors duration-fast" />
+                    </PanelResizeHandle>
+                  )}
                   <Panel
                     defaultSize={PANEL_DEFAULTS[id]}
                     minSize={PANEL_MINS[id]}

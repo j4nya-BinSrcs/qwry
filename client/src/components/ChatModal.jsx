@@ -79,14 +79,14 @@ export default function ChatModal({ workspaceId, workspaceName, onClose }) {
       <div className="absolute inset-0 bg-text/60" />
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-2xl max-h-[calc(100vh-6rem)] mx-4 bg-elevated border border-border rounded-xl overflow-hidden flex flex-col"
+        className="relative w-full max-w-2xl max-h-[calc(100vh-6rem)] mx-4 bg-elevated border border-border rounded-xl shadow-pop overflow-hidden flex flex-col"
       >
         {/* Header */}
         <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-border">
           <h2 className="text-base font-semibold text-text truncate">
             Chat: {workspaceName || "Workspace"}
           </h2>
-          <button onClick={onClose} className="p-1.5 rounded-md text-dim hover:text-text hover:bg-hover transition-all">
+          <button onClick={onClose} className="p-2 rounded-md text-dim hover:text-text hover:bg-hover transition-all">
             <X size={16} />
           </button>
         </div>
@@ -101,25 +101,25 @@ export default function ChatModal({ workspaceId, workspaceName, onClose }) {
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               <div
-                className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm ${
+                className={`max-w-[80%] rounded-xl px-4 py-3 text-sm ${
                   msg.role === "user"
                     ? "bg-text text-surface"
-                    : "bg-elevated border border-border text-text"
+                    : "bg-elevated shadow-surface text-text"
                 }`}
               >
                 <p className="whitespace-pre-line leading-relaxed">{msg.content}</p>
                 {msg.sources && msg.sources.length > 0 && (
                   <div className="mt-2 pt-2 border-t border-border/50 space-y-1">
-                    <p className="text-[14px] text-dim font-medium uppercase tracking-wider">Sources</p>
+                    <p className="text-base text-dim font-medium uppercase tracking-wider">Sources</p>
                     {msg.sources.map((s, j) => (
                       <a
                         key={j}
                         href={s.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 text-[15px] text-text hover:text-muted"
+                        className="flex items-center gap-2 text-base text-text hover:text-muted"
                       >
-                        <ExternalLink size={10} />
+                        <ExternalLink size={16} />
                         <span className="truncate">{s.title || s.url}</span>
                       </a>
                     ))}
@@ -130,8 +130,8 @@ export default function ChatModal({ workspaceId, workspaceName, onClose }) {
           ))}
           {loading && (
             <div className="flex justify-start">
-              <div className="bg-elevated border border-border rounded-xl px-4 py-2.5 flex items-center gap-2 text-sm text-muted">
-                <Loader2 size={12} className="animate-spin" />
+              <div className="bg-elevated shadow-surface rounded-xl px-4 py-3 flex items-center gap-2 text-sm text-muted">
+                <Loader2 size={16} className="animate-spin" />
                 Thinking...
               </div>
             </div>
@@ -155,7 +155,7 @@ export default function ChatModal({ workspaceId, workspaceName, onClose }) {
               disabled={!input.trim() || loading}
               className="shrink-0 p-2 rounded-lg bg-text text-surface hover:bg-text/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <Send size={14} />
+              <Send size={16} />
             </button>
           </div>
         </div>

@@ -14,6 +14,30 @@ _PRIMARY_ENGINES = ("google", "brave")
 _FALLBACK_ENGINES = ("bing", "wiby")
 
 
+def _parse_duration(value):
+    if not value:
+        return None
+    if isinstance(value, int):
+        return value
+    s = str(value).strip()
+    if not s:
+        return None
+    try:
+        return int(float(s))
+    except ValueError:
+        pass
+    parts = s.split(":")
+    try:
+        nums = [int(p) for p in parts]
+    except ValueError:
+        return s
+    if len(nums) == 2:
+        return nums[0] * 60 + nums[1]
+    if len(nums) == 3:
+        return nums[0] * 3600 + nums[1] * 60 + nums[2]
+    return s
+
+
 class SearxngClient:
     def __init__(self, http_client: httpx.AsyncClient, backend: Backend) -> None:
         self._client = http_client
@@ -88,6 +112,7 @@ class SearxngClient:
                 published_date=r.get("publishedDate"),
                 category=r.get("category"),
                 engine=r.get("engine"),
+                length_seconds=_parse_duration(r.get("length")),
             )
             for r in raw_results
             if r.get("url")

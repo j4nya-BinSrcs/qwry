@@ -24,12 +24,21 @@ class OllamaBackend(LLMBackend):
         if system_prompt:
             payload["system"] = system_prompt
 
-        resp = await self._client.post(
-            f"{self._base_url}/api/generate",
-            json=payload,
-            timeout=self._timeout,
-        )
-        resp.raise_for_status()
+        try:
+            resp = await self._client.post(
+                f"{self._base_url}/api/generate",
+                json=payload,
+                timeout=self._timeout,
+            )
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise RuntimeError(
+                f"LLM backend returned {exc.response.status_code}: {exc.response.text[:300]}"
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise RuntimeError(
+                f"LLM backend unreachable at {self._base_url}: {exc}"
+            ) from exc
         data = resp.json()
         if "error" in data:
             msg = data["error"] or "unknown Ollama error"

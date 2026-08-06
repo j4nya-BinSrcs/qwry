@@ -10,7 +10,7 @@ export default function InfoBoxCard({ infobox }) {
 
   return (
     <div className="px-3 pb-2">
-      <div className="rounded-lg bg-panel border border-border overflow-hidden">
+      <div className="rounded-lg bg-elevated shadow-raised overflow-hidden">
         {imgSrc && (
           <div className="relative w-full aspect-video bg-hover overflow-hidden">
             <img
@@ -36,9 +36,9 @@ export default function InfoBoxCard({ infobox }) {
                   href={u.url || u}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs text-text hover:text-muted transition-colors"
+                  className="flex items-center gap-2 text-xs text-text hover:text-muted transition-colors"
                 >
-                  <ExternalLink size={11} />
+                  <ExternalLink size={16} />
                   <span className="truncate">{u.title || u.url || u}</span>
                 </a>
               ))}

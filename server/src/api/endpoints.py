@@ -292,12 +292,12 @@ async def llm_generate(
             try:
                 result = await reader.read_url(r.url)
                 if result.success and result.content:
-                    return f"Title: {r.title}\nURL: {r.url}\n\nContent:\n{result.content[:3000]}"
+                    return f"Title: {r.title}\nURL: {r.url}\n\nContent:\n{result.content[:1500]}"
             except Exception:
                 pass
             return None
 
-        read_tasks = [_read_one(r) for r in body.results[:5]]
+        read_tasks = [_read_one(r) for r in body.results[:4]]
         read_results = await asyncio.gather(*read_tasks)
         contents = [c for c in read_results if c]
 
@@ -331,7 +331,11 @@ async def llm_generate(
             f"Use your own knowledge. Output only the overview."
         )
 
-    response = await llm.generate(prompt, system_prompt=system)
+    try:
+        response = await llm.generate(prompt, system_prompt=system)
+    except Exception as exc:
+        logger.error("LLM generate failed", extra={"query": body.query, "mode": body.mode, "error": str(exc)})
+        raise HTTPException(status_code=502, detail=f"LLM backend error: {exc}") from exc
 
     if cache.available:
         ttl = getattr(settings, "cache_llm_ttl_seconds", 1800)

@@ -113,34 +113,34 @@ export default function SettingsPopup({ open, onToggle }) {
     <div className="relative shrink-0">
       <button
         onClick={onToggle}
-        className="flex items-center justify-center size-7 rounded border border-border text-text hover:bg-hover transition-colors"
+        className="flex items-center justify-center size-7 rounded-md border border-border text-text hover:bg-hover transition-colors"
         title="Settings"
       >
-        <Settings size={14} />
+        <Settings size={16} />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={onToggle} />
-          <div className="absolute top-full right-0 mt-1 w-72 rounded-lg bg-elevated border border-border overflow-hidden z-50 max-h-[80vh] overflow-y-auto">
+          <div className="absolute top-full right-0 mt-1 w-72 rounded-lg bg-elevated border border-border shadow-pop overflow-hidden z-50 max-h-[80vh] overflow-y-auto">
             <div className="px-3 py-2 text-xs text-muted font-medium border-b border-border">
               Settings
             </div>
 
             {/* Theme */}
             <div className="px-3 py-2 border-b border-border">
-              <div className="text-xs text-muted mb-1.5">Theme</div>
+              <div className="text-xs text-muted mb-2">Theme</div>
               <div className="flex flex-col gap-1">
                 {THEME_OPTIONS.map(({ id, label, icon: Icon }) => (
                   <button
                     key={id}
                     onClick={() => setTheme(id)}
-                    className={`flex items-center gap-1.5 px-2 py-1.5 text-left text-xs transition-colors rounded ${
+                    className={`flex items-center gap-2 px-2 py-2 text-left text-xs transition-colors rounded-md ${
                       theme === id
                         ? "bg-text text-surface"
                         : "text-text hover:bg-hover"
                     }`}
                   >
-                    <Icon size={12} />
+                    <Icon size={16} />
                     {label}
                   </button>
                 ))}
@@ -151,10 +151,10 @@ export default function SettingsPopup({ open, onToggle }) {
             <div className="px-3 py-2 border-b border-border">
               <button
                 onClick={() => setShowProfiles(!showProfiles)}
-                className="flex items-center gap-1.5 w-full text-xs text-muted mb-1.5"
+                className="flex items-center gap-2 w-full text-xs text-muted mb-2"
               >
-                {showProfiles ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                <User size={12} />
+                {showProfiles ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                <User size={16} />
                 <span>Profiles</span>
                 <span className="text-dim ml-auto">{profiles.length}</span>
               </button>
@@ -162,7 +162,7 @@ export default function SettingsPopup({ open, onToggle }) {
               {showProfiles && (
                 <div className="space-y-1">
                   {/* Current profile name */}
-                  <div className="flex items-center justify-between px-1 py-0.5">
+                  <div className="flex items-center justify-between px-1 py-1">
                     {editing ? (
                       <div className="flex items-center gap-1 flex-1">
                         <input
@@ -170,13 +170,13 @@ export default function SettingsPopup({ open, onToggle }) {
                           value={username}
                           onChange={(e) => setUsername(e.target.value)}
                           placeholder="Your name"
-                          className="flex-1 px-2 py-1 text-xs rounded bg-hover border border-border text-text outline-none focus:border-text"
+                          className="flex-1 px-2 py-1 text-xs rounded-md bg-hover border border-border text-text outline-none focus:border-text"
                           autoFocus
                           onKeyDown={(e) => { if (e.key === "Enter") handleSaveUsername(); if (e.key === "Escape") setEditing(false); }}
                         />
                         <button
                           onClick={handleSaveUsername}
-                          className="px-2 py-1 text-[14px] rounded bg-text text-surface hover:bg-text/80 transition-colors"
+                          className="px-2 py-1 text-base rounded-md bg-text text-surface hover:bg-text/80 transition-colors"
                         >
                           Save
                         </button>
@@ -186,7 +186,7 @@ export default function SettingsPopup({ open, onToggle }) {
                         <span className="text-xs text-text">{profile?.username || "Anonymous"}</span>
                         <button
                           onClick={() => setEditing(true)}
-                          className="text-[14px] text-dim hover:text-text transition-colors"
+                          className="text-base text-dim hover:text-text transition-colors"
                         >
                           Edit
                         </button>
@@ -197,18 +197,18 @@ export default function SettingsPopup({ open, onToggle }) {
                   {/* Session ID */}
                   <button
                     onClick={handleCopySession}
-                    className="flex items-center gap-1 text-[14px] text-dim hover:text-text transition-colors px-1"
+                    className="flex items-center gap-1 text-base text-dim hover:text-text transition-colors px-1"
                   >
-                    {copied ? <Check size={10} /> : <Copy size={10} />}
+                    {copied ? <Check size={16} /> : <Copy size={16} />}
                     {copied ? "Copied!" : `Session: ${sessionId.slice(0, 8)}...`}
                   </button>
 
                   {/* Profile list */}
-                  <div className="mt-1.5 space-y-0.5">
+                  <div className="mt-2 space-y-1">
                     {profiles.map((p) => (
                       <div
                         key={p.session_id}
-                        className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-xs cursor-pointer transition-colors ${
+                        className={`flex items-center gap-2 px-2 py-2 rounded-md text-xs cursor-pointer transition-colors ${
                           p.session_id === sessionId
                             ? "bg-text text-surface"
                             : "text-text hover:bg-hover"
@@ -219,7 +219,7 @@ export default function SettingsPopup({ open, onToggle }) {
                           {p.username || "Anonymous"}
                         </span>
                         {p.session_id === sessionId && (
-                          <span className="text-[14px] opacity-70">active</span>
+                          <span className="text-base opacity-70">active</span>
                         )}
                         {profiles.length > 1 && p.session_id !== sessionId && (
                           <button
@@ -227,7 +227,7 @@ export default function SettingsPopup({ open, onToggle }) {
                             className="shrink-0 text-dim hover:text-red-400 transition-colors"
                             title="Delete profile"
                           >
-                            <Trash2 size={10} />
+                            <Trash2 size={16} />
                           </button>
                         )}
                       </div>
@@ -242,13 +242,13 @@ export default function SettingsPopup({ open, onToggle }) {
                         value={newName}
                         onChange={(e) => setNewName(e.target.value)}
                         placeholder="Profile name"
-                        className="flex-1 px-2 py-1 text-xs rounded bg-hover border border-border text-text outline-none focus:border-text"
+                        className="flex-1 px-2 py-1 text-xs rounded-md bg-hover border border-border text-text outline-none focus:border-text"
                         autoFocus
                         onKeyDown={(e) => { if (e.key === "Enter") handleCreateProfile(); if (e.key === "Escape") setCreating(false); }}
                       />
                       <button
                         onClick={handleCreateProfile}
-                        className="px-2 py-1 text-[14px] rounded bg-text text-surface hover:bg-text/80 transition-colors"
+                        className="px-2 py-1 text-base rounded-md bg-text text-surface hover:bg-text/80 transition-colors"
                       >
                         Add
                       </button>
@@ -256,9 +256,9 @@ export default function SettingsPopup({ open, onToggle }) {
                   ) : (
                     <button
                       onClick={() => setCreating(true)}
-                      className="flex items-center gap-1.5 w-full px-2 py-1.5 text-[14px] text-dim hover:text-text transition-colors"
+                      className="flex items-center gap-2 w-full px-2 py-2 text-base text-dim hover:text-text transition-colors"
                     >
-                      <Plus size={10} />
+                      <Plus size={16} />
                       New profile
                     </button>
                   )}
@@ -268,7 +268,7 @@ export default function SettingsPopup({ open, onToggle }) {
 
             {/* Search provider */}
             <div className="px-3 py-2">
-              <div className="text-xs text-muted mb-1.5">Search Provider</div>
+              <div className="text-xs text-muted mb-2">Search Provider</div>
               {providers.map((p) => (
                 <button
                   key={p.label}
@@ -276,7 +276,7 @@ export default function SettingsPopup({ open, onToggle }) {
                     setProvider(p.value);
                     if (query) search(query.trim(), 1, p.value);
                   }}
-                  className={`w-full px-2 py-1.5 text-left text-xs transition-colors rounded ${
+                  className={`w-full px-2 py-2 text-left text-xs transition-colors rounded-md ${
                     provider === p.value
                       ? "bg-text text-surface"
                       : "text-text hover:bg-hover"

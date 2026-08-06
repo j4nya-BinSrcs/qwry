@@ -14,6 +14,7 @@ class SearchResultItem(BaseModel):
     published_date: str | None = None
     category: str | None = None
     engine: str | None = None
+    length_seconds: int | str | None = None
 
 
 class SearchResponse(BaseModel):

@@ -22,27 +22,27 @@ export default function WorkspaceView() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="shrink-0 flex items-center justify-between px-3 py-1.5 border-b border-border">
-        <div className="flex items-center rounded-md bg-hover border border-border p-0.5">
+      <div className="shrink-0 flex items-center justify-between px-4 pt-4 pb-2">
+        <div className="flex items-center rounded-md bg-hover border border-border p-1">
           <button onClick={() => setMode("station")}
-            className={`px-2.5 py-0.5 rounded text-xs font-medium transition-colors ${
+            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
               mode === "station"
-                ? "bg-elevated text-text shadow-sm"
+                ? "bg-elevated text-text shadow-surface"
                 : "text-muted hover:text-text"
             }`}
           >Station</button>
           <button onClick={() => setMode("canvas")}
-            className={`px-2.5 py-0.5 rounded text-xs font-medium transition-colors ${
+            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
               mode === "canvas"
-                ? "bg-elevated text-text shadow-sm"
+                ? "bg-elevated text-text shadow-surface"
                 : "text-muted hover:text-text"
             }`}
           >Canvas</button>
         </div>
         <button onClick={() => setChatOpen(true)}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs text-muted hover:text-text hover:bg-hover transition-colors"
+          className="flex items-center gap-2 px-3 py-1 rounded-md text-xs text-muted hover:text-text hover:bg-hover transition-colors"
           title="Chat about this workspace"
-        ><MessageCircle size={13} /> Chat</button>
+        ><MessageCircle size={16} /> Chat</button>
       </div>
       <div className="flex-1 min-h-0">
         {mode === "station" ? <StationView /> : <CanvasView />}

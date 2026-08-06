@@ -1,11 +1,10 @@
-import { Hash, Image, Youtube, Maximize2, Minimize2, Newspaper, ExternalLink, BookOpen, Sparkles, Plus, Check, GripVertical, Loader2 } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { Image, Youtube, Maximize2, Minimize2, Newspaper, ExternalLink, BookOpen, Sparkles, Plus, Check, GripVertical, Loader2, Play } from "lucide-react";
+import { Children, useCallback, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { useSearchStore } from "../stores/searchStore";
 import { useUIStore } from "../stores/uiStore";
 import { useSessionStore } from "../stores/sessionStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
-import InfoBoxCard from "../components/InfoBoxCard";
 import { SkeletonDiscovery } from "../components/Skeleton";
 
 const FILTERS = [
@@ -15,22 +14,28 @@ const FILTERS = [
   { id: "news", label: "News" },
 ];
 
-function MultiRowScroll({ children, rows = 3 }) {
-  const scrollRef = useRef(null);
-  const items = Array.isArray(children) ? children : [children];
-  const cols = Math.ceil(items.length / rows);
-  const grid = Array.from({ length: cols }, (_, c) =>
-    items.slice(c * rows, c * rows + rows)
-  );
+function getHostname(url) {
+  try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
+}
+
+function Favicon({ domain }) {
   return (
-    <div ref={scrollRef} className="overflow-x-auto scrollbar-none">
-      <div className="grid grid-flow-col gap-3 px-3 pb-3" style={{ gridTemplateRows: `repeat(${rows}, auto)` }}>
-        {grid.flat().map((child, i) => (
-          <div key={i} className="contents">{child}</div>
-        ))}
-      </div>
-    </div>
+    <img
+      src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
+      alt=""
+      className="size-3 rounded-sm shrink-0"
+      onError={(e) => (e.target.style.display = "none")}
+    />
   );
+}
+
+function formatDuration(result) {
+  const raw = result?.length_seconds ?? result?.duration_secs;
+  const secs = Number(raw);
+  if (!Number.isFinite(secs) || secs <= 0) return null;
+  const m = Math.floor(secs / 60);
+  const s = Math.round(secs % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 function LoadMoreButton({ loading, hasMore, onClick }) {
@@ -39,11 +44,11 @@ function LoadMoreButton({ loading, hasMore, onClick }) {
     <button
       onClick={onClick}
       disabled={loading}
-      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border text-text hover:bg-hover hover:border-text transition-all disabled:opacity-50"
+      className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md text-muted hover:text-text hover:bg-hover transition-colors disabled:opacity-50"
     >
       {loading ? (
         <>
-          <Loader2 size={12} className="animate-spin" />
+          <Loader2 size={14} className="animate-spin" />
           Loading...
         </>
       ) : (
@@ -53,148 +58,26 @@ function LoadMoreButton({ loading, hasMore, onClick }) {
   );
 }
 
-function DraggableImageCard({ result }) {
-  const { listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `discover-img-${result.url}`,
-    data: { type: "search-result", result },
-  });
-  const style = transform ? { transform: `translate(${transform.x}px, ${transform.y}px)` } : undefined;
-  const imgSrc = result.img_src || result.thumbnail;
-  const sessionId = useSessionStore((s) => s.sessionId);
-  const activeWsId = useWorkspaceStore((s) => s.activeWorkspaceId);
-  const addItem = useWorkspaceStore((s) => s.addItem);
-  const openReader = useUIStore((s) => s.openReader);
-  const [saved, setSaved] = useState(false);
-
-  const handleSave = useCallback((e) => {
-    e.stopPropagation();
-    if (!activeWsId || saved) return;
-    addItem(sessionId, activeWsId, result.url, result.title, result.snippet, result.source, imgSrc);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1500);
-  }, [sessionId, activeWsId, result, addItem, saved, imgSrc]);
-
+function HoverActions({ onDragStart, onReader, onSave, onOpen, saved, canSave }) {
   return (
-    <div ref={setNodeRef} style={style}
-      className={`group flex-shrink-0 w-32 cursor-default ${isDragging ? "opacity-50" : ""}`}
-    >
-      <div className="relative rounded overflow-hidden bg-hover border border-border hover:border-text transition-all">
-        <div className="aspect-square">
-          {imgSrc ? (
-            <img
-              src={`/api/image-proxy?url=${encodeURIComponent(imgSrc)}`}
-              alt="" className="w-full h-full object-cover"
-              onError={(e) => { e.target.style.display = "none"; }}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-dim text-[14px]">No image</div>
-          )}
-        </div>
-        <div className="absolute inset-0 bg-text/0 group-hover:bg-text/30 transition-all flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
-          <button {...listeners} className="p-1.5 rounded bg-text/50 text-surface hover:bg-text/70 transition-colors cursor-grab active:cursor-grabbing">
-            <GripVertical size={13} />
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); openReader(result.url, result.title, imgSrc); }}
-            className="p-1.5 rounded bg-text/50 text-surface hover:bg-text/70 transition-colors" title="Reader"
-          >
-            <BookOpen size={13} />
-          </button>
-          <button onClick={handleSave} disabled={!activeWsId}
-            className="p-1.5 rounded bg-text/50 text-surface hover:bg-text/70 transition-colors disabled:opacity-30" title="Save"
-          >
-            {saved ? <Check size={13} /> : <Plus size={13} />}
-          </button>
-          <button onClick={() => window.open(result.url, "_blank")}
-            className="p-1.5 rounded bg-text/50 text-surface hover:bg-text/70 transition-colors" title="Open"
-          >
-            <ExternalLink size={13} />
-          </button>
-        </div>
-      </div>
-      <div className="mt-1 px-0.5">
-        <div className="text-[15px] text-text font-medium leading-tight line-clamp-2">{result.title}</div>
-        <div className="text-[14px] text-dim truncate mt-0.5">{result.engine || result.source || result.category}</div>
-      </div>
+    <div className="absolute inset-0 bg-text/0 group-hover:bg-text/30 transition-colors flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100">
+      <button {...onDragStart} className="p-2 rounded-lg bg-surface/70 text-text backdrop-blur-sm hover:bg-surface/90 transition-colors cursor-grab active:cursor-grabbing">
+        <GripVertical size={16} />
+      </button>
+      <button onClick={onReader} className="p-2 rounded-lg bg-surface/70 text-text backdrop-blur-sm hover:bg-surface/90 transition-colors" title="Reader">
+        <BookOpen size={16} />
+      </button>
+      <button onClick={onSave} disabled={!canSave} className="p-2 rounded-lg bg-surface/70 text-text backdrop-blur-sm hover:bg-surface/90 transition-colors disabled:opacity-40" title="Save to workspace">
+        {saved ? <Check size={16} /> : <Plus size={16} />}
+      </button>
+      <button onClick={onOpen} className="p-2 rounded-lg bg-surface/70 text-text backdrop-blur-sm hover:bg-surface/90 transition-colors" title="Open">
+        <ExternalLink size={16} />
+      </button>
     </div>
   );
 }
 
-function DraggableVideoCard({ result }) {
-  const { listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `discover-vid-${result.url}`,
-    data: { type: "search-result", result },
-  });
-  const style = transform ? { transform: `translate(${transform.x}px, ${transform.y}px)` } : undefined;
-  const imgSrc = result.img_src || result.thumbnail;
-  const sessionId = useSessionStore((s) => s.sessionId);
-  const activeWsId = useWorkspaceStore((s) => s.activeWorkspaceId);
-  const addItem = useWorkspaceStore((s) => s.addItem);
-  const openReader = useUIStore((s) => s.openReader);
-  const [saved, setSaved] = useState(false);
-
-  const handleSave = useCallback((e) => {
-    e.stopPropagation();
-    if (!activeWsId || saved) return;
-    addItem(sessionId, activeWsId, result.url, result.title, result.snippet, result.source, imgSrc);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1500);
-  }, [sessionId, activeWsId, result, addItem, saved, imgSrc]);
-
-  return (
-    <div ref={setNodeRef} style={style}
-      className={`group flex-shrink-0 w-56 cursor-default ${isDragging ? "opacity-50" : ""}`}
-    >
-      <div className="relative rounded overflow-hidden bg-hover border border-border hover:border-text transition-all">
-        <div className="aspect-video">
-          {imgSrc ? (
-            <img
-              src={`/api/image-proxy?url=${encodeURIComponent(imgSrc)}`}
-              alt="" className="w-full h-full object-cover"
-              onError={(e) => { e.target.style.display = "none"; }}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-dim text-[14px]">No thumbnail</div>
-          )}
-        </div>
-        <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-text/70 text-[14px] text-surface font-medium">
-          {result.published_date || result.engine || "Video"}
-        </div>
-        <div className="absolute inset-0 bg-text/0 group-hover:bg-text/30 transition-all flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
-          <button {...listeners} className="p-1.5 rounded bg-text/50 text-surface hover:bg-text/70 transition-colors cursor-grab active:cursor-grabbing">
-            <GripVertical size={13} />
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); openReader(result.url, result.title, imgSrc); }}
-            className="p-1.5 rounded bg-text/50 text-surface hover:bg-text/70 transition-colors" title="Reader"
-          >
-            <BookOpen size={13} />
-          </button>
-          <button onClick={handleSave} disabled={!activeWsId}
-            className="p-1.5 rounded bg-text/50 text-surface hover:bg-text/70 transition-colors disabled:opacity-30" title="Save"
-          >
-            {saved ? <Check size={13} /> : <Plus size={13} />}
-          </button>
-          <button onClick={() => window.open(result.url, "_blank")}
-            className="p-1.5 rounded bg-text/50 text-surface hover:bg-text/70 transition-colors" title="Open"
-          >
-            <ExternalLink size={13} />
-          </button>
-        </div>
-      </div>
-      <div className="mt-1 px-0.5">
-        <div className="text-[15px] text-text font-medium leading-tight line-clamp-2">{result.title}</div>
-        <div className="text-[14px] text-dim truncate mt-0.5">{result.engine || result.source || result.category}</div>
-      </div>
-    </div>
-  );
-}
-
-function DraggableNewsCard({ result }) {
-  const { listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `discover-news-${result.url}`,
-    data: { type: "search-result", result },
-  });
-  const style = transform ? { transform: `translate(${transform.x}px, ${transform.y}px)` } : undefined;
-  const imgSrc = result.img_src || result.thumbnail;
+function useSaveHandler(result, imgSrc) {
   const sessionId = useSessionStore((s) => s.sessionId);
   const activeWsId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const addItem = useWorkspaceStore((s) => s.addItem);
@@ -210,62 +93,216 @@ function DraggableNewsCard({ result }) {
     setTimeout(() => setSaved(false), 1500);
   }, [sessionId, activeWsId, result, addItem, saved, imgSrc]);
 
+  const handleReader = useCallback((e) => {
+    e.stopPropagation();
+    openReader(result.url, result.title, imgSrc);
+  }, [result, openReader, imgSrc]);
+
+  const handleSummarizer = useCallback((e) => {
+    e.stopPropagation();
+    openSummarizer(result.url, result.title);
+  }, [result, openSummarizer]);
+
+  return { sessionId, activeWsId, saved, handleSave, handleReader, handleSummarizer };
+}
+
+function DraggableImageCard({ result, featured = false }) {
+  const { listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `discover-img-${result.url}`,
+    data: { type: "search-result", result },
+  });
+  const style = transform ? { transform: `translate(${transform.x}px, ${transform.y}px)`, zIndex: 50 } : undefined;
+  const imgSrc = result.img_src || result.thumbnail;
+  const { activeWsId, saved, handleSave, handleReader } = useSaveHandler(result, imgSrc);
+
   return (
     <div ref={setNodeRef} style={style}
-      className={`group flex-shrink-0 w-72 rounded border border-border hover:border-text transition-all cursor-default ${isDragging ? "opacity-50" : "hover:bg-hover"}`}
+      className={`group relative mb-3 rounded-xl overflow-hidden bg-panel cursor-default ${isDragging ? "opacity-50" : ""}`}
     >
-      <div className="flex items-start gap-2.5 p-2.5">
+      <div className={`relative overflow-hidden ${featured ? "aspect-[4/5]" : "aspect-[3/4]"}`}>
         {imgSrc ? (
           <img
             src={`/api/image-proxy?url=${encodeURIComponent(imgSrc)}`}
-            alt="" className="size-10 rounded object-cover shrink-0"
+            alt="" className="w-full h-full object-cover transition-transform duration-slow ease-out group-hover:scale-[1.04]"
             onError={(e) => { e.target.style.display = "none"; }}
           />
         ) : (
-          <div className="size-10 rounded bg-hover shrink-0 flex items-center justify-center text-dim text-[14px]">No img</div>
+          <div className="w-full h-full flex items-center justify-center text-dim text-sm">No image</div>
         )}
-        <div className="flex-1 min-w-0">
-          <div className="text-xs font-medium text-text leading-snug line-clamp-2">
-            {result.title}
-          </div>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-[14px] text-dim truncate">
-              {result.engine || result.source || result.category}
-            </span>
-            {result.published_date && (
-              <>
-                <span className="text-dim text-[14px]">·</span>
-                <span className="text-[14px] text-dim shrink-0">{result.published_date}</span>
-              </>
-            )}
-          </div>
+        <HoverActions
+          onDragStart={listeners}
+          onReader={handleReader}
+          onSave={handleSave}
+          onOpen={() => window.open(result.url, "_blank")}
+          saved={saved}
+          canSave={activeWsId}
+        />
+        <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-text/60 via-text/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-fast pointer-events-none">
+          <p className="text-xs text-surface font-medium leading-snug line-clamp-2">{result.title}</p>
         </div>
       </div>
-      <div className="flex items-center gap-1 px-2.5 pb-2 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
-        <button {...listeners} className="p-1 rounded text-dim cursor-grab active:cursor-grabbing hover:text-text hover:bg-hover transition-all">
-          <GripVertical size={12} />
-        </button>
-        <button onClick={(e) => { e.stopPropagation(); openReader(result.url, result.title, imgSrc); }}
-          className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all" title="Reader"
-        >
-          <BookOpen size={11} />
-        </button>
-        <button onClick={(e) => { e.stopPropagation(); openSummarizer(result.url, result.title); }}
-          className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all" title="Summarize"
-        >
-          <Sparkles size={11} />
-        </button>
-        <button onClick={handleSave} disabled={!activeWsId}
-          className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all disabled:opacity-30" title="Save"
-        >
-          {saved ? <Check size={11} /> : <Plus size={11} />}
-        </button>
-        <button onClick={() => window.open(result.url, "_blank")}
-          className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all" title="Open"
-        >
-          <ExternalLink size={11} />
-        </button>
+    </div>
+  );
+}
+
+function DraggableVideoCard({ result }) {
+  const { listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `discover-vid-${result.url}`,
+    data: { type: "search-result", result },
+  });
+  const style = transform ? { transform: `translate(${transform.x}px, ${transform.y}px)`, zIndex: 50 } : undefined;
+  const imgSrc = result.img_src || result.thumbnail;
+  const { activeWsId, saved, handleSave, handleReader } = useSaveHandler(result, imgSrc);
+  const duration = formatDuration(result);
+  const domain = getHostname(result.url);
+
+  return (
+    <div ref={setNodeRef} style={style}
+      className={`group relative mb-3 rounded-xl overflow-hidden bg-panel cursor-default ${isDragging ? "opacity-50" : ""}`}
+    >
+      <div className="relative aspect-video overflow-hidden bg-hover">
+        {imgSrc ? (
+          <img
+            src={`/api/image-proxy?url=${encodeURIComponent(imgSrc)}`}
+            alt="" className="w-full h-full object-cover transition-transform duration-slow ease-out group-hover:scale-[1.04]"
+            onError={(e) => { e.target.style.display = "none"; }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-dim text-sm">No thumbnail</div>
+        )}
+
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="size-10 rounded-full bg-text/70 backdrop-blur-sm flex items-center justify-center shadow-raised transition-transform duration-slow ease-out group-hover:scale-110">
+            <Play size={16} className="text-surface ml-0.5" />
+          </div>
+        </div>
+
+        {duration && (
+          <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded-md bg-text/80 text-surface text-xs font-medium">
+            {duration}
+          </div>
+        )}
+
+        <HoverActions
+          onDragStart={listeners}
+          onReader={handleReader}
+          onSave={handleSave}
+          onOpen={() => window.open(result.url, "_blank")}
+          saved={saved}
+          canSave={activeWsId}
+        />
       </div>
+      <div className="px-3 py-2.5">
+        <p className="text-sm font-medium text-text leading-snug line-clamp-2">{result.title}</p>
+        <div className="flex items-center gap-1.5 mt-1.5 text-xs text-dim">
+          <Favicon domain={domain} />
+          <span className="truncate">{domain || result.source || result.category}</span>
+          {result.published_date && (
+            <>
+              <span className="shrink-0">·</span>
+              <span className="shrink-0">{result.published_date}</span>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DraggableNewsCard({ result }) {
+  const { listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `discover-news-${result.url}`,
+    data: { type: "search-result", result },
+  });
+  const style = transform ? { transform: `translate(${transform.x}px, ${transform.y}px)`, zIndex: 50 } : undefined;
+  const imgSrc = result.img_src || result.thumbnail;
+  const { activeWsId, saved, handleSave, handleReader, handleSummarizer } = useSaveHandler(result, imgSrc);
+  const domain = getHostname(result.url);
+
+  return (
+    <div ref={setNodeRef} style={style}
+      className={`group relative flex items-start gap-3.5 px-3.5 py-3 rounded-xl cursor-default transition-all duration-slow ease-out ${
+        isDragging ? "opacity-50" : "hover:bg-elevated hover:shadow-surface"
+      }`}
+    >
+      <div className="size-11 shrink-0 rounded-lg overflow-hidden bg-hover flex items-center justify-center">
+        {imgSrc ? (
+          <img
+            src={`/api/image-proxy?url=${encodeURIComponent(imgSrc)}`}
+            alt="" className="w-full h-full object-cover transition-transform duration-slow ease-out group-hover:scale-[1.05]"
+            onError={(e) => { e.target.style.display = "none"; }}
+          />
+        ) : (
+          <Favicon domain={domain} />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-dim">
+          <span className="flex items-center gap-1 truncate">
+            <Favicon domain={domain} />
+            <span className="truncate">{domain || result.source || result.engine}</span>
+          </span>
+          {result.published_date && (
+            <span className="flex items-center gap-1 shrink-0">
+              <span>·</span>
+              <span>{result.published_date}</span>
+            </span>
+          )}
+          {result.category && result.category !== "general" && (
+            <span className="px-1.5 py-0.5 rounded-md bg-hover text-muted">{result.category}</span>
+          )}
+        </div>
+        <p className="text-sm font-medium text-text leading-snug mt-1 line-clamp-2">{result.title}</p>
+        <div className="flex items-center gap-0.5 mt-2 opacity-0 translate-y-0.5 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-fast">
+          <button {...listeners} className="p-1.5 rounded-md text-dim cursor-grab active:cursor-grabbing hover:text-text hover:bg-hover transition-colors" title="Drag">
+            <GripVertical size={14} />
+          </button>
+          <button onClick={handleReader} className="p-1.5 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Reader">
+            <BookOpen size={14} />
+          </button>
+          <button onClick={handleSummarizer} className="p-1.5 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Summarize">
+            <Sparkles size={14} />
+          </button>
+          <button onClick={handleSave} disabled={!activeWsId} className="p-1.5 rounded-md text-dim hover:text-text hover:bg-hover transition-colors disabled:opacity-30" title="Save to workspace">
+            {saved ? <Check size={14} /> : <Plus size={14} />}
+          </button>
+          <button onClick={() => window.open(result.url, "_blank")} className="p-1.5 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Open">
+            <ExternalLink size={14} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SectionHeader({ icon: Icon, label, count, loading, hasMore, onLoadMore }) {
+  return (
+    <div className="flex items-center justify-between px-1 pb-3 pt-5">
+      <div className="flex items-center gap-2 text-sm font-semibold text-text tracking-tight">
+        <Icon size={16} className="text-dim" />
+        <span>{label}</span>
+        {count > 0 && <span className="text-sm font-normal text-dim">{count}</span>}
+      </div>
+      <LoadMoreButton loading={loading} hasMore={hasMore} onClick={onLoadMore} />
+    </div>
+  );
+}
+
+function MultiRowScroll({ children, itemClass }) {
+  const items = Children.toArray(children);
+  const rows = [[], [], []];
+  items.forEach((child, i) => rows[i % 3].push(child));
+  return (
+    <div className="space-y-2.5">
+      {rows.map((row, ri) => (
+        <div key={ri} className="overflow-x-auto overflow-y-hidden scrollbar-none -mx-3 px-3">
+          <div className="flex gap-2.5 w-max items-stretch">
+            {row.map((child, i) => (
+              <div key={i} className={`shrink-0 ${itemClass}`}>{child}</div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -275,7 +312,6 @@ export default function DiscoveryPanel() {
   const imageResults = useSearchStore((s) => s.imageResults);
   const videoResults = useSearchStore((s) => s.videoResults);
   const newsResults = useSearchStore((s) => s.newsResults);
-  const infobox = useSearchStore((s) => s.infobox);
   const loadMoreImages = useSearchStore((s) => s.loadMoreImages);
   const loadMoreVideos = useSearchStore((s) => s.loadMoreVideos);
   const loadMoreNews = useSearchStore((s) => s.loadMoreNews);
@@ -289,7 +325,7 @@ export default function DiscoveryPanel() {
   const isExpanded = expandedPanel === "discovery";
 
   const hasContent = query && (
-    infobox || imageResults.length > 0 || videoResults.length > 0 ||
+    imageResults.length > 0 || videoResults.length > 0 ||
     newsResults.length > 0
   );
 
@@ -297,17 +333,17 @@ export default function DiscoveryPanel() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="shrink-0 px-3 py-2 border-b border-border">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-xs font-semibold text-muted uppercase tracking-wider">
-            Discovery
-          </h2>
+      <div className="shrink-0 px-4 pt-4 pb-2">
+        <div className="flex items-center justify-between mb-2.5">
+          <div className="flex items-baseline gap-2">
+            <h2 className="text-base font-semibold text-text tracking-tight">Discovery</h2>
+          </div>
           <button
             onClick={() => toggleExpand("discovery")}
-            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors"
+            className="p-1.5 rounded-md text-dim hover:text-text hover:bg-hover transition-colors"
             title={isExpanded ? "Collapse" : "Expand"}
           >
-            {isExpanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+            {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
           </button>
         </div>
         <div className="flex gap-1 overflow-x-auto scrollbar-none">
@@ -315,9 +351,9 @@ export default function DiscoveryPanel() {
             <button
               key={f.id}
               onClick={() => setActiveFilter(f.id)}
-              className={`shrink-0 px-2.5 py-1 text-xs rounded-md transition-colors ${
+              className={`shrink-0 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-fast ${
                 activeFilter === f.id
-                  ? "bg-text text-surface font-medium"
+                  ? "bg-elevated text-text shadow-surface"
                   : "text-muted hover:text-text hover:bg-hover"
               }`}
             >
@@ -327,97 +363,79 @@ export default function DiscoveryPanel() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-1">
+      <div className="flex-1 overflow-y-auto px-3 pb-4">
         {loading ? (
           <SkeletonDiscovery />
         ) : !query ? (
-          <div className="px-4 py-12 text-center text-sm text-muted">
+          <div className="px-4 py-16 text-center text-sm text-muted">
             Search to see related content here
           </div>
         ) : !hasContent ? (
-          <div className="px-4 py-8 text-center text-sm text-muted">
+          <div className="px-4 py-12 text-center text-sm text-muted">
             No additional content found
           </div>
         ) : (
-          <>
-            {(showAll || activeFilter === "all") && infobox && (
-              <div className="border-t border-border">
-                <div className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-muted uppercase tracking-wider">
-                  <Hash size={13} />
-                  <span>Overview</span>
-                </div>
-                <div className="px-3 pb-2">
-                  <InfoBoxCard infobox={infobox} />
-                </div>
-              </div>
-            )}
-
+          <div key={activeFilter} className="animate-fade-in">
             {(showAll || activeFilter === "images") && imageResults.length > 0 && (
-              <div className="border-t border-border">
-                <div className="flex items-center justify-between px-3 py-2">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-muted uppercase tracking-wider">
-                    <Image size={13} />
-                    <span>Images</span>
-                    <span className="text-dim font-normal">{imageResults.length}</span>
-                  </div>
-                  <LoadMoreButton
-                    loading={loading}
-                    hasMore={hasMoreImages}
-                    onClick={loadMoreImages}
-                  />
-                </div>
-                <MultiRowScroll rows={3}>
+              <div>
+              <SectionHeader icon={Image} label="Images" count={imageResults.length}
+                loading={loading} hasMore={hasMoreImages} onLoadMore={loadMoreImages} />
+              {showAll ? (
+                <MultiRowScroll itemClass="w-32">
                   {imageResults.map((r, i) => (
-                    <DraggableImageCard key={`img-${r.url}-${i}`} result={r} />
+                    <DraggableImageCard key={`img-${r.url}-${i}`} result={r} featured={i === 0} />
                   ))}
                 </MultiRowScroll>
+              ) : (
+                <div className="columns-2 gap-3">
+                  {imageResults.map((r, i) => (
+                    <DraggableImageCard key={`img-${r.url}-${i}`} result={r} featured={i === 0} />
+                  ))}
+                </div>
+              )}
               </div>
             )}
 
             {(showAll || activeFilter === "videos") && videoResults.length > 0 && (
-              <div className="border-t border-border">
-                <div className="flex items-center justify-between px-3 py-2">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-muted uppercase tracking-wider">
-                    <Youtube size={13} />
-                    <span>Videos</span>
-                    <span className="text-dim font-normal">{videoResults.length}</span>
+              <div>
+                <SectionHeader icon={Youtube} label="Videos" count={videoResults.length}
+                  loading={loading} hasMore={hasMoreVideos} onLoadMore={loadMoreVideos} />
+                {showAll ? (
+                  <MultiRowScroll itemClass="w-56">
+                    {videoResults.map((r, i) => (
+                      <DraggableVideoCard key={`vid-${r.url}-${i}`} result={r} />
+                    ))}
+                  </MultiRowScroll>
+                ) : (
+                  <div className="columns-2 gap-3">
+                    {videoResults.map((r, i) => (
+                      <DraggableVideoCard key={`vid-${r.url}-${i}`} result={r} />
+                    ))}
                   </div>
-                  <LoadMoreButton
-                    loading={loading}
-                    hasMore={hasMoreVideos}
-                    onClick={loadMoreVideos}
-                  />
-                </div>
-                <MultiRowScroll rows={3}>
-                  {videoResults.map((r, i) => (
-                    <DraggableVideoCard key={`vid-${r.url}-${i}`} result={r} />
-                  ))}
-                </MultiRowScroll>
+                )}
               </div>
             )}
 
             {(showAll || activeFilter === "news") && newsResults.length > 0 && (
-              <div className="border-t border-border">
-                <div className="flex items-center justify-between px-3 py-2">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-muted uppercase tracking-wider">
-                    <Newspaper size={13} />
-                    <span>News</span>
-                    <span className="text-dim font-normal">{newsResults.length}</span>
+              <div>
+                <SectionHeader icon={Newspaper} label="News" count={newsResults.length}
+                  loading={loading} hasMore={hasMoreNews} onLoadMore={loadMoreNews} />
+                {showAll ? (
+                  <MultiRowScroll itemClass="w-72">
+                    {newsResults.map((r, i) => (
+                      <DraggableNewsCard key={`news-${r.url}-${i}`} result={r} />
+                    ))}
+                  </MultiRowScroll>
+                ) : (
+                  <div className="space-y-1.5 px-0.5">
+                    {newsResults.map((r, i) => (
+                      <DraggableNewsCard key={`news-${r.url}-${i}`} result={r} />
+                    ))}
                   </div>
-                  <LoadMoreButton
-                    loading={loading}
-                    hasMore={hasMoreNews}
-                    onClick={loadMoreNews}
-                  />
-                </div>
-                <MultiRowScroll rows={3}>
-                  {newsResults.map((r, i) => (
-                    <DraggableNewsCard key={`news-${r.url}-${i}`} result={r} />
-                  ))}
-                </MultiRowScroll>
+                )}
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>

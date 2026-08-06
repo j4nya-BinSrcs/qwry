@@ -16,7 +16,7 @@ function WorkspaceBadge() {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const ws = workspaces.find((w) => w.id === activeId);
   if (!ws) return null;
-  return <span className="text-[14px] px-1.5 py-0.5 bg-hover rounded text-dim truncate max-w-28">{ws.name}</span>;
+  return <span className="text-base px-2 py-1 bg-hover rounded-md text-dim truncate max-w-28">{ws.name}</span>;
 }
 
 export default function SummarizerView() {
@@ -124,7 +124,7 @@ export default function SummarizerView() {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center px-8">
-          <div className="size-8 rounded bg-hover border border-border flex items-center justify-center mx-auto mb-3">
+          <div className="size-8 rounded-lg bg-elevated flex items-center justify-center mx-auto mb-3">
             <Sparkles size={16} className="text-text" />
           </div>
           <p className="text-sm text-muted">Select a result to summarize</p>
@@ -135,17 +135,17 @@ export default function SummarizerView() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="shrink-0 px-3 py-2 border-b border-border flex items-center justify-between">
+      <div className="shrink-0 px-4 pt-4 pb-2 flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-text">Summarizer</h2>
-          <p className="text-[14px] text-muted">{summaries.length} {summaries.length === 1 ? "summary" : "summaries"}</p>
+          <h2 className="text-base font-semibold text-text tracking-tight">Summarizer</h2>
+          <p className="text-sm text-muted mt-0.5">{summaries.length} {summaries.length === 1 ? "summary" : "summaries"}</p>
         </div>
         <WorkspaceBadge />
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+      <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
         {summaries.map((s) => (
-          <div key={s.id} className="rounded bg-panel border border-border overflow-hidden">
+          <div key={s.id} className="rounded-lg bg-elevated shadow-raised overflow-hidden">
             <div
               className="flex items-center gap-2 px-3 py-2 border-b border-border cursor-pointer hover:bg-hover transition-colors"
               onClick={() => toggleSummary(s.id)}
@@ -153,28 +153,28 @@ export default function SummarizerView() {
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-medium text-text truncate">{s.title || getHostname(s.url)}</div>
                 <a href={s.url} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[14px] text-text hover:text-muted mt-0.5"
+                  className="flex items-center gap-1 text-base text-text hover:text-muted mt-1"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <ExternalLink size={10} />
+                  <ExternalLink size={16} />
                   {getHostname(s.url)}
                 </a>
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {!s.loading && s.summary && (
-                  <span className="flex items-center gap-1 text-[14px] text-dim">
-                    <Sparkles size={10} />
+                  <span className="flex items-center gap-1 text-base text-dim">
+                    <Sparkles size={16} />
                     {s.provider}
                   </span>
                 )}
                 <button
                   onClick={(e) => { e.stopPropagation(); removeSummary(s.id, s.url); }}
-                  className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
+                  className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-all"
                   title="Remove"
                 >
-                  <X size={11} />
+                  <X size={16} />
                 </button>
-                {expanded.has(s.id) ? <ChevronDown size={12} className="text-dim" /> : <ChevronRight size={12} className="text-dim" />}
+                {expanded.has(s.id) ? <ChevronDown size={16} className="text-dim" /> : <ChevronRight size={16} className="text-dim" />}
               </div>
             </div>
             {expanded.has(s.id) && (
@@ -185,10 +185,10 @@ export default function SummarizerView() {
                 {s.error && (
                   <div className="py-3 text-center space-y-2">
                     <p className="text-xs text-muted">Could not generate a summary for this page.</p>
-                    <p className="text-[14px] text-dim">{s.error}</p>
+                    <p className="text-base text-dim">{s.error}</p>
                     <a href={s.url} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-text text-surface hover:bg-text/80 transition-colors"
-                    ><ExternalLink size={11} /> Open in browser</a>
+                      className="inline-flex items-center gap-1 text-xs px-3 py-2 rounded-md bg-text text-surface hover:bg-text/80 transition-colors"
+                    ><ExternalLink size={16} /> Open in browser</a>
                   </div>
                 )}
                 {s.summary && <MarkdownRenderer>{s.summary}</MarkdownRenderer>}

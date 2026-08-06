@@ -19,13 +19,13 @@ export default function MarkdownRenderer({ children }) {
           const isInline = !className;
           return isInline ? (
             <code
-              className="px-1 py-0.5 rounded bg-hover text-[15px] text-text font-mono"
+              className="px-1.5 py-0.5 rounded-md bg-hover text-sm text-text font-mono"
               {...props}
             >
               {children}
             </code>
           ) : (
-            <pre className="p-3 my-2 rounded bg-panel border border-border text-xs font-mono overflow-x-auto">
+            <pre className="p-4 my-3 rounded-lg bg-panel text-sm font-mono overflow-x-auto">
               <code className="text-text" {...props}>
                 {children}
               </code>
@@ -35,7 +35,7 @@ export default function MarkdownRenderer({ children }) {
         a: ({ href, children }) => (
           <a
             href={href}
-            className="text-text hover:underline"
+            className="text-text underline decoration-border underline-offset-2 hover:text-muted transition-colors"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -43,38 +43,38 @@ export default function MarkdownRenderer({ children }) {
           </a>
         ),
         h1: ({ children }) => (
-          <h1 className="text-sm font-bold text-text mt-3 mb-1">{children}</h1>
+          <h1 className="text-lg font-bold text-text mt-5 mb-2 tracking-tight">{children}</h1>
         ),
         h2: ({ children }) => (
-          <h2 className="text-sm font-bold text-text mt-2.5 mb-1">{children}</h2>
+          <h2 className="text-base font-bold text-text mt-4 mb-1.5 tracking-tight">{children}</h2>
         ),
         h3: ({ children }) => (
-          <h3 className="text-xs font-bold text-text mt-2 mb-0.5">{children}</h3>
+          <h3 className="text-sm font-semibold text-text mt-3 mb-1">{children}</h3>
         ),
         h4: ({ children }) => (
-          <h4 className="text-xs font-semibold text-text mt-2 mb-0.5">{children}</h4>
+          <h4 className="text-sm font-semibold text-text mt-3 mb-1">{children}</h4>
         ),
         p: ({ children }) => (
-          <p className="text-xs text-text leading-relaxed my-1.5">{children}</p>
+          <p className="text-sm text-text leading-relaxed my-2.5">{children}</p>
         ),
         ul: ({ children }) => (
-          <ul className="text-xs text-text list-disc pl-4 my-1.5 space-y-0.5">{children}</ul>
+          <ul className="text-sm text-text list-disc pl-5 my-2.5 space-y-1.5">{children}</ul>
         ),
         ol: ({ children }) => (
-          <ol className="text-xs text-text list-decimal pl-4 my-1.5 space-y-0.5">{children}</ol>
+          <ol className="text-sm text-text list-decimal pl-5 my-2.5 space-y-1.5">{children}</ol>
         ),
         li: ({ children }) => (
           <li className="leading-relaxed">{children}</li>
         ),
         blockquote: ({ children }) => (
-          <blockquote className="border-l-2 border-border pl-3 my-2 italic text-muted text-xs">
+          <blockquote className="border-l-2 border-border pl-4 my-3 italic text-muted text-sm">
             {children}
           </blockquote>
         ),
-        hr: () => <hr className="my-3 border-border" />,
+        hr: () => <hr className="my-4 border-border/60" />,
         table: ({ children }) => (
-          <div className="overflow-x-auto my-2">
-            <table className="min-w-full text-xs border-collapse border border-border">
+          <div className="overflow-x-auto my-3">
+            <table className="min-w-full text-sm border-collapse">
               {children}
             </table>
           </div>
@@ -83,12 +83,10 @@ export default function MarkdownRenderer({ children }) {
           <thead className="bg-hover">{children}</thead>
         ),
         th: ({ children }) => (
-          <th className="px-2.5 py-1.5 text-left font-medium text-text border border-border">
-            {children}
-          </th>
+          <th className="px-3 py-2 text-left font-medium text-text">{children}</th>
         ),
         td: ({ children }) => (
-          <td className="px-2.5 py-1.5 text-text border border-border">{children}</td>
+          <td className="px-3 py-2 text-text border-t border-border/60">{children}</td>
         ),
       }}
     >
