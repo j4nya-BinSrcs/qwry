@@ -1,6 +1,6 @@
 import {
-  Activity, BarChart2, Book, Check, Edit3, ExternalLink, Layers,
-  Lightbulb, ListChecks, Pencil, Pin, Plus, Scale, Search, Sparkles,
+  Activity, BarChart2, Book, Check, ChevronDown, ChevronUp, Edit3, ExternalLink, Layers,
+  Lightbulb, ListChecks, Pencil, Plus, Scale, Search, Sparkles,
   Target, TrendingUp, Trash2, X, MessageCircle, LayoutGrid, FileText,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -88,7 +88,7 @@ function SourceCard({ item, type, isPinned, onPin, onDelete, onReader, onSummary
 
   return (
     <div className={`group rounded-xl bg-panel shadow-card border border-border hover:shadow-card-hover transition-all duration-slow ease-out overflow-hidden ${isPage ? "max-w-xs shrink-0" : "shrink-0"}`}>
-      <div className="relative aspect-square overflow-hidden bg-hover">
+      <div className={`relative overflow-hidden bg-hover ${isPage ? "aspect-square" : type === "video" ? "aspect-video" : "aspect-[4/3]"}`}>
         {isPage ? (
           <PagePlaceholder title={item.title} />
         ) : thumbSrc ? (
@@ -100,12 +100,6 @@ function SourceCard({ item, type, isPinned, onPin, onDelete, onReader, onSummary
           <Layers size={28} className="text-dim opacity-40" />
         )}
         <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={() => onPin(item.id, type)}
-            className={`size-6 rounded-md bg-surface/90 backdrop-blur-sm flex items-center justify-center shadow-card transition-all ${
-              isPinned ? "text-accent bg-accent/10" : "text-dim hover:text-text hover:bg-hover"
-            }`}
-            title={isPinned ? "Unpin" : "Pin"}
-          ><Pin size={12} /></button>
           <button onClick={() => onDelete(item.id, type)}
             className="size-6 rounded-md bg-surface/90 backdrop-blur-sm text-dim hover:text-red-500 hover:bg-hover flex items-center justify-center shadow-card transition-all"
             title="Remove from workspace"
@@ -113,7 +107,7 @@ function SourceCard({ item, type, isPinned, onPin, onDelete, onReader, onSummary
         </div>
       </div>
 
-      <div className="p-3 space-y-2">
+      <div className="p-2.5 space-y-1.5">
         <h3 className="text-sm font-medium text-text line-clamp-2 leading-snug">
           {item.title || item.caption || "Untitled"}
         </h3>
@@ -159,8 +153,7 @@ function SourceCard({ item, type, isPinned, onPin, onDelete, onReader, onSummary
 
 // ── Note Card ──────────────────────────────────────────────────────────────
 
-function NoteCard({ note, isPinned, onPin, onDelete, onEdit }) {
-  const contentPreview = note.content?.slice(0, 120) + (note.content?.length > 120 ? "..." : "");
+function NoteCard({ note, onDelete, onEdit }) {
   const updatedAt = formatDate(note.updated_at || note.created_at);
 
   return (
@@ -169,16 +162,10 @@ function NoteCard({ note, isPinned, onPin, onDelete, onEdit }) {
         <h3 className="text-sm font-medium text-text line-clamp-2 leading-snug flex-1">
           {note.title || "Untitled note"}
         </h3>
-        <button onClick={() => onPin(note.id, "note")}
-          className={`shrink-0 p-1 rounded-md transition-all ${
-            isPinned ? "text-accent bg-accent/10" : "text-dim opacity-0 group-hover:opacity-100 hover:text-text hover:bg-hover"
-          }`}
-          title={isPinned ? "Unpin" : "Pin"}
-        ><Pin size={14} /></button>
       </div>
       {note.content && (
-        <p className="text-xs text-dim mt-2 line-clamp-4 leading-relaxed whitespace-pre-line">
-          {contentPreview}
+        <p className="text-xs text-dim mt-2 leading-relaxed whitespace-pre-line">
+          {note.content}
         </p>
       )}
       <div className="flex items-center justify-between mt-2">
@@ -200,31 +187,54 @@ function NoteCard({ note, isPinned, onPin, onDelete, onEdit }) {
 
 // ── Comparison Card ───────────────────────────────────────────────────────
 
-function ComparisonCard({ comp, domain, onDelete }) {
+function ComparisonCard({ comp, onDelete }) {
   const data = comp.data;
   const s1 = data?.sources?.[0];
   const s2 = data?.sources?.[1];
+  const [expanded, setExpanded] = useState(false);
 
   return (
     <div className="group rounded-xl bg-panel shadow-card border border-border hover:shadow-card-hover transition-all duration-slow ease-out overflow-hidden">
       <div className="p-3">
-        <h3 className="text-sm font-medium text-text line-clamp-2 leading-snug">{comp.title || "Comparison"}</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium text-text line-clamp-2 leading-snug">{comp.title || "Comparison"}</h3>
+          <button onClick={() => setExpanded(!expanded)}
+            className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors"
+            title={expanded ? "Collapse" : "Expand"}
+          >
+            {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+        </div>
         {s1 && s2 && (
-          <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
-            <div className="bg-hover rounded-md p-2 min-w-0">
-              <p className="font-medium text-text truncate">{s1.title || "Untitled"}</p>
-              <p className="text-dim truncate">{s1.url ? getHostname(s1.url) : s1._type}</p>
-              {s1.snippet && <p className="text-dim mt-1 line-clamp-2">{s1.snippet.slice(0, 80)}...</p>}
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <div className="bg-hover rounded-md p-3 min-w-0">
+              <p className="font-medium text-text truncate mb-2">{s1.title || "Untitled"}</p>
+              <p className="text-dim text-xs truncate mb-2">{s1.url ? getHostname(s1.url) : s1._type}</p>
+              {s1.snippet && <p className="text-dim text-xs leading-relaxed">{s1.snippet}</p>}
+              {s1.summary && <p className="text-text text-xs mt-2 leading-relaxed">{s1.summary}</p>}
+              {s1.notes && <p className="text-dim text-xs mt-2 leading-relaxed">{s1.notes}</p>}
+              {s1.url && (
+                <a href={s1.url} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-accent mt-2 hover:underline"
+                ><ExternalLink size={12} /> Open</a>
+              )}
             </div>
-            <div className="bg-hover rounded-md p-2 min-w-0">
-              <p className="font-medium text-text truncate">{s2.title || "Untitled"}</p>
-              <p className="text-dim truncate">{s2.url ? getHostname(s2.url) : s2._type}</p>
-              {s2.snippet && <p className="text-dim mt-1 line-clamp-2">{s2.snippet.slice(0, 80)}...</p>}
+            <div className="bg-hover rounded-md p-3 min-w-0">
+              <p className="font-medium text-text truncate mb-2">{s2.title || "Untitled"}</p>
+              <p className="text-dim text-xs truncate mb-2">{s2.url ? getHostname(s2.url) : s2._type}</p>
+              {s2.snippet && <p className="text-dim text-xs leading-relaxed">{s2.snippet}</p>}
+              {s2.summary && <p className="text-text text-xs mt-2 leading-relaxed">{s2.summary}</p>}
+              {s2.notes && <p className="text-dim text-xs mt-2 leading-relaxed">{s2.notes}</p>}
+              {s2.url && (
+                <a href={s2.url} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-accent mt-2 hover:underline"
+                ><ExternalLink size={12} /> Open</a>
+              )}
             </div>
           </div>
         )}
       </div>
-      <div className="flex items-center justify-end gap-1 px-3 py-2 border-t border-border bg-hover/50 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center justify-end gap-1 px-3 py-2 border-t border-border bg-hover/50">
         <button onClick={() => onDelete(comp.id)}
           className="p-1.5 rounded-md text-dim hover:text-red-500 hover:bg-hover transition-colors"
           title="Delete comparison"
@@ -394,30 +404,6 @@ function SourceCollections({ images, videos, notes, comparisons, onPin, onDelete
   );
 }
 
-// ── Pinned Chips ──────────────────────────────────────────────────────────
-
-function PinnedChips({ pins, sessionId, wsId, onDeletePin }) {
-  if (pins.length === 0) return null;
-  return (
-    <div className="shrink-0 flex items-center gap-2 px-3 py-2 overflow-x-auto">
-      <Pin size={16} className="text-dim shrink-0" />
-      {pins.map((p) => (
-        <span key={p.id}
-          className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-hover border border-border text-xs text-text shrink-0"
-        >
-          <span className="capitalize">{p.pinnable_type}</span>
-          <span className="text-dim max-w-20 truncate">{p.pinnable_id}</span>
-          <button onClick={() => onDeletePin(p.id)}
-            className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors"
-          ><X size={14} /></button>
-        </span>
-      ))}
-    </div>
-  );
-}
-
-// ── Notes Section ─────────────────────────────────────────────────────────
-
 function NotesSection({ notes, sessionId, wsId, pins, onCreateNote, onUpdateNote, onDeleteNote, onPin, onUnpin, searchQuery }) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -484,7 +470,6 @@ function NotesSection({ notes, sessionId, wsId, pins, onCreateNote, onUpdateNote
           <p className="text-xs text-dim text-center py-6">No notes yet — capture your thoughts here</p>
         )}
         {filteredNotes.map((n) => {
-          const pinned = isPinned(n.id);
           return (
             <div key={n.id} className="bg-panel rounded-lg px-3 py-2 shadow-surface border border-border">
               {editingId === n.id ? (
@@ -507,8 +492,6 @@ function NotesSection({ notes, sessionId, wsId, pins, onCreateNote, onUpdateNote
               ) : (
                 <NoteCard
                   note={n}
-                  isPinned={pinned}
-                  onPin={() => pinned ? onUnpin(n.id) : onPin("note", n.id)}
                   onDelete={onDeleteNote}
                   onEdit={() => startEdit(n)}
                 />

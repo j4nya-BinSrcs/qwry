@@ -1,6 +1,6 @@
 import {
   Book, Check, ExternalLink, FileText, Image, Layers, Loader2, Maximize2, MessageCircle,
-  Pencil, Pin, Plus, Scale, Search, Sparkles, Trash2, Video, X, ZoomIn, ZoomOut,
+  Pencil, Plus, Scale, Search, Sparkles, Trash2, Video, X, ZoomIn, ZoomOut,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as canvasApi from "../api/canvas";
@@ -94,7 +94,7 @@ function IconBtn({ title, onClick, children, className }) {
 
 // ── Node Card ─────────────────────────────────────────────────────────────
 
-function NodeCard({ node, obj, isSelected, connectionMode, onSelect, onDragStart, onDelete, onConnect, onOpenReader, onOpenSummarizer, onOpenUrl, isPinned, onTogglePin, onEditNote }) {
+function NodeCard({ node, obj, isSelected, connectionMode, onSelect, onDragStart, onDelete, onConnect, onOpenReader, onOpenSummarizer, onOpenUrl, onEditNote }) {
   const type = node.object_type;
   const color = node.color || NODE_COLORS[type] || "#666";
   const { w, h } = nodeSize(node);
@@ -192,11 +192,6 @@ function NodeCard({ node, obj, isSelected, connectionMode, onSelect, onDragStart
               <button onClick={(e) => { e.stopPropagation(); obj?.url && onOpenUrl(obj.url); }}
                 className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Open"
               ><ExternalLink size={14} /></button>
-              <div className="flex-1" />
-              <button onClick={(e) => { e.stopPropagation(); onTogglePin("source", obj?.id || node.object_id); }}
-                className={`p-1 rounded-md transition-all ${isPinned ? "text-accent" : "text-dim hover:text-text hover:bg-hover"}`}
-                title={isPinned ? "Unpin" : "Pin"}
-              ><Pin size={14} className={isPinned ? "" : ""} /></button>
             </div>
           )}
           {type === "note" && (
@@ -204,11 +199,6 @@ function NodeCard({ node, obj, isSelected, connectionMode, onSelect, onDragStart
               <button onClick={(e) => { e.stopPropagation(); onEditNote(node); }}
                 className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Edit"
               ><Pencil size={14} /></button>
-              <div className="flex-1" />
-              <button onClick={(e) => { e.stopPropagation(); onTogglePin("note", obj?.id || node.object_id); }}
-                className={`p-1 rounded-md transition-all ${isPinned ? "text-accent" : "text-dim hover:text-text hover:bg-hover"}`}
-                title={isPinned ? "Unpin" : "Pin"}
-              ><Pin size={14} className={isPinned ? "" : ""} /></button>
             </div>
           )}
         </div>
@@ -339,7 +329,7 @@ function InspectorBtn({ onClick, children, primary }) {
   );
 }
 
-function InspectorPanel({ node, obj, isPinned, onTogglePin, onDeleteNode, onDeleteObject, onOpenReader, onOpenSummarizer, onOpenUrl, onUpdateNote, onClose }) {
+function InspectorPanel({ node, obj, onDeleteNode, onDeleteObject, onOpenReader, onOpenSummarizer, onOpenUrl, onUpdateNote, onClose }) {
   const type = node.object_type;
   const color = node.color || NODE_COLORS[type] || "#666";
   const [draft, setDraft] = useState({ title: "", content: "" });
@@ -385,7 +375,6 @@ function InspectorPanel({ node, obj, isPinned, onTogglePin, onDeleteNode, onDele
               {obj?.url && <InspectorBtn primary onClick={() => onOpenReader(obj.url, obj.title)}><Book size={16} /> Reader</InspectorBtn>}
               {obj?.url && <InspectorBtn onClick={() => onOpenSummarizer(obj.url, obj.title)}><Sparkles size={16} /> Summarize</InspectorBtn>}
               {obj?.url && <InspectorBtn onClick={() => onOpenUrl(obj.url)}><ExternalLink size={16} /> Open</InspectorBtn>}
-              <InspectorBtn onClick={() => onTogglePin("source", obj?.id || node.object_id)}><Pin size={16} /> {isPinned ? "Unpin" : "Pin"}</InspectorBtn>
             </div>
           </div>
         );
@@ -407,8 +396,6 @@ function InspectorPanel({ node, obj, isPinned, onTogglePin, onDeleteNode, onDele
                 <Check size={16} /> Save
               </InspectorBtn>
               {saved && <span className="text-base text-dim">Saved</span>}
-              <div className="flex-1" />
-              <InspectorBtn onClick={() => onTogglePin("note", obj?.id || node.object_id)}><Pin size={16} /> {isPinned ? "Unpin" : "Pin"}</InspectorBtn>
             </div>
           </div>
         );
@@ -427,7 +414,6 @@ function InspectorPanel({ node, obj, isPinned, onTogglePin, onDeleteNode, onDele
             <div className="flex items-center gap-1 pt-1">
               {obj?.url && <InspectorBtn primary onClick={() => onOpenUrl(obj.url)}><ExternalLink size={16} /> Open</InspectorBtn>}
               {type === "video" && obj?.url && <InspectorBtn onClick={() => onOpenSummarizer(obj.url, obj.title)}><Sparkles size={16} /> Summarize</InspectorBtn>}
-              <InspectorBtn onClick={() => onTogglePin(type, obj?.id || node.object_id)}><Pin size={16} /> {isPinned ? "Unpin" : "Pin"}</InspectorBtn>
             </div>
           </div>
         );
@@ -688,19 +674,6 @@ export default function CanvasView({ mode, setMode, chatOpen, setChatOpen }) {
     for (const c of comparisons) list.push({ key: `comparison:${c.id}`, type: "comparison", label: c.title || "Comparison", id: c.id });
     return list.filter((x) => !placed.has(x.key));
   }, [nodes, items, notes, images, videos, comparisons]);
-
-  const isPinned = useCallback((type, id) => {
-    const t = type === "source" ? "item" : type;
-    return pins.some((p) => p.pinnable_type === t && p.pinnable_id === id);
-  }, [pins]);
-
-  const togglePin = useCallback(async (type, id) => {
-    if (!activeId) return;
-    const t = type === "source" ? "item" : type;
-    const existing = pins.find((p) => p.pinnable_type === t && p.pinnable_id === id);
-    if (existing) await deletePin(sessionId, activeId, existing.id);
-    else await createPin(sessionId, activeId, t, id);
-  }, [activeId, sessionId, pins, deletePin, createPin]);
 
   // ── Node CRUD ─────────────────────────────────────────────────────
 
@@ -1162,8 +1135,6 @@ export default function CanvasView({ mode, setMode, chatOpen, setChatOpen }) {
               onOpenReader={openReader}
               onOpenSummarizer={openSummarizer}
               onOpenUrl={(url) => window.open(url, "_blank")}
-              isPinned={isPinned(node.object_type, node.object_id)}
-              onTogglePin={togglePin}
               onEditNote={(n) => setSelectedIds(new Set([n.id]))}
             />
           ))}
@@ -1197,8 +1168,6 @@ export default function CanvasView({ mode, setMode, chatOpen, setChatOpen }) {
           <InspectorPanel
             node={selectedNode}
             obj={selectedObj}
-            isPinned={selectedObj ? isPinned(selectedNode.object_type, selectedObj.id) : false}
-            onTogglePin={togglePin}
             onDeleteNode={deleteNode}
             onDeleteObject={selectedNode.object_type === "note"
               ? () => handleDeleteNote(selectedNode.object_id)
