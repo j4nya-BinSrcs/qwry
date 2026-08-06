@@ -10,6 +10,9 @@ logger = logging.getLogger(__name__)
 _RETRY_ATTEMPTS = 3
 _RETRY_BACKOFF = 1.0
 
+_PRIMARY_ENGINES = ("google", "brave")
+_FALLBACK_ENGINES = ("bing", "wiby")
+
 
 class SearxngClient:
     def __init__(self, http_client: httpx.AsyncClient, backend: Backend) -> None:
@@ -17,6 +20,26 @@ class SearxngClient:
         self._backend = backend
 
     async def search(self, q: str, page: int = 1, page_size: int = 10, categories: str | None = None) -> SearchResponse:
+        is_general = not categories or categories == "general"
+        if is_general:
+            result = await self._fetch(q, page, page_size, categories, _PRIMARY_ENGINES)
+            if result.results:
+                return result
+            logger.warning(
+                "Primary engines returned no results, falling back to bing/wiby",
+                extra={"query": q, "engines": _PRIMARY_ENGINES},
+            )
+            return await self._fetch(q, page, page_size, categories, _FALLBACK_ENGINES)
+        return await self._fetch(q, page, page_size, categories, None)
+
+    async def _fetch(
+        self,
+        q: str,
+        page: int,
+        page_size: int,
+        categories: str | None,
+        engines: tuple[str, ...] | None,
+    ) -> SearchResponse:
         url = f"{self._backend.base_url}/search"
         params: dict[str, str | int] = {
             "q": q,
@@ -25,6 +48,8 @@ class SearxngClient:
         }
         if categories:
             params["categories"] = categories
+        if engines:
+            params["engines"] = ",".join(engines)
 
         for attempt in range(1, _RETRY_ATTEMPTS + 1):
             logger.debug("SearXNG request", extra={"url": url, "params": params, "attempt": attempt})
