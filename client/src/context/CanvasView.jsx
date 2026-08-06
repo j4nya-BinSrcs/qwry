@@ -101,51 +101,49 @@ function NodeCard({ node, obj, isSelected, connectionMode, onSelect, onDragStart
 
   return (
     <div
-      className={`canvas-node absolute rounded-lg bg-elevated overflow-hidden transition-all hover:shadow-pop ${
-        isSelected ? "ring-2 ring-text" : connectionMode === node.id ? "ring-2 ring-text/60" : "shadow-surface"
+       className={`canvas-node absolute rounded-xl bg-elevated overflow-hidden transition-all duration-slow ease-out hover:shadow-pop ${
+        isSelected
+          ? "ring-2 ring-accent shadow-pop animate-pulse-subtle"
+          : connectionMode === node.id
+            ? "ring-2 ring-accent/60 shadow-pop"
+            : "shadow-card hover:shadow-card-hover"
       }`}
       style={{ left: node.x, top: node.y, width: w, height: h, zIndex: node.z_index || 0 }}
       onMouseDown={(e) => { e.stopPropagation(); onDragStart(node.id, e); }}
       onClick={(e) => { e.stopPropagation(); onSelect(node.id, e); }}
     >
-      <div className="h-0.5 shrink-0" style={{ backgroundColor: color }} />
+      <div className="h-1.5 shrink-0" style={{ backgroundColor: color }} />
 
       {(type === "image" || type === "video") ? (
         <div className="h-full flex flex-col">
           <div className="relative flex-1 min-h-0 bg-hover overflow-hidden">
             {(type === "video" ? obj?.thumbnail : obj?.url) ? (
               <img src={type === "video" ? obj?.thumbnail : obj?.url} alt=""
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover transition-transform duration-slow ease-out group-hover:scale-[1.03]"
                 onError={(e) => { e.target.style.display = "none"; }}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                {type === "image" ? <Image size={24} className="text-dim opacity-40" /> : <Video size={24} className="text-dim opacity-40" />}
+                {type === "image" ? <Image size={32} className="text-dim opacity-30" /> : <Video size={32} className="text-dim opacity-30" />}
               </div>
             )}
-            <div className="absolute top-1 right-1 flex gap-1">
-              {onConnect && <IconBtn title="Connect"><Plus size={16} /></IconBtn>}
-              <IconBtn title="Remove from canvas" onClick={() => onDelete(node.id)}><Trash2 size={16} /></IconBtn>
+            <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              {onConnect && (
+                <button onClick={(e) => { e.stopPropagation(); onConnect(node.id); }}
+                  className="size-5 rounded-md bg-surface/90 backdrop-blur-sm text-dim hover:text-text hover:bg-hover flex items-center justify-center shadow-card transition-all"
+                  title="Connect"><Plus size={12} /></button>
+              )}
+              <button onClick={(e) => { e.stopPropagation(); onDelete(node.id); }}
+                className="size-5 rounded-md bg-surface/90 backdrop-blur-sm text-dim hover:text-red-500 hover:bg-hover flex items-center justify-center shadow-card transition-all"
+                title="Delete"
+              ><Trash2 size={12} /></button>
             </div>
           </div>
           <div className="shrink-0 px-3 py-2 border-t border-border/50">
-            <p className="text-xs text-text truncate">{obj?.title || obj?.caption || node.label || TYPE_LABELS[type] || "Untitled"}</p>
-            <div className="flex items-center gap-1 mt-1">
-              {obj?.url ? (
-                <>
-                  <Favicon domain={getHostname(obj.url)} />
-                  <span className="text-base text-muted truncate flex-1">{getHostname(obj.url)}</span>
-                  <IconBtn title="Open" onClick={() => onOpenUrl(obj.url)}><ExternalLink size={16} /></IconBtn>
-                </>
-              ) : (
-                <span className="text-base text-muted truncate flex-1">{obj?.platform || ""}</span>
-              )}
-              {type === "video" && obj?.url && (
-                <IconBtn title="Summarize" onClick={() => onOpenSummarizer(obj.url, obj.title)}><Sparkles size={16} /></IconBtn>
-              )}
-              <IconBtn title={isPinned ? "Unpin" : "Pin"} onClick={() => onTogglePin(type, obj?.id || node.object_id)}>
-                <Pin size={16} className={isPinned ? "text-text" : ""} />
-              </IconBtn>
+            <p className="text-sm font-medium text-text line-clamp-2 leading-snug">{obj?.title || obj?.caption || node.label || TYPE_LABELS[type] || "Untitled"}</p>
+            <div className="flex items-center gap-1.5 mt-1.5 text-xs text-dim">
+              <Favicon domain={getHostname(obj?.url || "")} />
+              <span className="truncate">{getHostname(obj?.url || "") || obj?.platform || ""}</span>
             </div>
           </div>
         </div>
@@ -158,37 +156,58 @@ function NodeCard({ node, obj, isSelected, connectionMode, onSelect, onDragStart
             {type === "ai_response" && <MessageCircle size={16} style={{ color }} />}
             {type === "task" && <Check size={16} style={{ color }} />}
             {type === "source"
-              ? <span className="text-base text-muted truncate flex-1">{domain || "Source"}</span>
-              : <span className="text-base uppercase tracking-wider text-dim">{TYPE_LABELS[type]}</span>}
-            {onConnect && <IconBtn title="Connect"><Plus size={16} /></IconBtn>}
-            <IconBtn title="Remove from canvas" onClick={() => onDelete(node.id)}><Trash2 size={16} /></IconBtn>
+              ? <span className="text-sm font-medium text-text truncate flex-1">{domain || "Source"}</span>
+              : <span className="text-xs uppercase tracking-wider text-dim">{TYPE_LABELS[type]}</span>}
+            <div className="flex-1" />
+            {onConnect && (
+              <button onClick={(e) => { e.stopPropagation(); onConnect(node.id); }}
+                className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-all"
+                title="Connect"
+              ><Plus size={14} /></button>
+            )}
+            <button onClick={(e) => { e.stopPropagation(); onDelete(node.id); }}
+              className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-dim hover:text-red-500 hover:bg-hover transition-all"
+              title="Delete"
+            ><Trash2 size={14} /></button>
           </div>
-          <p className="text-xs font-medium text-text truncate">{obj?.title || node.label || "Untitled"}</p>
-          {type === "source" && obj?.snippet && <p className="text-base text-muted mt-1 line-clamp-3 leading-relaxed">{obj.snippet}</p>}
-          {type === "note" && obj?.content && <p className="text-base text-muted mt-1 line-clamp-5 leading-relaxed whitespace-pre-line">{obj.content}</p>}
-          {type === "comparison" && obj?.data?.sources?.length === 2 && (
-            <p className="text-base text-muted mt-1 truncate">{(obj.data.sources[0].title || "A")} vs {(obj.data.sources[1].title || "B")}</p>
+          <p className="text-sm font-medium text-text leading-snug truncate mb-1">{obj?.title || obj?.label || node.label || "Untitled"}</p>
+          {type === "source" && obj?.snippet && (
+            <p className="text-xs text-dim mt-1 line-clamp-3 leading-relaxed">{obj.snippet}</p>
           )}
-          {type === "ai_response" && obj?.response_text && <p className="text-base text-muted mt-1 line-clamp-4 leading-relaxed">{obj.response_text}</p>}
-          {type === "task" && obj?.name && <p className="text-base text-muted mt-1 truncate">{obj.name}</p>}
+          {type === "note" && obj?.content && <p className="text-xs text-dim mt-1 line-clamp-5 leading-relaxed whitespace-pre-line">{obj.content}</p>}
+          {type === "comparison" && obj?.data?.sources?.length === 2 && (
+            <p className="text-xs text-dim mt-1 truncate">{(obj.data.sources[0].title || "A")} vs {(obj.data.sources[1].title || "B")}</p>
+          )}
+          {type === "ai_response" && obj?.response_text && <p className="text-xs text-dim mt-1 line-clamp-4 leading-relaxed">{obj.response_text}</p>}
+          {type === "task" && obj?.name && <p className="text-xs text-dim mt-1 truncate">{obj.name}</p>}
           {type === "source" && (
             <div className="flex items-center gap-1 mt-auto pt-2">
-              <IconBtn title="Reader" onClick={() => obj?.url && onOpenReader(obj.url, obj.title)}><Book size={16} /></IconBtn>
-              <IconBtn title="Summarize" onClick={() => obj?.url && onOpenSummarizer(obj.url, obj.title)}><Sparkles size={16} /></IconBtn>
-              <IconBtn title="Open" onClick={() => obj?.url && onOpenUrl(obj.url)}><ExternalLink size={16} /></IconBtn>
+              <button onClick={(e) => { e.stopPropagation(); obj?.url && onOpenReader(obj.url, obj.title); }}
+                className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Reader"
+              ><Book size={14} /></button>
+              <button onClick={(e) => { e.stopPropagation(); obj?.url && onOpenSummarizer(obj.url, obj.title); }}
+                className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Summarize"
+              ><Sparkles size={14} /></button>
+              <button onClick={(e) => { e.stopPropagation(); obj?.url && onOpenUrl(obj.url); }}
+                className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Open"
+              ><ExternalLink size={14} /></button>
               <div className="flex-1" />
-              <IconBtn title={isPinned ? "Unpin" : "Pin"} onClick={() => onTogglePin("source", obj?.id || node.object_id)}>
-                <Pin size={16} className={isPinned ? "text-text" : ""} />
-              </IconBtn>
+              <button onClick={(e) => { e.stopPropagation(); onTogglePin("source", obj?.id || node.object_id); }}
+                className={`p-1 rounded-md transition-all ${isPinned ? "text-accent" : "text-dim hover:text-text hover:bg-hover"}`}
+                title={isPinned ? "Unpin" : "Pin"}
+              ><Pin size={14} className={isPinned ? "" : ""} /></button>
             </div>
           )}
           {type === "note" && (
             <div className="flex items-center gap-1 mt-auto pt-2">
-              <IconBtn title="Edit note" onClick={() => onEditNote(node)}><Pencil size={16} /></IconBtn>
+              <button onClick={(e) => { e.stopPropagation(); onEditNote(node); }}
+                className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Edit"
+              ><Pencil size={14} /></button>
               <div className="flex-1" />
-              <IconBtn title={isPinned ? "Unpin" : "Pin"} onClick={() => onTogglePin("note", obj?.id || node.object_id)}>
-                <Pin size={16} className={isPinned ? "text-text" : ""} />
-              </IconBtn>
+              <button onClick={(e) => { e.stopPropagation(); onTogglePin("note", obj?.id || node.object_id); }}
+                className={`p-1 rounded-md transition-all ${isPinned ? "text-accent" : "text-dim hover:text-text hover:bg-hover"}`}
+                title={isPinned ? "Unpin" : "Pin"}
+              ><Pin size={14} className={isPinned ? "" : ""} /></button>
             </div>
           )}
         </div>
@@ -213,16 +232,22 @@ function ConnectionLines({ connections, nodes, onDelete }) {
         const mx = (s.x + t.x) / 2;
         const my = (s.y + t.y) / 2;
         return (
-          <g key={conn.id}>
+          <g key={conn.id} className="canvas-connection">
             <line x1={s.x} y1={s.y} x2={t.x} y2={t.y}
               stroke="transparent" strokeWidth={10}
               style={{ pointerEvents: "stroke", cursor: "pointer" }}
               onClick={() => onDelete && onDelete(conn.id)}
             />
             <line x1={s.x} y1={s.y} x2={t.x} y2={t.y}
-              stroke={conn.color || "#666"} strokeWidth={2}
+              stroke={conn.color || NODE_COLORS[src.object_type] || "#666"} strokeWidth={2}
               strokeDasharray={dash}
-              className="transition-all"
+              className="transition-all duration-slow"
+              style={{ strokeOpacity: 0.7 }}
+            />
+            <line x1={s.x} y1={s.y} x2={t.x} y2={t.y}
+              stroke={conn.color || NODE_COLORS[src.object_type] || "#666"} strokeWidth={8}
+              strokeOpacity={0.15}
+              strokeLinecap="round"
             />
             {conn.label && (
               <text x={mx} y={my - 4} textAnchor="middle" fontSize="10" fill="var(--color-muted)" style={{ pointerEvents: "none" }}>
@@ -241,8 +266,8 @@ function ConnectionLines({ connections, nodes, onDelete }) {
 function Minimap({ nodes, viewport }) {
   const nodesArr = Object.values(nodes);
   if (nodesArr.length === 0) return null;
-  const MINIMAP_SIZE = 120;
-  const PAD = 10;
+  const MINIMAP_SIZE = 140;
+  const PAD = 12;
 
   const xs = nodesArr.map((n) => n.x);
   const ys = nodesArr.map((n) => n.y);
@@ -255,20 +280,23 @@ function Minimap({ nodes, viewport }) {
   const scale = Math.min((MINIMAP_SIZE - PAD * 2) / areaW, (MINIMAP_SIZE - PAD * 2) / areaH);
 
   return (
-    <div className="canvas-ui absolute bottom-2 right-2 size-[120px] rounded-md border border-border bg-surface/80 backdrop-blur-sm overflow-hidden shadow-md z-10">
-      <svg width={MINIMAP_SIZE} height={MINIMAP_SIZE}>
+      <div className="canvas-ui absolute bottom-2 right-2 w-[140px] h-[140px] rounded-lg border border-border bg-elevated/90 backdrop-blur-sm overflow-hidden shadow-pop z-10">
+        <svg width={140} height={140}>
         {nodesArr.map((n) => {
           const s = nodeSize(n);
           const cx = PAD + (n.x + s.w / 2 - minX) * scale;
           const cy = PAD + (n.y + s.h / 2 - minY) * scale;
-          return <circle key={n.id} cx={cx} cy={cy} r={2} fill="var(--color-dim)" />;
+           return <circle key={n.id} cx={cx} cy={cy} r={2.5}
+              fill={NODE_COLORS[n.object_type] || "#666"}
+              style={{ stroke: "var(--color-elevated)", strokeWidth: 0.5 }}
+            />;
         })}
         <rect
           x={PAD + (-viewport.x / viewport.zoom - minX) * scale}
           y={PAD + (-viewport.y / viewport.zoom - minY) * scale}
           width={(window.innerWidth || 800) / viewport.zoom * scale}
           height={(window.innerHeight || 600) / viewport.zoom * scale}
-          fill="none" stroke="var(--color-muted)" strokeWidth={1} rx={2}
+          fill="none" stroke="var(--color-accent)" strokeWidth={1.5} strokeOpacity={0.6} rx={3}
         />
       </svg>
     </div>
@@ -281,12 +309,13 @@ function Legend({ counts }) {
   const entries = Object.keys(NODE_COLORS).filter((t) => counts[t] > 0);
   if (entries.length === 0) return null;
   return (
-    <div className="canvas-ui absolute bottom-2 left-2 z-10 rounded-md border border-border bg-surface/80 backdrop-blur-sm px-2 py-2 shadow-md">
+    <div className="canvas-ui absolute bottom-3 left-3 z-10 rounded-lg border border-border bg-elevated/90 backdrop-blur-sm px-3 py-2.5 shadow-pop">
+      <div className="text-xs text-dim font-medium mb-1.5">Canvas Nodes</div>
       {entries.map((t) => (
         <div key={t} className="flex items-center gap-2 py-1">
-          <span className="size-1.5 rounded-full shrink-0" style={{ backgroundColor: NODE_COLORS[t] }} />
-          <span className="text-base text-muted capitalize">{TYPE_LABELS[t]}</span>
-          <span className="text-base text-dim ml-1">{counts[t]}</span>
+          <span className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: NODE_COLORS[t] }} />
+          <span className="text-xs text-dim capitalize">{TYPE_LABELS[t]}</span>
+          <span className="text-xs text-dim ml-1">{counts[t]}</span>
         </div>
       ))}
     </div>
@@ -1035,12 +1064,12 @@ export default function CanvasView() {
         />
 
         {/* Connection SVG */}
-        <div style={{ transform, transformOrigin: "0 0", position: "absolute", top: 0, left: 0 }}>
+        <div className="transition-transform duration-150 ease-out" style={{ transform, transformOrigin: "0 0", position: "absolute", top: 0, left: 0 }}>
           <ConnectionLines connections={connections} nodes={nodes} onDelete={deleteConnection} />
         </div>
 
         {/* Nodes */}
-        <div style={{ transform, transformOrigin: "0 0", position: "absolute", top: 0, left: 0 }}>
+        <div className="transition-transform duration-150 ease-out" style={{ transform, transformOrigin: "0 0", position: "absolute", top: 0, left: 0 }}>
           {Object.values(nodes).map((node) => (
             <NodeCard key={node.id} node={node}
               obj={objectMap[`${node.object_type}:${node.object_id}`]}
@@ -1121,7 +1150,7 @@ export default function CanvasView() {
             <div className="flex items-center gap-1">
               <button onClick={createNoteAt} disabled={!noteTitle.trim()}
                 className="flex items-center gap-1 text-base px-2 py-1 rounded-md bg-text text-surface hover:opacity-80 transition-opacity disabled:opacity-30"
-              ><Plus size={16} /> Add</button>
+              ><Plus size={14} /> Add</button>
               <button onClick={() => setNoteComposer(null)}
                 className="text-base px-2 py-1 rounded-md border border-border text-dim hover:text-text transition-colors"
               >Cancel</button>
@@ -1138,22 +1167,22 @@ export default function CanvasView() {
         )}
 
         {/* Toolbar */}
-        <div className="canvas-ui absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-2 rounded-lg bg-surface/90 backdrop-blur-sm border border-border shadow-md z-10">
+        <div className="canvas-ui absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 px-1.5 py-1.5 rounded-lg bg-surface/90 backdrop-blur-sm border border-border shadow-pop z-10">
           <button onClick={() => { const r = containerRef.current?.getBoundingClientRect(); setNoteComposer(r ? { px: r.width / 2 - 80, py: r.height / 2 - 60 } : { px: 200, py: 200 }); setNoteTitle(""); setNoteContent(""); }}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-base text-text hover:bg-hover transition-colors" title="Create a note on the canvas"
-          ><FileText size={16} /> Note</button>
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-text hover:bg-hover transition-all active:scale-95" title="Create a note on the canvas"
+          ><FileText size={14} /> Note</button>
           <button onClick={() => setCompareOpen(true)}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-base text-text hover:bg-hover transition-colors" title="Compare two sources"
-          ><Scale size={16} /> Compare</button>
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-text hover:bg-hover transition-all active:scale-95" title="Compare two sources"
+          ><Scale size={14} /> Compare</button>
           <div className="relative">
             <button onClick={() => setAddMenu(!addMenu)}
-              className="flex items-center gap-1 px-2 py-1 rounded-md text-base text-text hover:bg-hover transition-colors" title="Add a station item to the canvas"
-            ><Plus size={16} /> Add{unplaced.length > 0 ? ` (${unplaced.length})` : ""}</button>
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-text hover:bg-hover transition-all active:scale-95" title="Add a station item to the canvas"
+            ><Plus size={14} /> Add{unplaced.length > 0 ? ` (${unplaced.length})` : ""}</button>
             {addMenu && (
-              <div className="absolute bottom-full left-0 mb-1 w-64 max-h-64 overflow-y-auto rounded-lg bg-elevated border border-border shadow-pop z-20">
-                <div className="px-3 py-2 text-base text-muted font-medium border-b border-border">Add from station</div>
+              <div className="absolute bottom-full left-0 mb-1 w-64 max-h-66 overflow-y-auto rounded-lg bg-elevated border border-border shadow-pop z-20">
+                <div className="px-3 py-2 text-xs text-dim font-medium border-b border-border">Add from station</div>
                 {unplaced.length === 0 && (
-                  <div className="px-3 py-3 text-base text-dim text-center">All station items are already on the canvas</div>
+                  <div className="px-3 py-3 text-xs text-dim text-center">All station items are on the canvas</div>
                 )}
                 {unplaced.map((u) => (
                   <button key={u.key} onClick={() => placeNode(u)}
@@ -1161,7 +1190,7 @@ export default function CanvasView() {
                   >
                     <span className="size-1.5 rounded-full shrink-0" style={{ backgroundColor: NODE_COLORS[u.type] || "#666" }} />
                     <span className="truncate">{u.label}</span>
-                    <span className="text-base text-dim shrink-0 capitalize">{u.type}</span>
+                    <span className="text-xs text-dim shrink-0 capitalize">{u.type}</span>
                   </button>
                 ))}
               </div>
@@ -1169,15 +1198,15 @@ export default function CanvasView() {
           </div>
           <div className="w-px h-4 bg-border mx-1" />
           <button onClick={() => setViewport((v) => sanitizeViewport({ ...v, zoom: v.zoom - 0.2 }))}
-            className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Zoom out"
-          ><ZoomOut size={16} /></button>
-          <span className="text-base text-dim w-10 text-center font-mono">{zoomPct}%</span>
+            className="p-1.5 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Zoom out"
+          ><ZoomOut size={14} /></button>
+          <span className="text-xs text-dim w-12 text-center font-mono">{zoomPct}%</span>
           <button onClick={() => setViewport((v) => sanitizeViewport({ ...v, zoom: v.zoom + 0.2 }))}
-            className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Zoom in"
-          ><ZoomIn size={16} /></button>
+            className="p-1.5 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Zoom in"
+          ><ZoomIn size={14} /></button>
           <button onClick={fitToScreen}
-            className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Fit to screen"
-          ><Maximize2 size={16} /></button>
+            className="p-1.5 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Fit to screen"
+          ><Maximize2 size={14} /></button>
         </div>
       </div>
     </div>

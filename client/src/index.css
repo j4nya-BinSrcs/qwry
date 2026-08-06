@@ -26,8 +26,10 @@
 
   /* ── Elevation shadows (light) ────────────────────────────── */
   --shadow-surface: 0 1px 2px rgb(0 0 0 / 0.05);
-  --shadow-raised: 0 1px 3px rgb(0 0 0 / 0.08);
+  --shadow-raised: 0 4px 12px rgb(0 0 0 / 0.08);
   --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.14);
+  --shadow-card: 0 1px 3px rgb(0 0 0 / 0.08);
+  --shadow-card-hover: 0 8px 20px rgb(0 0 0 / 0.12);
 
   /* ── Motion ───────────────────────────────────────────────── */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -69,6 +71,8 @@
   --shadow-surface: 0 1px 2px rgb(0 0 0 / 0.35);
   --shadow-raised: 0 2px 8px rgb(0 0 0 / 0.45);
   --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.6);
+  --shadow-card: 0 2px 6px rgb(0 0 0 / 0.4);
+  --shadow-card-hover: 0 8px 20px rgb(0 0 0 / 0.55);
 }
 
 .tokyo-night {
@@ -207,6 +211,38 @@ a:focus-visible {
     animation: none;
   }
   .animate-fade-in {
+    animation: none;
+  }
+}
+
+/* Canvas smooth transitions */
+.canvas-node,
+.canvas-ui {
+  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 150ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Connection line animation */
+.canvas-connection {
+  stroke-dasharray: 4 4;
+  animation: canvas-pulse 3s ease-in-out infinite;
+}
+@keyframes canvas-pulse {
+  0%, 100% { stroke-opacity: 0.6; }
+  50% { stroke-opacity: 1; }
+}
+
+/* Subtle glow for selected canvas nodes */
+@keyframes pulse-subtle {
+  0%, 100% { box-shadow: 0 8px 24px rgb(0 0 0 / 0.6), 0 0 0 2px var(--color-accent); }
+  50% { box-shadow: 0 8px 24px rgb(0 0 0 / 0.6), 0 0 0 4px color-mix(in srgb, var(--color-accent) 60%, transparent); }
+}
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-subtle {
     animation: none;
   }
 }
