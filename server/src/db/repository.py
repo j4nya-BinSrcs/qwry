@@ -223,6 +223,7 @@ class ProfileRepo:
         if profile:
             profile.last_active = func.now()
             await self._session.commit()
+            await self._session.refresh(profile)
 
 
 # ── Search History ──────────────────────────────────────────────────────

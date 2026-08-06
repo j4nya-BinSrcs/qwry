@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { Settings, User, Copy, Check, Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { Settings, Sun, Moon, User, Copy, Check, Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import { getProfile, updateProfile, listProfiles, createProfile, deleteProfile } from "../api/profile";
 import { useSearchStore, providers } from "../stores/searchStore";
 import { useSessionStore } from "../stores/sessionStore";
+import { useUIStore } from "../stores/uiStore";
 
 export default function SettingsPopup({ open, onToggle }) {
   const [profile, setProfile] = useState(null);
@@ -14,6 +15,8 @@ export default function SettingsPopup({ open, onToggle }) {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
 
+  const theme = useUIStore((s) => s.theme);
+  const toggleTheme = useUIStore((s) => s.toggleTheme);
   const provider = useSearchStore((s) => s.provider);
   const setProvider = useSearchStore((s) => s.setProvider);
   const search = useSearchStore((s) => s.search);
@@ -111,6 +114,35 @@ export default function SettingsPopup({ open, onToggle }) {
           <div className="absolute top-full right-0 mt-1 w-72 rounded-lg bg-elevated border border-border overflow-hidden z-50 max-h-[80vh] overflow-y-auto">
             <div className="px-3 py-2 text-xs text-muted font-medium border-b border-border">
               Settings
+            </div>
+
+            {/* Theme */}
+            <div className="px-3 py-2 border-b border-border">
+              <div className="text-xs text-muted mb-1.5">Theme</div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => theme !== "light" && toggleTheme()}
+                  className={`flex items-center gap-1.5 flex-1 px-2 py-1.5 text-left text-xs transition-colors rounded ${
+                    theme === "light"
+                      ? "bg-text text-surface"
+                      : "text-text hover:bg-hover"
+                  }`}
+                >
+                  <Sun size={12} />
+                  Light
+                </button>
+                <button
+                  onClick={() => theme !== "dark" && toggleTheme()}
+                  className={`flex items-center gap-1.5 flex-1 px-2 py-1.5 text-left text-xs transition-colors rounded ${
+                    theme === "dark"
+                      ? "bg-text text-surface"
+                      : "text-text hover:bg-hover"
+                  }`}
+                >
+                  <Moon size={12} />
+                  Dark
+                </button>
+              </div>
             </div>
 
             {/* Profiles */}

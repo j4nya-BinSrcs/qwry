@@ -1,4 +1,4 @@
-import { Layers, Moon, Plus, Search, Settings, Sun, Trash2 } from "lucide-react";
+import { Layers, Plus, Search, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchStore } from "../stores/searchStore";
 import { useSessionStore } from "../stores/sessionStore";
@@ -190,8 +190,6 @@ export default function HomeView() {
   const [quickQuery, setQuickQuery] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [focused, setFocused] = useState(false);
-  const theme = useUIStore((s) => s.theme);
-  const toggleTheme = useUIStore((s) => s.toggleTheme);
 
   useEffect(() => {
     loadWorkspaces(sessionId);
@@ -236,11 +234,7 @@ export default function HomeView() {
       <SmokeBackground />
 
       {/* Top controls */}
-      <div className="relative z-10 flex flex-shrink-0 items-center justify-end gap-2 px-6 py-3">
-        <button onClick={toggleTheme}
-          className="flex items-center justify-center size-7 rounded text-dim hover:text-text hover:bg-hover transition-colors"
-          title={theme === "dark" ? "Light mode" : "Dark mode"}
-        >{theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}</button>
+      <div className="relative z-40 flex flex-shrink-0 items-center justify-end gap-2 px-6 py-3">
         <SettingsPopup open={settingsOpen} onToggle={() => setSettingsOpen(!settingsOpen)} />
       </div>
 
