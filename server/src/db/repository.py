@@ -260,6 +260,7 @@ class ReadingListRepo:
     async def upsert(
         self, session_id: str, url: str, title: str | None = None, source: str | None = None,
         content: str | None = None, content_type: str | None = None, media_url: str | None = None,
+        workspace_id: UUID | None = None,
     ) -> ReadingListItem:
         stmt = (
             select(ReadingListItem)
@@ -278,23 +279,38 @@ class ReadingListRepo:
                 item.content_type = content_type
             if media_url is not None:
                 item.media_url = media_url
+            if workspace_id is not None:
+                item.workspace_id = workspace_id
         else:
             item = ReadingListItem(
                 session_id=session_id, url=url, title=title, source=source,
                 content=content, content_type=content_type, media_url=media_url,
+                workspace_id=workspace_id,
             )
             self._session.add(item)
         await self._session.commit()
         await self._session.refresh(item)
         return item
 
-    async def add(self, session_id: str, url: str, title: str | None = None, source: str | None = None) -> ReadingListItem:
-        return await self.upsert(session_id, url, title=title, source=source)
+    async def add(self, session_id: str, url: str, title: str | None = None, source: str | None = None, workspace_id: UUID | None = None) -> ReadingListItem:
+        return await self.upsert(session_id, url, title=title, source=source, workspace_id=workspace_id)
 
-    async def list_by_session(self, session_id: str, limit: int = 50) -> list[ReadingListItem]:
-        result = await self._session.execute(
+    async def list_by_session(self, session_id: str, limit: int = 50, workspace_id: UUID | None = None) -> list[ReadingListItem]:
+        stmt = (
             select(ReadingListItem)
             .where(ReadingListItem.session_id == session_id)
+            .order_by(ReadingListItem.saved_at.desc())
+            .limit(limit),
+        )
+        if workspace_id is not None:
+            stmt = stmt.where(ReadingListItem.workspace_id == workspace_id)
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def list_by_workspace(self, workspace_id: UUID, limit: int = 50) -> list[ReadingListItem]:
+        result = await self._session.execute(
+            select(ReadingListItem)
+            .where(ReadingListItem.workspace_id == workspace_id)
             .order_by(ReadingListItem.saved_at.desc())
             .limit(limit),
         )
@@ -311,6 +327,7 @@ class SummaryListRepo:
     async def upsert(
         self, session_id: str, url: str, title: str | None = None, source: str | None = None,
         summary: str | None = None, model: str | None = None,
+        workspace_id: UUID | None = None,
     ) -> SummaryListItem:
         stmt = (
             select(SummaryListItem)
@@ -327,23 +344,38 @@ class SummaryListRepo:
                 item.summary = summary
             if model is not None:
                 item.model = model
+            if workspace_id is not None:
+                item.workspace_id = workspace_id
         else:
             item = SummaryListItem(
                 session_id=session_id, url=url, title=title, source=source,
                 summary=summary, model=model,
+                workspace_id=workspace_id,
             )
             self._session.add(item)
         await self._session.commit()
         await self._session.refresh(item)
         return item
 
-    async def add(self, session_id: str, url: str, title: str | None = None, source: str | None = None) -> SummaryListItem:
-        return await self.upsert(session_id, url, title=title, source=source)
+    async def add(self, session_id: str, url: str, title: str | None = None, source: str | None = None, workspace_id: UUID | None = None) -> SummaryListItem:
+        return await self.upsert(session_id, url, title=title, source=source, workspace_id=workspace_id)
 
-    async def list_by_session(self, session_id: str, limit: int = 50) -> list[SummaryListItem]:
-        result = await self._session.execute(
+    async def list_by_session(self, session_id: str, limit: int = 50, workspace_id: UUID | None = None) -> list[SummaryListItem]:
+        stmt = (
             select(SummaryListItem)
             .where(SummaryListItem.session_id == session_id)
+            .order_by(SummaryListItem.saved_at.desc())
+            .limit(limit),
+        )
+        if workspace_id is not None:
+            stmt = stmt.where(SummaryListItem.workspace_id == workspace_id)
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def list_by_workspace(self, workspace_id: UUID, limit: int = 50) -> list[SummaryListItem]:
+        result = await self._session.execute(
+            select(SummaryListItem)
+            .where(SummaryListItem.workspace_id == workspace_id)
             .order_by(SummaryListItem.saved_at.desc())
             .limit(limit),
         )

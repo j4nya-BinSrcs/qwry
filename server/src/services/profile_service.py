@@ -1,4 +1,5 @@
 import logging
+from uuid import UUID
 
 from server.src.db.repository import (
     ActivityLogRepo,
@@ -56,34 +57,38 @@ class ProfileService:
     async def log_read(
         self, session_id: str, url: str, title: str | None = None, source: str | None = None,
         content: str | None = None, content_type: str | None = None, media_url: str | None = None,
+        workspace_id: UUID | None = None,
     ):
         await self._profile_repo.touch(session_id)
         entry = await self._reading_list_repo.upsert(
             session_id, url, title=title, source=source,
             content=content, content_type=content_type, media_url=media_url,
+            workspace_id=workspace_id,
         )
         await self.log_activity(session_id, "read", {"url": url, "title": title, "source": source})
         return entry
 
-    async def get_reading_list(self, session_id: str, limit: int = 50):
-        return await self._reading_list_repo.list_by_session(session_id, limit)
+    async def get_reading_list(self, session_id: str, limit: int = 50, workspace_id: UUID | None = None):
+        return await self._reading_list_repo.list_by_session(session_id, limit, workspace_id)
 
     # ── Summary List ─────────────────────────────────────────────────
 
     async def log_summary(
         self, session_id: str, url: str, title: str | None = None, source: str | None = None,
         summary: str | None = None, model: str | None = None,
+        workspace_id: UUID | None = None,
     ):
         await self._profile_repo.touch(session_id)
         entry = await self._summary_list_repo.upsert(
             session_id, url, title=title, source=source,
             summary=summary, model=model,
+            workspace_id=workspace_id,
         )
         await self.log_activity(session_id, "summarize", {"url": url, "title": title, "source": source})
         return entry
 
-    async def get_summary_list(self, session_id: str, limit: int = 50):
-        return await self._summary_list_repo.list_by_session(session_id, limit)
+    async def get_summary_list(self, session_id: str, limit: int = 50, workspace_id: UUID | None = None):
+        return await self._summary_list_repo.list_by_session(session_id, limit, workspace_id)
 
     # ── LLM Overviews ────────────────────────────────────────────────
 

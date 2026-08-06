@@ -261,6 +261,7 @@ class ReadingListEntry(BaseModel):
     content: str | None = None
     content_type: str | None = None
     media_url: str | None = None
+    workspace_id: UUID | None = None
     saved_at: datetime
 
 
@@ -271,6 +272,7 @@ class SummaryListEntry(BaseModel):
     source: str | None = None
     summary: str | None = None
     model: str | None = None
+    workspace_id: UUID | None = None
     saved_at: datetime
 
 

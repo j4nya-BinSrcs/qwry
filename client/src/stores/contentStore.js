@@ -35,7 +35,7 @@ export const useContentStore = create(
     }),
     {
       name: "qwry_content",
-      version: 1,
+      version: 2,
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         state.reads = (state.reads || []).filter((r) => !r.loading);

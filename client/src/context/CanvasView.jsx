@@ -1,6 +1,6 @@
 import {
   Book, Check, ExternalLink, FileText, Image, Layers, Loader2, Maximize2, MessageCircle,
-  Pencil, Pin, Plus, Scale, Sparkles, Trash2, Video, X, ZoomIn, ZoomOut,
+  Pencil, Pin, Plus, Scale, Search, Sparkles, Trash2, Video, X, ZoomIn, ZoomOut,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as canvasApi from "../api/canvas";
@@ -8,6 +8,7 @@ import { useSessionStore } from "../stores/sessionStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import { useWorkspaceStationStore } from "../stores/workspaceStationStore";
 import { useUIStore } from "../stores/uiStore";
+import ChatModal from "../components/ChatModal";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -218,8 +219,8 @@ function NodeCard({ node, obj, isSelected, connectionMode, onSelect, onDragStart
 
 // ── Connection Lines (SVG) ───────────────────────────────────────────────
 
-function ConnectionLines({ connections, nodes, onDelete }) {
-  if (connections.length === 0) return null;
+function ConnectionLines({ connections, nodes, onDelete, connectionMode, pendingConnection }) {
+  if (connections.length === 0 && !pendingConnection) return null;
   return (
     <svg className="absolute inset-0 pointer-events-none" style={{ overflow: "visible" }}>
       {connections.map((conn) => {
@@ -234,29 +235,33 @@ function ConnectionLines({ connections, nodes, onDelete }) {
         return (
           <g key={conn.id} className="canvas-connection">
             <line x1={s.x} y1={s.y} x2={t.x} y2={t.y}
-              stroke="transparent" strokeWidth={10}
+              stroke="transparent" strokeWidth={8}
               style={{ pointerEvents: "stroke", cursor: "pointer" }}
               onClick={() => onDelete && onDelete(conn.id)}
             />
             <line x1={s.x} y1={s.y} x2={t.x} y2={t.y}
-              stroke={conn.color || NODE_COLORS[src.object_type] || "#666"} strokeWidth={2}
+              stroke={conn.color || NODE_COLORS[src.object_type] || "#666"} strokeWidth={1.5}
               strokeDasharray={dash}
               className="transition-all duration-slow"
-              style={{ strokeOpacity: 0.7 }}
-            />
-            <line x1={s.x} y1={s.y} x2={t.x} y2={t.y}
-              stroke={conn.color || NODE_COLORS[src.object_type] || "#666"} strokeWidth={8}
-              strokeOpacity={0.15}
-              strokeLinecap="round"
+              style={{ strokeOpacity: 0.8 }}
             />
             {conn.label && (
-              <text x={mx} y={my - 4} textAnchor="middle" fontSize="10" fill="var(--color-muted)" style={{ pointerEvents: "none" }}>
+              <text x={mx} y={my - 4} textAnchor="middle" fontSize="9" fill="var(--color-muted)" style={{ pointerEvents: "none" }}>
                 {conn.label}
               </text>
             )}
           </g>
         );
       })}
+      {pendingConnection && (
+        <g className="canvas-connection pending">
+          <line x1={pendingConnection.x1} y1={pendingConnection.y1} x2={pendingConnection.x2} y2={pendingConnection.y2}
+            stroke="var(--color-accent)" strokeWidth={1.5} strokeDasharray="4,4"
+            className="transition-all duration-fast"
+            style={{ strokeOpacity: 0.8 }}
+          />
+        </g>
+      )}
     </svg>
   );
 }
@@ -534,9 +539,10 @@ function CompareDialog({ sources, onClose, onCreate }) {
 
 // ── Main Canvas View ─────────────────────────────────────────────────────
 
-export default function CanvasView() {
+export default function CanvasView({ mode, setMode, chatOpen, setChatOpen }) {
   const sessionId = useSessionStore((s) => s.sessionId);
   const activeId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const activeWs = useWorkspaceStore((s) => s.workspaces).find((w) => w.id === activeId);
   const items = useWorkspaceStore((s) => s.items);
   const notes = useWorkspaceStationStore((s) => s.notes);
   const images = useWorkspaceStationStore((s) => s.images);
@@ -561,6 +567,7 @@ export default function CanvasView() {
 
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [connectionMode, setConnectionMode] = useState(null);
+  const [pendingConnection, setPendingConnection] = useState(null);
   const [compareOpen, setCompareOpen] = useState(false);
   const [addMenu, setAddMenu] = useState(false);
   const [noteComposer, setNoteComposer] = useState(null);
@@ -915,15 +922,46 @@ export default function CanvasView() {
   // ── Connection mode ───────────────────────────────────────────────
 
   const handleConnect = useCallback((nodeId) => {
-    if (connectionMode === null) {
+    const sourceNode = nodes[connectionMode];
+    if (!sourceNode) {
       setConnectionMode(nodeId);
-    } else if (connectionMode === nodeId) {
+      return;
+    }
+    if (connectionMode === nodeId) {
       setConnectionMode(null);
+      setPendingConnection(null);
     } else {
       addConnection(connectionMode, nodeId);
       setConnectionMode(null);
+      setPendingConnection(null);
     }
-  }, [connectionMode, addConnection]);
+  }, [connectionMode, addConnection, nodes]);
+
+  // Track mouse position for pending connection line
+  useEffect(() => {
+    if (!connectionMode) {
+      setPendingConnection(null);
+      return;
+    }
+
+    const handleMouseMove = (e) => {
+      const sourceNode = nodes[connectionMode];
+      if (!sourceNode || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const s = centerOf(sourceNode);
+      const x1 = s.x * viewport.zoom + viewport.x;
+      const y1 = s.y * viewport.zoom + viewport.y;
+      const x2 = e.clientX - rect.left;
+      const y2 = e.clientY - rect.top;
+      setPendingConnection({ x1, y1, x2, y2 });
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      setPendingConnection(null);
+    };
+  }, [connectionMode, nodes, viewport]);
 
   // ── Keyboard shortcuts ────────────────────────────────────────────
 
@@ -1008,45 +1046,87 @@ export default function CanvasView() {
 
   // ── Render ────────────────────────────────────────────────────────
 
+  const transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`;
+  const gridSize = 24 * viewport.zoom;
+  const zoomPct = Number.isFinite(viewport.zoom) ? Math.round(viewport.zoom * 100) : 100;
+
   if (!activeId) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center px-8">
-          <div className="size-8 rounded-lg bg-elevated flex items-center justify-center mx-auto mb-3">
-            <Layers size={16} className="text-text" />
+      <>
+        <div className="h-full flex items-center justify-center">
+          <div className="text-center px-8">
+            <div className="size-8 rounded-lg bg-elevated flex items-center justify-center mx-auto mb-3">
+              <Layers size={16} className="text-text" />
+            </div>
+            <p className="text-sm text-muted">Create or select a workspace to use Canvas</p>
           </div>
-          <p className="text-sm text-muted">Create or select a workspace to use Canvas</p>
         </div>
-      </div>
+      </>
     );
   }
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="flex items-center gap-2 text-sm text-muted">
-          <Loader2 size={16} className="animate-spin" /> Loading canvas...
+      <>
+        <div className="h-full flex items-center justify-center">
+          <div className="flex items-center gap-2 text-sm text-muted">
+            <Loader2 size={16} className="animate-spin" /> Loading canvas...
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   if (error) {
     return (
-      <div className="h-full flex items-center justify-center p-6">
-        <div className="text-center max-w-xs">
-          <p className="text-xs text-text bg-hover rounded-md px-3 py-2">{error}</p>
+      <>
+        <div className="h-full flex items-center justify-center p-6">
+          <div className="text-center max-w-xs">
+            <p className="text-xs text-text bg-hover rounded-md px-3 py-2">{error}</p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
-  const transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`;
-  const gridSize = 24 * viewport.zoom;
-  const zoomPct = Number.isFinite(viewport.zoom) ? Math.round(viewport.zoom * 100) : 100;
-
   return (
-    <div className="h-full flex">
+    <>
+      <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="shrink-0 px-3 py-3">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="relative flex-1 min-w-0">
+            <span className="text-sm font-semibold text-text truncate">{activeWs?.name || "Workspace"}</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="relative">
+              <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dim pointer-events-none" />
+              <input type="text" placeholder="Search nodes..." className="w-[280px] h-9 pl-8 pr-2 rounded-lg bg-panel border border-border text-xs text-text outline-none placeholder:text-dim focus:border-text/50 transition-colors" />
+            </div>
+            <div className="flex items-center gap-1 bg-elevated border border-border rounded-md p-1">
+              <button onClick={() => setMode("station")}
+                className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  mode === "station"
+                    ? "bg-text text-surface shadow-surface"
+                    : "text-muted hover:text-text hover:bg-hover"
+                }`}
+              ><Layers size={14} /></button>
+              <button onClick={() => setMode("canvas")}
+                className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  mode === "canvas"
+                    ? "bg-text text-surface shadow-surface"
+                    : "text-muted hover:text-text hover:bg-hover"
+                }`}
+              ><FileText size={14} /></button>
+            </div>
+            <button onClick={() => setChatOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-muted hover:text-text hover:bg-hover transition-colors"
+              title="Chat about this workspace"
+            ><MessageCircle size={14} /> Chat</button>
+          </div>
+        </div>
+      </div>
+
       {/* Canvas area */}
       <div className="flex-1 min-w-0 relative overflow-hidden bg-surface"
         ref={containerRef}
@@ -1065,7 +1145,7 @@ export default function CanvasView() {
 
         {/* Connection SVG */}
         <div className="transition-transform duration-150 ease-out" style={{ transform, transformOrigin: "0 0", position: "absolute", top: 0, left: 0 }}>
-          <ConnectionLines connections={connections} nodes={nodes} onDelete={deleteConnection} />
+          <ConnectionLines connections={connections} nodes={nodes} onDelete={deleteConnection} connectionMode={connectionMode} pendingConnection={pendingConnection} />
         </div>
 
         {/* Nodes */}
@@ -1210,5 +1290,9 @@ export default function CanvasView() {
         </div>
       </div>
     </div>
-  );
+    {chatOpen && (
+      <ChatModal workspaceId={activeId} workspaceName={activeWs?.name} onClose={() => setChatOpen(false)} />
+    )}
+  </>
+);
 }

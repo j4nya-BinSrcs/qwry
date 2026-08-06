@@ -1,4 +1,4 @@
-import { ExternalLink, Sparkles, X, ChevronDown, ChevronRight } from "lucide-react";
+import { ExternalLink, Sparkles, X, ChevronDown, ChevronRight, FolderOpen, FolderClosed } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "../api/client";
 import { useContentStore } from "../stores/contentStore";
@@ -19,10 +19,89 @@ function WorkspaceBadge() {
   return <span className="text-base px-2 py-1 bg-hover rounded-md text-dim truncate max-w-28">{ws.name}</span>;
 }
 
+function WorkspaceSummariesContainer({ summaries, workspace, expanded, toggleSummary, removeSummary, getHostname }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div className="rounded-lg bg-elevated shadow-raised overflow-hidden border border-border">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center gap-2 px-3 py-2 border-b border-border cursor-pointer hover:bg-hover transition-colors text-left"
+      >
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium text-text truncate">{workspace.name}</div>
+          <div className="text-xs text-dim mt-0.5">{summaries.length} summar{summaries.length === 1 ? "y" : "ies"}</div>
+        </div>
+        {isExpanded ? <ChevronDown size={16} className="text-dim shrink-0" /> : <ChevronRight size={16} className="text-dim shrink-0" />}
+      </button>
+
+      {isExpanded && (
+        <div className="space-y-2.5 p-3">
+          {summaries.map((s) => (
+            <div key={s.id} className="rounded-lg bg-panel shadow-card border border-border overflow-hidden">
+              <div
+                className="flex items-center gap-2 px-3 py-2 border-b border-border cursor-pointer hover:bg-hover transition-colors"
+                onClick={() => toggleSummary(s.id)}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-text truncate">{s.title || getHostname(s.url)}</div>
+                  <a href={s.url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-base text-text hover:text-muted mt-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExternalLink size={16} />
+                    {getHostname(s.url)}
+                  </a>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {!s.loading && s.summary && (
+                    <span className="flex items-center gap-1 text-base text-dim">
+                      <Sparkles size={16} />
+                      {s.provider}
+                    </span>
+                  )}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); removeSummary(s.id, s.url); }}
+                    className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-all"
+                    title="Remove"
+                  >
+                    <X size={16} />
+                  </button>
+                  {expanded.has(s.id) ? <ChevronDown size={16} className="text-dim" /> : <ChevronRight size={16} className="text-dim" />}
+                </div>
+              </div>
+              {expanded.has(s.id) && (
+                <div className="px-3 py-2">
+                  {s.loading && (
+                    <SkeletonText lines={4} />
+                  )}
+                  {s.error && (
+                    <div className="py-3 text-center space-y-2">
+                      <p className="text-xs text-muted">Could not generate a summary for this page.</p>
+                      <p className="text-base text-dim">{s.error}</p>
+                      <a href={s.url} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs px-3 py-2 rounded-md bg-text text-surface hover:bg-text/80 transition-colors"
+                      ><ExternalLink size={16} /> Open in browser</a>
+                    </div>
+                  )}
+                  {s.summary && <MarkdownRenderer>{s.summary}</MarkdownRenderer>}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SummarizerView() {
   const summarizeUrl = useUIStore((s) => s.summarizeUrl);
   const summarizeTitle = useUIStore((s) => s.summarizeTitle);
   const summarizeVersion = useUIStore((s) => s.summarizeVersion);
+
+  const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const workspaces = useWorkspaceStore((s) => s.workspaces);
 
   const storeSummaries = useContentStore((s) => s.summaries);
   const addSummary = useContentStore((s) => s.addSummary);
@@ -41,6 +120,7 @@ export default function SummarizerView() {
         id: loadingId,
         url: loadingUrl,
         title: summarizeTitle,
+        workspaceId: activeWorkspaceId,
         loading: true,
         error: null,
         summary: null,
@@ -48,7 +128,7 @@ export default function SummarizerView() {
       });
     }
     return all;
-  }, [storeSummaries, loadingUrl, loadingId, summarizeTitle]);
+  }, [storeSummaries, loadingUrl, loadingId, summarizeTitle, activeWorkspaceId]);
 
   useEffect(() => {
     if (!summarizeUrl) return;
@@ -70,7 +150,7 @@ export default function SummarizerView() {
     let cancelled = false;
     apiFetch("/api/summarize", {
       method: "POST",
-      body: JSON.stringify({ url: summarizeUrl }),
+      body: JSON.stringify({ url: summarizeUrl, workspace_id: activeWorkspaceId }),
     })
       .then((r) => {
         if (cancelled) return;
@@ -79,7 +159,7 @@ export default function SummarizerView() {
       })
       .then((d) => {
         if (cancelled) return;
-        addSummary({ id, url: summarizeUrl, title: d.title || summarizeTitle, loading: false, error: null, summary: d.summary, provider: d.provider || "unknown" });
+        addSummary({ id, url: summarizeUrl, title: d.title || summarizeTitle, workspaceId: activeWorkspaceId, loading: false, error: null, summary: d.summary, provider: d.provider || "unknown" });
         if (!cancelled) {
           setLoadingUrl(null);
           setLoadingId(null);
@@ -88,7 +168,7 @@ export default function SummarizerView() {
       })
       .catch((err) => {
         if (cancelled) return;
-        addSummary({ id, url: summarizeUrl, title: summarizeTitle, loading: false, error: err.message, summary: null, provider: null });
+        addSummary({ id, url: summarizeUrl, title: summarizeTitle, workspaceId: activeWorkspaceId, loading: false, error: err.message, summary: null, provider: null });
         if (!cancelled) {
           setLoadingUrl(null);
           setLoadingId(null);
@@ -96,7 +176,7 @@ export default function SummarizerView() {
         }
       });
     return () => { cancelled = true; };
-  }, [summarizeUrl, summarizeVersion, summarizeTitle, storeSummaries, addSummary]);
+  }, [summarizeUrl, summarizeVersion, summarizeTitle, storeSummaries, addSummary, activeWorkspaceId]);
 
   const removeSummary = useCallback(
     (id, url) => {
@@ -119,6 +199,27 @@ export default function SummarizerView() {
       return next;
     });
   }, []);
+
+  // Group summaries by workspace
+  const summariesByWorkspace = useMemo(() => {
+    const grouped = { noWorkspace: [] };
+    for (const s of summaries) {
+      const wsId = s.workspaceId;
+      if (!wsId) {
+        grouped.noWorkspace.push(s);
+      } else {
+        if (!grouped[wsId]) grouped[wsId] = [];
+        grouped[wsId].push(s);
+      }
+    }
+    return grouped;
+  }, [summaries]);
+
+  const getWorkspaceName = (wsId) => {
+    if (!wsId) return null;
+    const ws = workspaces.find((w) => w.id === wsId);
+    return ws?.name || "Unknown Workspace";
+  };
 
   if (!summarizeUrl && storeSummaries.length === 0 && !loadingUrl) {
     return (
@@ -143,58 +244,76 @@ export default function SummarizerView() {
         <WorkspaceBadge />
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
-        {summaries.map((s) => (
-          <div key={s.id} className="rounded-lg bg-elevated shadow-raised overflow-hidden">
-            <div
-              className="flex items-center gap-2 px-3 py-2 border-b border-border cursor-pointer hover:bg-hover transition-colors"
-              onClick={() => toggleSummary(s.id)}
-            >
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium text-text truncate">{s.title || getHostname(s.url)}</div>
-                <a href={s.url} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-base text-text hover:text-muted mt-1"
-                  onClick={(e) => e.stopPropagation()}
+      <div className="flex-1 overflow-y-auto p-3 space-y-4">
+        {/* Summaries with no workspace */}
+        {summariesByWorkspace.noWorkspace.length > 0 && (
+          <div className="space-y-2.5">
+            {summariesByWorkspace.noWorkspace.map((s) => (
+              <div key={s.id} className="rounded-lg bg-elevated shadow-raised overflow-hidden">
+                <div
+                  className="flex items-center gap-2 px-3 py-2 border-b border-border cursor-pointer hover:bg-hover transition-colors"
+                  onClick={() => toggleSummary(s.id)}
                 >
-                  <ExternalLink size={16} />
-                  {getHostname(s.url)}
-                </a>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                {!s.loading && s.summary && (
-                  <span className="flex items-center gap-1 text-base text-dim">
-                    <Sparkles size={16} />
-                    {s.provider}
-                  </span>
-                )}
-                <button
-                  onClick={(e) => { e.stopPropagation(); removeSummary(s.id, s.url); }}
-                  className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-all"
-                  title="Remove"
-                >
-                  <X size={16} />
-                </button>
-                {expanded.has(s.id) ? <ChevronDown size={16} className="text-dim" /> : <ChevronRight size={16} className="text-dim" />}
-              </div>
-            </div>
-            {expanded.has(s.id) && (
-              <div className="px-3 py-2">
-                {s.loading && (
-                  <SkeletonText lines={4} />
-                )}
-                {s.error && (
-                  <div className="py-3 text-center space-y-2">
-                    <p className="text-xs text-muted">Could not generate a summary for this page.</p>
-                    <p className="text-base text-dim">{s.error}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium text-text truncate">{s.title || getHostname(s.url)}</div>
                     <a href={s.url} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs px-3 py-2 rounded-md bg-text text-surface hover:bg-text/80 transition-colors"
-                    ><ExternalLink size={16} /> Open in browser</a>
+                      className="flex items-center gap-1 text-base text-text hover:text-muted mt-1"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ExternalLink size={16} />
+                      {getHostname(s.url)}
+                    </a>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {!s.loading && s.summary && (
+                      <span className="flex items-center gap-1 text-base text-dim">
+                        <Sparkles size={16} />
+                        {s.provider}
+                      </span>
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); removeSummary(s.id, s.url); }}
+                      className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-all"
+                      title="Remove"
+                    >
+                      <X size={16} />
+                    </button>
+                    {expanded.has(s.id) ? <ChevronDown size={16} className="text-dim" /> : <ChevronRight size={16} className="text-dim" />}
+                  </div>
+                </div>
+                {expanded.has(s.id) && (
+                  <div className="px-3 py-2">
+                    {s.loading && (
+                      <SkeletonText lines={4} />
+                    )}
+                    {s.error && (
+                      <div className="py-3 text-center space-y-2">
+                        <p className="text-xs text-muted">Could not generate a summary for this page.</p>
+                        <p className="text-base text-dim">{s.error}</p>
+                        <a href={s.url} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs px-3 py-2 rounded-md bg-text text-surface hover:bg-text/80 transition-colors"
+                        ><ExternalLink size={16} /> Open in browser</a>
+                      </div>
+                    )}
+                    {s.summary && <MarkdownRenderer>{s.summary}</MarkdownRenderer>}
                   </div>
                 )}
-                {s.summary && <MarkdownRenderer>{s.summary}</MarkdownRenderer>}
               </div>
-            )}
+            ))}
           </div>
+        )}
+
+        {/* Summaries grouped by workspace */}
+        {Object.entries(summariesByWorkspace).filter(([k]) => k !== "noWorkspace").map(([wsId, wsSummaries]) => (
+          <WorkspaceSummariesContainer
+            key={wsId}
+            summaries={wsSummaries}
+            workspace={{ id: wsId, name: getWorkspaceName(wsId) }}
+            expanded={expanded}
+            toggleSummary={toggleSummary}
+            removeSummary={removeSummary}
+            getHostname={getHostname}
+          />
         ))}
       </div>
     </div>

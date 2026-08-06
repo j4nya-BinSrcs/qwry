@@ -413,6 +413,7 @@ async def image_proxy(request: Request, url: str = Query(..., description="Image
 async def summarize(
     request: Request,
     body: SummarizeRequest,
+    workspace_id: UUID | None = Query(None, description="Workspace ID to associate the summary with"),
     x_session_id: str | None = Header(None, alias="X-Session-Id"),
 ) -> SummarizeResponse:
     summarizer: Summarizer = request.app.state.summarizer
@@ -429,6 +430,7 @@ async def summarize(
             source=result.provider if result.success else None,
             summary=result.summary if result.success else None,
             model=result.model if result.success else None,
+            workspace_id=workspace_id,
         )
 
     return SummarizeResponse(
@@ -447,6 +449,7 @@ async def read_url(
     request: Request,
     url: str = Query(..., description="URL to extract readable content from"),
     media_url: str | None = Query(None, description="Direct media URL (image/video) for content-type detection"),
+    workspace_id: UUID | None = Query(None, description="Workspace ID to associate the read with"),
     x_session_id: str | None = Header(None, alias="X-Session-Id"),
 ) -> ReaderResponse:
     reader: ReaderService = request.app.state.reader
@@ -468,6 +471,7 @@ async def read_url(
             content=result.content if result.success else None,
             content_type=result.content_type,
             media_url=result.media_url,
+            workspace_id=workspace_id,
         )
 
     return ReaderResponse(
@@ -903,6 +907,7 @@ async def history_search(
 
 async def history_reads(
     request: Request,
+    workspace_id: UUID | None = Query(None, description="Filter by workspace ID"),
     x_session_id: str | None = Header(None, alias="X-Session-Id"),
 ) -> list[ReadingListEntry]:
     session_id = get_session_id(request)
@@ -911,11 +916,12 @@ async def history_reads(
         from server.src.services.profile_service import ProfileService
 
         svc = ProfileService(db)
-        entries = await svc.get_reading_list(session_id)
+        entries = await svc.get_reading_list(session_id, workspace_id=workspace_id)
         return [
             ReadingListEntry(
                 id=e.id, title=e.title, url=e.url, source=e.source,
                 content=e.content, content_type=e.content_type, media_url=e.media_url,
+                workspace_id=e.workspace_id,
                 saved_at=e.saved_at,
             ) for e in entries
         ]
@@ -923,6 +929,7 @@ async def history_reads(
 
 async def history_summaries(
     request: Request,
+    workspace_id: UUID | None = Query(None, description="Filter by workspace ID"),
     x_session_id: str | None = Header(None, alias="X-Session-Id"),
 ) -> list[SummaryListEntry]:
     session_id = get_session_id(request)
@@ -931,11 +938,12 @@ async def history_summaries(
         from server.src.services.profile_service import ProfileService
 
         svc = ProfileService(db)
-        entries = await svc.get_summary_list(session_id)
+        entries = await svc.get_summary_list(session_id, workspace_id=workspace_id)
         return [
             SummaryListEntry(
                 id=e.id, title=e.title, url=e.url, source=e.source,
                 summary=e.summary, model=e.model,
+                workspace_id=e.workspace_id,
                 saved_at=e.saved_at,
             ) for e in entries
         ]
