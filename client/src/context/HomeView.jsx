@@ -273,7 +273,7 @@ export default function HomeView() {
               ><Plus size={12} /> New</button>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-5">
+            <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-3 pb-5">
               {workspaces.length === 0 ? (
                 <div className="text-center py-10 rounded-xl border border-dashed border-border">
                   <Layers size={24} className="text-dim mx-auto mb-3" />
