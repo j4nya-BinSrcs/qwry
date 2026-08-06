@@ -47,6 +47,76 @@
   --color-accent-hover: #f5c2e7;
 }
 
+.tokyo-night {
+  /* Tokyo Night */
+  --color-surface: #1a1b26;
+  --color-panel: #24283b;
+  --color-elevated: #2f3549;
+  --color-hover: #363b54;
+  --color-border: #414868;
+  --color-text: #c0caf5;
+  --color-muted: #a9b1d6;
+  --color-dim: #565f89;
+  --color-accent: #7aa2f7;
+  --color-accent-hover: #7dcfff;
+}
+
+.everforest {
+  /* Everforest Dark */
+  --color-surface: #1e2326;
+  --color-panel: #2d353b;
+  --color-elevated: #343f44;
+  --color-hover: #3d484d;
+  --color-border: #465258;
+  --color-text: #d3c6aa;
+  --color-muted: #a4ad9e;
+  --color-dim: #859289;
+  --color-accent: #a7c080;
+  --color-accent-hover: #83c092;
+}
+
+.rose-pine {
+  /* Rosé Pine */
+  --color-surface: #191724;
+  --color-panel: #1f1d2e;
+  --color-elevated: #26233a;
+  --color-hover: #2a283e;
+  --color-border: #393552;
+  --color-text: #e0def4;
+  --color-muted: #908caa;
+  --color-dim: #6e6a86;
+  --color-accent: #c4a7e7;
+  --color-accent-hover: #eb6f92;
+}
+
+.gruvbox {
+  /* Gruvbox Dark */
+  --color-surface: #282828;
+  --color-panel: #3c3836;
+  --color-elevated: #504945;
+  --color-hover: #665c54;
+  --color-border: #7c6f64;
+  --color-text: #ebdbb2;
+  --color-muted: #d5c4a1;
+  --color-dim: #928374;
+  --color-accent: #fe8019;
+  --color-accent-hover: #fabd2f;
+}
+
+.frosted-glass {
+  /* Frosted Glass (light) */
+  --color-surface: #eef2f6;
+  --color-panel: #f7fafc;
+  --color-elevated: #ffffff;
+  --color-hover: #e3e9f0;
+  --color-border: #c6d0da;
+  --color-text: #3a4454;
+  --color-muted: #5c6b7d;
+  --color-dim: #8795a8;
+  --color-accent: #60a5fa;
+  --color-accent-hover: #93c5fd;
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;

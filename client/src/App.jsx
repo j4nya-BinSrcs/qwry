@@ -4,14 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import AppLayout from "./layouts/AppLayout";
 import { useSessionStore } from "./stores/sessionStore";
 import { useWorkspaceStore } from "./stores/workspaceStore";
-import { useUIStore } from "./stores/uiStore";
+import { useUIStore, applyThemeClass } from "./stores/uiStore";
 
 export default function App() {
   const [activeDrag, setActiveDrag] = useState(null);
   const theme = useUIStore((s) => s.theme);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
+    applyThemeClass(theme);
   }, [theme]);
 
   const sessionId = useSessionStore((s) => s.sessionId);

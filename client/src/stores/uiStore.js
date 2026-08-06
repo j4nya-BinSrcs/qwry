@@ -2,6 +2,43 @@ import { create } from "zustand";
 
 const DEFAULT_ORDER = ["sources", "context", "discovery"];
 
+export const THEMES = [
+  "latte",
+  "mocha",
+  "tokyo-night",
+  "everforest",
+  "rose-pine",
+  "gruvbox",
+  "frosted-glass",
+];
+
+const THEME_CLASSES = [
+  "dark",
+  "tokyo-night",
+  "everforest",
+  "rose-pine",
+  "gruvbox",
+  "frosted-glass",
+];
+
+export function applyThemeClass(theme) {
+  const root = document.documentElement;
+  for (const cls of THEME_CLASSES) root.classList.remove(cls);
+  if (theme === "latte" || theme === "frosted-glass") {
+    if (theme === "frosted-glass") root.classList.add("frosted-glass");
+    return;
+  }
+  root.classList.add("dark");
+  if (theme !== "mocha") root.classList.add(theme);
+}
+
+export function getAccentColor() {
+  const val = getComputedStyle(document.documentElement)
+    .getPropertyValue("--color-accent")
+    .trim();
+  return val || "#cba6f7";
+}
+
 function loadPanelOrder() {
   try {
     const stored = localStorage.getItem("qwry_panel_order");
@@ -22,9 +59,12 @@ function savePanelOrder(order) {
 function loadTheme() {
   try {
     const stored = localStorage.getItem("qwry_theme");
-    if (stored === "dark" || stored === "light") return stored;
+    if (THEMES.includes(stored)) return stored;
+    if (stored === "light") return "latte";
+    if (stored === "dark") return "mocha";
+    if (stored === "ember") return "gruvbox";
   } catch {}
-  return "dark";
+  return "mocha";
 }
 
 function saveTheme(theme) {
@@ -75,11 +115,12 @@ export const useUIStore = create((set, get) => ({
       summarizeVersion: state.summarizeVersion + 1,
     })),
 
-  toggleTheme: () =>
+  setTheme: (name) =>
     set((state) => {
-      const next = state.theme === "light" ? "dark" : "light";
+      const next = THEMES.includes(name) ? name : "mocha";
+      if (next === state.theme) return state;
       saveTheme(next);
-      document.documentElement.classList.toggle("dark", next === "dark");
+      applyThemeClass(next);
       return { theme: next };
     }),
 }));

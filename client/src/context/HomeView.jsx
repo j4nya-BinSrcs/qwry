@@ -2,10 +2,10 @@ import { Layers, Plus, Search, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchStore } from "../stores/searchStore";
 import { useSessionStore } from "../stores/sessionStore";
-import { useUIStore } from "../stores/uiStore";
+import { useUIStore, applyThemeClass, getAccentColor } from "../stores/uiStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import SettingsPopup from "../components/SettingsPopup";
-import SmokeBackground from "../components/SmokeBackground";
+import PixelBlast from "../components/PixelBlast";
 
 function getHostname(url) {
   try { return new URL(url).hostname; } catch { return ""; }
@@ -186,10 +186,17 @@ export default function HomeView() {
   const setSearchQuery = useSearchStore((s) => s.setQuery);
   const search = useSearchStore((s) => s.search);
   const setContextMode = useUIStore((s) => s.setContextMode);
+  const theme = useUIStore((s) => s.theme);
 
   const [quickQuery, setQuickQuery] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [accentColor, setAccentColor] = useState(() => getAccentColor());
+
+  useEffect(() => {
+    applyThemeClass(theme);
+    setAccentColor(getAccentColor());
+  }, [theme]);
 
   useEffect(() => {
     loadWorkspaces(sessionId);
@@ -231,7 +238,27 @@ export default function HomeView() {
 
   return (
     <div className="h-full overflow-hidden relative flex flex-col">
-      <SmokeBackground />
+      <PixelBlast
+        style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+        variant="circle"
+        pixelSize={3}
+        color={accentColor}
+        patternScale={4.5}
+        patternDensity={1.2}
+        pixelSizeJitter={0.5}
+        enableRipples={false}
+        rippleSpeed={0.4}
+        rippleThickness={0.12}
+        rippleIntensityScale={1.5}
+        liquid={false}
+        liquidStrength={0.12}
+        liquidRadius={1.2}
+        liquidWobbleSpeed={5}
+        speed={1.05}
+        edgeFade={0.16}
+        transparent
+        autoPauseOffscreen
+      />
 
       {/* Top controls */}
       <div className="relative z-40 flex flex-shrink-0 items-center justify-end gap-2 px-6 py-3">

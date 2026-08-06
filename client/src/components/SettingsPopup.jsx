@@ -1,9 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
-import { Settings, Sun, Moon, User, Copy, Check, Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { Settings, Sun, Moon, Flame, User, Copy, Check, Plus, Trash2, ChevronDown, ChevronRight, MoonStar, Leaf, Flower, Snowflake } from "lucide-react";
 import { getProfile, updateProfile, listProfiles, createProfile, deleteProfile } from "../api/profile";
 import { useSearchStore, providers } from "../stores/searchStore";
 import { useSessionStore } from "../stores/sessionStore";
 import { useUIStore } from "../stores/uiStore";
+
+const THEME_OPTIONS = [
+  { id: "latte", label: "Light (Latte)", icon: Sun },
+  { id: "mocha", label: "Dark (Mocha)", icon: Moon },
+  { id: "tokyo-night", label: "Tokyo Night", icon: MoonStar },
+  { id: "everforest", label: "Everforest", icon: Leaf },
+  { id: "rose-pine", label: "Rosé Pine", icon: Flower },
+  { id: "gruvbox", label: "Gruvbox Dark", icon: Flame },
+  { id: "frosted-glass", label: "Frosted Glass", icon: Snowflake },
+];
 
 export default function SettingsPopup({ open, onToggle }) {
   const [profile, setProfile] = useState(null);
@@ -16,7 +26,7 @@ export default function SettingsPopup({ open, onToggle }) {
   const [newName, setNewName] = useState("");
 
   const theme = useUIStore((s) => s.theme);
-  const toggleTheme = useUIStore((s) => s.toggleTheme);
+  const setTheme = useUIStore((s) => s.setTheme);
   const provider = useSearchStore((s) => s.provider);
   const setProvider = useSearchStore((s) => s.setProvider);
   const search = useSearchStore((s) => s.search);
@@ -119,29 +129,21 @@ export default function SettingsPopup({ open, onToggle }) {
             {/* Theme */}
             <div className="px-3 py-2 border-b border-border">
               <div className="text-xs text-muted mb-1.5">Theme</div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => theme !== "light" && toggleTheme()}
-                  className={`flex items-center gap-1.5 flex-1 px-2 py-1.5 text-left text-xs transition-colors rounded ${
-                    theme === "light"
-                      ? "bg-text text-surface"
-                      : "text-text hover:bg-hover"
-                  }`}
-                >
-                  <Sun size={12} />
-                  Light
-                </button>
-                <button
-                  onClick={() => theme !== "dark" && toggleTheme()}
-                  className={`flex items-center gap-1.5 flex-1 px-2 py-1.5 text-left text-xs transition-colors rounded ${
-                    theme === "dark"
-                      ? "bg-text text-surface"
-                      : "text-text hover:bg-hover"
-                  }`}
-                >
-                  <Moon size={12} />
-                  Dark
-                </button>
+              <div className="flex flex-col gap-1">
+                {THEME_OPTIONS.map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    onClick={() => setTheme(id)}
+                    className={`flex items-center gap-1.5 px-2 py-1.5 text-left text-xs transition-colors rounded ${
+                      theme === id
+                        ? "bg-text text-surface"
+                        : "text-text hover:bg-hover"
+                    }`}
+                  >
+                    <Icon size={12} />
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
 
