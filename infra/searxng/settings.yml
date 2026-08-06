@@ -16,6 +16,15 @@ search:
     - html
     - json
 
+engines:
+  # Default general engines (duckduckgo, google, brave, qwant, startpage) are
+  # frequently rate-limited/CAPTCHA'd and return no page results. Enable
+  # reliable general engines as a fallback.
+  - name: bing
+    disabled: false
+  - name: wiby
+    disabled: false
+
 ui:
   static_use_hash: true
 
