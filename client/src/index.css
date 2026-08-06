@@ -4,32 +4,47 @@
 
 @theme {
   --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-  --color-surface: #f7f6f2;
-  --color-panel: #ffffff;
+  /* Catppuccin Latte (light) */
+  --color-surface: #e6e9ef;
+  --color-panel: #eff1f5;
   --color-elevated: #ffffff;
-  --color-hover: #efeee9;
-  --color-border: #e5e2da;
-  --color-text: #242220;
-  --color-muted: #5c5850;
-  --color-dim: #938e84;
-  --color-accent: #7a6f50;
-  --color-accent-hover: #8f835f;
+  --color-hover: #dce0e8;
+  --color-border: #bcc0cc;
+  --color-text: #4c4f69;
+  --color-muted: #6c6f85;
+  --color-dim: #8c8fa1;
+  --color-accent: #8839ef;
+  --color-accent-hover: #ea76cb;
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
+  /* Larger base font sizes */
+  --text-xs: 0.875rem;
+  --text-xs--line-height: 1.3rem;
+  --text-sm: 1rem;
+  --text-sm--line-height: 1.5rem;
+  --text-base: 1.125rem;
+  --text-base--line-height: 1.7rem;
+  --text-lg: 1.375rem;
+  --text-lg--line-height: 2rem;
+  --text-xl: 1.75rem;
+  --text-xl--line-height: 2.375rem;
+  --text-2xl: 2rem;
+  --text-2xl--line-height: 2.625rem;
 }
 
 .dark {
-  --color-surface: #252323;
-  --color-panel: #2d2b2a;
-  --color-elevated: #343130;
-  --color-hover: #3a3735;
-  --color-border: #443f3c;
-  --color-text: #e8e4dc;
-  --color-muted: #b9b2a6;
-  --color-dim: #8a847a;
-  --color-accent: #dad2bc;
-  --color-accent-hover: #e7e0cc;
+  /* Catppuccin Mocha */
+  --color-surface: #1e1e2e;
+  --color-panel: #313244;
+  --color-elevated: #45475a;
+  --color-hover: #585b70;
+  --color-border: #6c7086;
+  --color-text: #cdd6f4;
+  --color-muted: #a6adc8;
+  --color-dim: #7f849c;
+  --color-accent: #cba6f7;
+  --color-accent-hover: #f5c2e7;
 }
 
 * {

@@ -61,7 +61,7 @@ export default function MediaCard({ result, compact }) {
               onError={(e) => (e.target.style.display = "none")}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-dim text-[10px]">
+            <div className="w-full h-full flex items-center justify-center text-dim text-[14px]">
               {isVideo ? "▶" : "🖼"}
             </div>
           )}
@@ -70,7 +70,7 @@ export default function MediaCard({ result, compact }) {
           <div className="text-xs text-text truncate font-medium">
             {result.title}
           </div>
-          <div className="text-[10px] text-dim truncate">
+          <div className="text-[14px] text-dim truncate">
             {result.engine || result.source || result.category}
           </div>
         </div>
@@ -144,7 +144,7 @@ export default function MediaCard({ result, compact }) {
           {result.title}
         </div>
         <div className="flex items-center gap-1.5 mt-0.5">
-          <span className="text-[10px] text-dim capitalize">
+          <span className="text-[14px] text-dim capitalize">
             {result.engine || result.source || result.category}
           </span>
         </div>

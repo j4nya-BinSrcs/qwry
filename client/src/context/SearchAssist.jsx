@@ -173,7 +173,7 @@ export default function SearchAssist() {
               <button
                 onClick={handleElaborate}
                 disabled={loadingElaborate || !!elaborateExtension}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] text-text border border-border hover:bg-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[15px] text-text border border-border hover:bg-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {loadingElaborate ? (
                   <Loader2 size={11} className="animate-spin" />
@@ -185,7 +185,7 @@ export default function SearchAssist() {
               <button
                 onClick={handleStudy}
                 disabled={loadingStudy || !!studyExtension}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] text-text border border-border hover:bg-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[15px] text-text border border-border hover:bg-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {loadingStudy ? (
                   <Loader2 size={11} className="animate-spin" />

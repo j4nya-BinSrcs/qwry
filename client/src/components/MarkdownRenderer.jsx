@@ -19,7 +19,7 @@ export default function MarkdownRenderer({ children }) {
           const isInline = !className;
           return isInline ? (
             <code
-              className="px-1 py-0.5 rounded bg-hover text-[11px] text-text font-mono"
+              className="px-1 py-0.5 rounded bg-hover text-[15px] text-text font-mono"
               {...props}
             >
               {children}

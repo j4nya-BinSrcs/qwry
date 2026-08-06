@@ -12,7 +12,7 @@ function WorkspaceBadge() {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const ws = workspaces.find((w) => w.id === activeId);
   if (!ws) return null;
-  return <span className="text-[10px] px-1.5 py-0.5 bg-hover rounded text-dim truncate max-w-28">{ws.name}</span>;
+  return <span className="text-[14px] px-1.5 py-0.5 bg-hover rounded text-dim truncate max-w-28">{ws.name}</span>;
 }
 
 export default function ReaderView() {
@@ -121,7 +121,7 @@ export default function ReaderView() {
       <div className="shrink-0 px-3 py-2 border-b border-border flex items-center justify-between">
         <div>
           <h2 className="text-sm font-semibold text-text">Reader</h2>
-          <p className="text-[10px] text-muted">{reads.length} read{reads.length !== 1 ? "s" : ""}</p>
+          <p className="text-[14px] text-muted">{reads.length} read{reads.length !== 1 ? "s" : ""}</p>
         </div>
         <WorkspaceBadge />
       </div>
@@ -142,20 +142,20 @@ export default function ReaderView() {
                   <div className="text-xs font-medium text-text truncate">{r.title || hostname}</div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <a href={r.url} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-[10px] text-text hover:text-muted"
+                      className="flex items-center gap-1 text-[14px] text-text hover:text-muted"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <ExternalLink size={10} />
                       {hostname}
                     </a>
                     {data && data.content_type === "article" && mins > 0 && (
-                      <span className="flex items-center gap-1 text-[10px] text-dim"><Clock size={10} />{mins} min</span>
+                      <span className="flex items-center gap-1 text-[14px] text-dim"><Clock size={10} />{mins} min</span>
                     )}
                     {data && data.content_type === "image" && (
-                      <span className="flex items-center gap-1 text-[10px] text-dim"><ImageIcon size={10} />Image</span>
+                      <span className="flex items-center gap-1 text-[14px] text-dim"><ImageIcon size={10} />Image</span>
                     )}
                     {data && data.content_type === "video" && (
-                      <span className="flex items-center gap-1 text-[10px] text-dim"><Play size={10} />Video</span>
+                      <span className="flex items-center gap-1 text-[14px] text-dim"><Play size={10} />Video</span>
                     )}
                   </div>
                 </div>
@@ -178,7 +178,7 @@ export default function ReaderView() {
                   {r.error && (
                     <div className="py-4 text-center space-y-2">
                       <p className="text-xs text-text">Unable to load this page.</p>
-                      <p className="text-[10px] text-muted">{r.error}</p>
+                      <p className="text-[14px] text-muted">{r.error}</p>
                       <a href={r.url} target="_blank" rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-text text-surface hover:bg-text/80 transition-colors"
                       ><ExternalLink size={11} /> Open in browser</a>
@@ -188,7 +188,7 @@ export default function ReaderView() {
                   {!r.loading && !r.error && data?.success === false && (
                     <div className="py-4 text-center space-y-2">
                       <p className="text-xs text-muted">Could not read this page automatically.</p>
-                      <p className="text-[10px] text-dim">{data.error}</p>
+                      <p className="text-[14px] text-dim">{data.error}</p>
                       <a href={r.url} target="_blank" rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-text text-surface hover:bg-text/80 transition-colors"
                       ><ExternalLink size={11} /> Open in browser</a>

@@ -86,7 +86,7 @@ function DraggableImageCard({ result }) {
               onError={(e) => { e.target.style.display = "none"; }}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-dim text-[10px]">No image</div>
+            <div className="w-full h-full flex items-center justify-center text-dim text-[14px]">No image</div>
           )}
         </div>
         <div className="absolute inset-0 bg-text/0 group-hover:bg-text/30 transition-all flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
@@ -111,8 +111,8 @@ function DraggableImageCard({ result }) {
         </div>
       </div>
       <div className="mt-1 px-0.5">
-        <div className="text-[11px] text-text font-medium leading-tight line-clamp-2">{result.title}</div>
-        <div className="text-[10px] text-dim truncate mt-0.5">{result.engine || result.source || result.category}</div>
+        <div className="text-[15px] text-text font-medium leading-tight line-clamp-2">{result.title}</div>
+        <div className="text-[14px] text-dim truncate mt-0.5">{result.engine || result.source || result.category}</div>
       </div>
     </div>
   );
@@ -152,10 +152,10 @@ function DraggableVideoCard({ result }) {
               onError={(e) => { e.target.style.display = "none"; }}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-dim text-[10px]">No thumbnail</div>
+            <div className="w-full h-full flex items-center justify-center text-dim text-[14px]">No thumbnail</div>
           )}
         </div>
-        <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-text/70 text-[10px] text-surface font-medium">
+        <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-text/70 text-[14px] text-surface font-medium">
           {result.published_date || result.engine || "Video"}
         </div>
         <div className="absolute inset-0 bg-text/0 group-hover:bg-text/30 transition-all flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
@@ -180,8 +180,8 @@ function DraggableVideoCard({ result }) {
         </div>
       </div>
       <div className="mt-1 px-0.5">
-        <div className="text-[11px] text-text font-medium leading-tight line-clamp-2">{result.title}</div>
-        <div className="text-[10px] text-dim truncate mt-0.5">{result.engine || result.source || result.category}</div>
+        <div className="text-[15px] text-text font-medium leading-tight line-clamp-2">{result.title}</div>
+        <div className="text-[14px] text-dim truncate mt-0.5">{result.engine || result.source || result.category}</div>
       </div>
     </div>
   );
@@ -221,20 +221,20 @@ function DraggableNewsCard({ result }) {
             onError={(e) => { e.target.style.display = "none"; }}
           />
         ) : (
-          <div className="size-10 rounded bg-hover shrink-0 flex items-center justify-center text-dim text-[10px]">No img</div>
+          <div className="size-10 rounded bg-hover shrink-0 flex items-center justify-center text-dim text-[14px]">No img</div>
         )}
         <div className="flex-1 min-w-0">
           <div className="text-xs font-medium text-text leading-snug line-clamp-2">
             {result.title}
           </div>
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-[10px] text-dim truncate">
+            <span className="text-[14px] text-dim truncate">
               {result.engine || result.source || result.category}
             </span>
             {result.published_date && (
               <>
-                <span className="text-dim text-[10px]">·</span>
-                <span className="text-[10px] text-dim shrink-0">{result.published_date}</span>
+                <span className="text-dim text-[14px]">·</span>
+                <span className="text-[14px] text-dim shrink-0">{result.published_date}</span>
               </>
             )}
           </div>

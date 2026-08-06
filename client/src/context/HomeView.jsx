@@ -118,7 +118,7 @@ function WorkspaceThumb({ ws, items, cat }) {
         </div>
       </div>
       {extra > 0 && (
-        <span className="absolute bottom-1 right-1 bg-accent text-surface text-[9px] font-semibold px-1 py-px rounded-full">
+        <span className="absolute bottom-1 right-1 bg-accent text-surface text-[14px] font-semibold px-1 py-px rounded-full">
           +{extra}
         </span>
       )}
@@ -248,7 +248,7 @@ export default function HomeView() {
               </div>
               <h1 className="text-xl font-semibold text-text tracking-wide">QWRY</h1>
             </div>
-            <p className="text-[11px] text-muted text-center mb-4">Search, save, summarize, and organize your research.</p>
+            <p className="text-[15px] text-muted text-center mb-4">Search, save, summarize, and organize your research.</p>
 
             <form onSubmit={handleQuickSearch}>
               <div className="relative">
@@ -299,8 +299,8 @@ export default function HomeView() {
                         <WorkspaceThumb ws={ws} items={items} cat={cat} />
                         <div className="px-2 py-1.5 flex items-center justify-between gap-1.5">
                           <div className="min-w-0 flex items-baseline gap-1">
-                            <p className="text-[11px] font-medium text-text truncate">{ws.name}</p>
-                            <span className="text-[9px] font-normal text-dim shrink-0">{ws.item_count ?? items.length}</span>
+                            <p className="text-[15px] font-medium text-text truncate">{ws.name}</p>
+                            <span className="text-[14px] font-normal text-dim shrink-0">{ws.item_count ?? items.length}</span>
                           </div>
                           <button type="button" onClick={(e) => handleDeleteWs(e, ws.id)}
                             className="flex items-center justify-center size-5 rounded-md text-dim hover:text-red-400 hover:bg-red-400/10 transition-colors shrink-0"

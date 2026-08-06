@@ -98,7 +98,7 @@ export default function TopBar() {
       {/* Logo */}
       <div className="flex items-center gap-2 shrink-0">
         <div className="size-6 rounded bg-text flex items-center justify-center">
-          <span className="text-surface text-[10px] font-bold">Q</span>
+          <span className="text-surface text-[14px] font-bold">Q</span>
         </div>
         <span className="text-sm font-semibold tracking-tight text-text">
           QWRY

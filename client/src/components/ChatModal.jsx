@@ -110,14 +110,14 @@ export default function ChatModal({ workspaceId, workspaceName, onClose }) {
                 <p className="whitespace-pre-line leading-relaxed">{msg.content}</p>
                 {msg.sources && msg.sources.length > 0 && (
                   <div className="mt-2 pt-2 border-t border-border/50 space-y-1">
-                    <p className="text-[10px] text-dim font-medium uppercase tracking-wider">Sources</p>
+                    <p className="text-[14px] text-dim font-medium uppercase tracking-wider">Sources</p>
                     {msg.sources.map((s, j) => (
                       <a
                         key={j}
                         href={s.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 text-[11px] text-text hover:text-muted"
+                        className="flex items-center gap-1.5 text-[15px] text-text hover:text-muted"
                       >
                         <ExternalLink size={10} />
                         <span className="truncate">{s.title || s.url}</span>

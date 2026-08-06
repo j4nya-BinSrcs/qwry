@@ -50,7 +50,7 @@ export default function App() {
       if (sourceData?.type !== "search-result") return;
       const result = sourceData.result;
       if (result) {
-        addItem(sessionId, activeWsId, result.url, result.title, result.snippet, result.source);
+        addItem(sessionId, activeWsId, result.url, result.title, result.snippet, result.source, result.img_src || result.thumbnail);
       }
     },
     [sessionId, activeWsId, addItem, items, reorderItem, setItems]

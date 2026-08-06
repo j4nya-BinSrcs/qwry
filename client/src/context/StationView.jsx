@@ -1,5 +1,5 @@
 import {
-  Book, Check, ExternalLink, Layers, MessageCircle,
+  Book, Check, ExternalLink, Layers,
   Pencil, Pin, Plus, Scale, Search, Sparkles, Trash2, X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -8,7 +8,6 @@ import { useSessionStore } from "../stores/sessionStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import { useWorkspaceStationStore } from "../stores/workspaceStationStore";
 import { useUIStore } from "../stores/uiStore";
-import ChatModal from "../components/ChatModal";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -42,7 +41,7 @@ function Spinner() {
 
 // ── Workspace Header ─────────────────────────────────────────────────────
 
-function WorkspaceHeader({ workspace, sessionId, onChatClick }) {
+function WorkspaceHeader({ workspace, sessionId, searchQuery, onSearchChange }) {
   const updateWorkspace = useWorkspaceStore((s) => s.updateWorkspace);
   const createWorkspace = useWorkspaceStore((s) => s.createWorkspace);
   const deleteWorkspace = useWorkspaceStore((s) => s.deleteWorkspace);
@@ -69,19 +68,19 @@ function WorkspaceHeader({ workspace, sessionId, onChatClick }) {
   }, [nameInput, workspace, sessionId, updateWorkspace]);
 
   return (
-    <div className="shrink-0 px-3 py-2 border-b border-border flex items-center justify-between">
+    <div className="shrink-0 px-3 py-2 flex items-center gap-3">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <div className="relative">
             <button onClick={() => setShowWsMenu(!showWsMenu)}
-              className="flex items-center gap-2 text-sm font-semibold text-text hover:text-muted transition-colors"
+              className="flex items-center gap-2 text-sm font-semibold text-text hover:text-muted transition-colors text-left"
             >
-              <span className="truncate max-w-28">{workspace?.name || "Workspace"}</span>
-              <span className="text-xs text-dim">{workspace?.item_count ?? 0}</span>
+              <span>{workspace?.name || "Workspace"}</span>
+              <span className="text-xs text-dim shrink-0">{workspace?.item_count ?? 0}</span>
             </button>
             {showWsMenu && (
               <div className="absolute top-full left-0 mt-1 w-48 rounded bg-elevated border border-border shadow-xl overflow-hidden z-10">
-                <div className="px-3 py-1.5 text-[10px] text-muted font-medium border-b border-border">Workspaces</div>
+                <div className="px-3 py-1.5 text-[14px] text-muted font-medium border-b border-border">Workspaces</div>
                 {workspaces.map((ws) => (
                   <button key={ws.id}
                     onClick={() => { setActive(ws.id); setShowWsMenu(false); }}
@@ -90,7 +89,7 @@ function WorkspaceHeader({ workspace, sessionId, onChatClick }) {
                     }`}
                   >
                     <span className="truncate">{ws.name}</span>
-                    <span className="text-[10px] text-dim">{ws.item_count}</span>
+                    <span className="text-[14px] text-dim">{ws.item_count}</span>
                   </button>
                 ))}
                 <button onClick={async () => {
@@ -132,23 +131,11 @@ function WorkspaceHeader({ workspace, sessionId, onChatClick }) {
           </div>
         )}
       </div>
-      <button onClick={onChatClick}
-        className="flex items-center gap-1 text-xs text-muted hover:text-text transition-colors"
-      ><MessageCircle size={12} /> Chat</button>
-    </div>
-  );
-}
-
-// ── Search Bar ───────────────────────────────────────────────────────────
-
-function SearchBar({ value, onChange }) {
-  return (
-    <div className="shrink-0 px-3 py-2 border-b border-border">
-      <div className="relative">
-        <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dim" />
-        <input type="text" value={value} onChange={(e) => onChange(e.target.value)}
-          placeholder="Search sources, notes, summaries..."
-          className="w-full h-8 pl-8 pr-3 rounded bg-hover border border-border text-xs text-text outline-none placeholder:text-dim"
+      <div className="relative shrink-0 w-44">
+        <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dim pointer-events-none" />
+        <input type="text" value={searchQuery || ""} onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="Search..."
+          className="w-full h-7 pl-7 pr-2 rounded-full bg-hover border border-border text-xs text-text outline-none placeholder:text-dim focus:border-text/50 transition-colors"
         />
       </div>
     </div>
@@ -160,11 +147,11 @@ function SearchBar({ value, onChange }) {
 function PinnedChips({ pins, sessionId, wsId, onDeletePin }) {
   if (pins.length === 0) return null;
   return (
-    <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 border-b border-border overflow-x-auto">
+    <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 overflow-x-auto">
       <Pin size={11} className="text-dim shrink-0" />
       {pins.map((p) => (
         <span key={p.id}
-          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-hover border border-border text-[10px] text-text shrink-0"
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-hover border border-border text-[14px] text-text shrink-0"
         >
           <span className="capitalize">{p.pinnable_type}</span>
           <span className="text-dim max-w-20 truncate">{p.pinnable_id}</span>
@@ -182,49 +169,64 @@ function PinnedChips({ pins, sessionId, wsId, onDeletePin }) {
 function SourceTallCard({ item, type, sessionId, wsId, isPinned, onPin, onUnpin }) {
   const openReader = useUIStore((s) => s.openReader);
   const openSummarizer = useUIStore((s) => s.openSummarizer);
+  const [imgFailed, setImgFailed] = useState(false);
+
+  const thumbSrc = type === "video" ? item.thumbnail
+    : type === "image" ? item.url
+    : item.media_url;
+
+  const previewAspect = type === "image" ? "aspect-square"
+    : type === "video" ? "aspect-video"
+    : "aspect-[4/3]";
 
   return (
-    <div className="group shrink-0 w-44 h-44 bg-panel border border-border rounded-lg flex flex-col overflow-hidden hover:border-text/40 transition-all">
+    <div className="group w-full break-inside-avoid mb-3 bg-panel border border-border rounded-xl overflow-hidden hover:border-text/40 hover:shadow-lg transition-all">
       {/* Preview area */}
-      <div className="h-20 shrink-0 bg-hover flex items-center justify-center overflow-hidden relative">
-        {(type === "image" || type === "video") && item.url ? (
-          <img src={type === "video" ? item.thumbnail : item.url} alt=""
+      <div className={`relative ${previewAspect} bg-hover flex items-center justify-center overflow-hidden`}>
+        {thumbSrc && !imgFailed ? (
+          <img src={thumbSrc} alt=""
             className="w-full h-full object-cover"
-            onError={(e) => { e.target.style.display = "none"; }}
+            onError={() => setImgFailed(true)}
           />
         ) : (
-          <Layers size={24} className="text-dim opacity-40" />
+          <div className="w-full h-full flex items-center justify-center">
+            <Layers size={28} className="text-dim opacity-40" />
+          </div>
         )}
         <button onClick={() => isPinned ? onUnpin(item.id) : onPin(type, item.id)}
-          className={`absolute top-1 right-1 p-1 rounded transition-all opacity-0 group-hover:opacity-100 ${
+          className={`absolute top-1.5 right-1.5 p-1 rounded transition-all opacity-0 group-hover:opacity-100 ${
             isPinned ? "bg-text text-surface" : "bg-surface/80 text-dim hover:text-text"
           }`}
           title={isPinned ? "Unpin" : "Pin"}
-        ><Pin size={10} /></button>
+        ><Pin size={12} /></button>
       </div>
       {/* Info area */}
-      <div className="flex-1 px-2.5 py-2 min-w-0 flex flex-col justify-between">
-        <p className="text-xs text-text truncate">{item.title || "Untitled"}</p>
-        <div className="flex items-center gap-1 mt-1">
+      <div className="px-2.5 py-2.5 min-w-0">
+        <p className="text-sm font-medium text-text line-clamp-2 leading-snug">{item.title || "Untitled"}</p>
+        {type === "page" && item.snippet && (
+          <p className="text-xs text-muted mt-1 line-clamp-2 leading-relaxed">{item.snippet}</p>
+        )}
+        <div className="flex items-center gap-1 mt-2">
           {item.url ? (
             <>
               <Favicon domain={getHostname(item.url)} />
-              <span className="text-[10px] text-muted truncate flex-1">{getHostname(item.url)}</span>
-              <button onClick={() => window.open(item.url, "_blank")}
-                className="p-0.5 rounded text-dim hover:text-text hover:bg-hover transition-colors shrink-0"
-              ><ExternalLink size={9} /></button>
+              <span className="text-xs text-muted truncate flex-1">{getHostname(item.url)}</span>
             </>
           ) : (
-            <span className="text-[10px] text-muted truncate flex-1">{item.caption || item.platform || ""}</span>
+            <span className="text-xs text-muted truncate flex-1">{item.caption || item.platform || ""}</span>
           )}
+          <button onClick={() => window.open(item.url, "_blank")}
+            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors shrink-0"
+            title="Open"
+          ><ExternalLink size={11} /></button>
           <button onClick={() => { if (item.url) openSummarizer(item.url, item.title); }}
-            className="p-0.5 rounded text-dim hover:text-text hover:bg-hover transition-colors shrink-0"
+            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors shrink-0"
             title="Summarize"
-          ><Sparkles size={9} /></button>
+          ><Sparkles size={11} /></button>
           <button onClick={() => { if (item.url) openReader(item.url, item.title); }}
-            className="p-0.5 rounded text-dim hover:text-text hover:bg-hover transition-colors shrink-0"
+            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors shrink-0"
             title="Reader"
-          ><Book size={9} /></button>
+          ><Book size={11} /></button>
         </div>
       </div>
     </div>
@@ -262,7 +264,7 @@ function NotesSection({ notes, sessionId, wsId, pins, onCreateNote, onUpdateNote
   const isPinned = (noteId) => pins.some((p) => p.pinnable_type === "note" && p.pinnable_id === noteId);
 
   return (
-    <div className="border-t border-border">
+    <div>
       <div className="px-3 py-2 space-y-2">
         <h3 className="text-xs font-semibold text-text">Notes</h3>
         <div className="flex gap-2">
@@ -280,7 +282,7 @@ function NotesSection({ notes, sessionId, wsId, pins, onCreateNote, onUpdateNote
         </div>
       </div>
       <div className="px-3 pb-2 space-y-1">
-        {notes.length === 0 && <p className="text-[10px] text-dim text-center py-4">No notes yet</p>}
+        {notes.length === 0 && <p className="text-[14px] text-dim text-center py-4">No notes yet</p>}
         {notes.map((n) => {
           const pinned = isPinned(n.id);
           return (
@@ -348,7 +350,7 @@ function ComparePanel({ sources, onClose, onSave }) {
 
   if (!a || !b || !srcA || !srcB) {
     return (
-      <div className="border-t border-border p-3">
+      <div className="p-3">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-xs font-semibold text-text">Compare Sources</h3>
           <button onClick={onClose} className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors"><X size={12} /></button>
@@ -360,7 +362,7 @@ function ComparePanel({ sources, onClose, onSave }) {
             <option value="">Select source A...</option>
             {sources.map((s) => <option key={s.id} value={s.id}>{s.title || s.id?.slice(0, 12)}</option>)}
           </select>
-          <span className="text-[10px] text-dim shrink-0">vs</span>
+          <span className="text-[14px] text-dim shrink-0">vs</span>
           <select value={b} onChange={(e) => setB(e.target.value)}
             className="flex-1 min-w-0 truncate bg-hover border border-border rounded px-2 py-1 text-xs text-text outline-none"
           >
@@ -384,13 +386,13 @@ function ComparePanel({ sources, onClose, onSave }) {
   };
 
   return (
-    <div className="border-t border-border">
+    <div>
       <div className="px-3 py-2">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-xs font-semibold text-text">Compare Sources</h3>
           <div className="flex items-center gap-1">
             <button onClick={() => onSave?.(srcA, srcB)}
-              className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-text text-surface hover:opacity-80 transition-opacity"
+              className="flex items-center gap-1 text-[14px] px-2 py-1 rounded bg-text text-surface hover:opacity-80 transition-opacity"
             ><Plus size={10} /> Save</button>
             <button onClick={onClose} className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors"><X size={12} /></button>
           </div>
@@ -398,19 +400,19 @@ function ComparePanel({ sources, onClose, onSave }) {
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
             <h4 className="text-xs font-medium text-text truncate">{srcA.title || "Untitled"}</h4>
-            <div className="text-[10px] text-dim">{srcA.url ? getHostname(srcA.url) : srcA._type}</div>
+            <div className="text-[14px] text-dim">{srcA.url ? getHostname(srcA.url) : srcA._type}</div>
             {renderPreview(srcA)}
-            {srcA.snippet && <p className="text-[10px] text-muted leading-relaxed">{srcA.snippet}</p>}
-            {srcA.summary && <div><Sparkles size={10} className="inline text-dim mr-1" /><p className="text-[10px] text-text leading-relaxed mt-0.5">{srcA.summary}</p></div>}
-            {srcA.notes && <p className="text-[10px] text-dim italic mt-0.5">{srcA.notes}</p>}
+            {srcA.snippet && <p className="text-[14px] text-muted leading-relaxed">{srcA.snippet}</p>}
+            {srcA.summary && <div><Sparkles size={10} className="inline text-dim mr-1" /><p className="text-[14px] text-text leading-relaxed mt-0.5">{srcA.summary}</p></div>}
+            {srcA.notes && <p className="text-[14px] text-dim italic mt-0.5">{srcA.notes}</p>}
           </div>
           <div className="space-y-2">
             <h4 className="text-xs font-medium text-text truncate">{srcB.title || "Untitled"}</h4>
-            <div className="text-[10px] text-dim">{srcB.url ? getHostname(srcB.url) : srcB._type}</div>
+            <div className="text-[14px] text-dim">{srcB.url ? getHostname(srcB.url) : srcB._type}</div>
             {renderPreview(srcB)}
-            {srcB.snippet && <p className="text-[10px] text-muted leading-relaxed">{srcB.snippet}</p>}
-            {srcB.summary && <div><Sparkles size={10} className="inline text-dim mr-1" /><p className="text-[10px] text-text leading-relaxed mt-0.5">{srcB.summary}</p></div>}
-            {srcB.notes && <p className="text-[10px] text-dim italic mt-0.5">{srcB.notes}</p>}
+            {srcB.snippet && <p className="text-[14px] text-muted leading-relaxed">{srcB.snippet}</p>}
+            {srcB.summary && <div><Sparkles size={10} className="inline text-dim mr-1" /><p className="text-[14px] text-text leading-relaxed mt-0.5">{srcB.summary}</p></div>}
+            {srcB.notes && <p className="text-[14px] text-dim italic mt-0.5">{srcB.notes}</p>}
           </div>
         </div>
       </div>
@@ -424,8 +426,7 @@ function SavedComparisons({ comparisons, onDelete }) {
   const [openId, setOpenId] = useState(null);
   if (comparisons.length === 0) return null;
   return (
-    <div className="border-t border-border px-3 py-2">
-      <h3 className="text-xs font-semibold text-text mb-2">Saved Comparisons ({comparisons.length})</h3>
+    <div className="px-3 py-2">
       <div className="space-y-1">
         {comparisons.map((c) => {
           const data = c.data;
@@ -446,9 +447,9 @@ function SavedComparisons({ comparisons, onDelete }) {
                   {data.sources.map((s, i) => (
                     <div key={i} className="space-y-1 min-w-0">
                       <p className="text-xs font-medium text-text truncate">{s.title || "Untitled"}</p>
-                      <p className="text-[10px] text-dim">{s.url ? getHostname(s.url) : s._type}</p>
-                      {s.snippet && <p className="text-[10px] text-muted leading-relaxed">{s.snippet}</p>}
-                      {s.summary && <p className="text-[10px] text-text leading-relaxed">{s.summary}</p>}
+                      <p className="text-[14px] text-dim">{s.url ? getHostname(s.url) : s._type}</p>
+                      {s.snippet && <p className="text-[14px] text-muted leading-relaxed">{s.snippet}</p>}
+                      {s.summary && <p className="text-[14px] text-text leading-relaxed">{s.summary}</p>}
                     </div>
                   ))}
                 </div>
@@ -478,7 +479,7 @@ export default function StationView() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [compareOpen, setCompareOpen] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("sources");
 
   useEffect(() => {
     if (activeId) {
@@ -565,60 +566,86 @@ export default function StationView() {
     return station.pins.some((p) => p.pinnable_type === pinType && p.pinnable_id === id);
   };
 
+  const TABS = [
+    { id: "sources", label: "Sources", count: filteredSources.length },
+    { id: "notes", label: "Notes", count: filteredNotes.length },
+    { id: "comparisons", label: "Comparisons", count: station.comparisons.length },
+  ];
+
   return (
     <div className="h-full flex flex-col">
-      <WorkspaceHeader workspace={activeWs} sessionId={sessionId} onChatClick={() => setChatOpen(true)} />
+      <WorkspaceHeader workspace={activeWs} sessionId={sessionId}
+        searchQuery={searchQuery} onSearchChange={setSearchQuery}
+      />
 
       <div ref={setNodeRef} className={`flex-1 overflow-y-auto ${isOver ? "bg-hover" : ""}`}>
         {(error || stationError) && (
-          <div className="px-3 py-1.5 mx-2 mt-2 text-[10px] text-text bg-hover rounded">{error || stationError}</div>
+          <div className="px-3 py-1.5 mx-2 mt-2 text-[14px] text-text bg-hover rounded">{error || stationError}</div>
         )}
-
-        <SearchBar value={searchQuery} onChange={setSearchQuery} />
 
         <PinnedChips pins={station.pins} sessionId={sessionId} wsId={activeId} onDeletePin={async (pinId) => { await station.deletePin(sessionId, activeId, pinId); await station.loadAll(sessionId, activeId); }} />
 
-        {/* Sources row */}
-        <div className="border-b border-border">
-          {loading && allSources.length === 0 ? (
-            <Spinner />
-          ) : searchQuery.trim() && filteredSources.length === 0 ? (
-            <div className="px-3 py-6"><EmptyState icon={Search} message="No sources match your search" /></div>
-          ) : filteredSources.length > 0 ? (
-            <>
-              <div className="px-3 py-2">
-                <h3 className="text-xs font-semibold text-text mb-2">Sources</h3>
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {filteredSources.map((s) => (
-                    <SourceTallCard key={s.id} item={s} type={s._type}
-                      sessionId={sessionId} wsId={activeId}
-                      isPinned={isPinned(s._type, s.id)}
-                      onPin={handlePin} onUnpin={handleUnpin}
-                    />
-                  ))}
-                </div>
-              </div>
-              {items.filter((i) => i.summary).length > 0 && (
-                <div className="px-3 pb-2 space-y-1">
-                  {items.filter((i) => i.summary).map((item) => (
-                    <div key={item.id} className="bg-panel border border-border rounded-md px-3 py-2">
-                      <div className="flex items-center gap-1.5 text-xs text-text">
-                        <Sparkles size={11} />
-                        <span className="font-medium truncate">{item.title || "Untitled"}</span>
-                      </div>
-                      <p className="text-[10px] text-text leading-relaxed mt-1 whitespace-pre-line">{item.summary}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="px-3 py-6"><EmptyState icon={Layers} message="Add sources to your workspace from Search Assist" /></div>
-          )}
+        {/* Section tabs */}
+        <div className="shrink-0 flex items-center gap-1 px-3 py-1.5">
+          {TABS.map((t) => (
+            <button key={t.id} onClick={() => setActiveTab(t.id)}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                activeTab === t.id
+                  ? "bg-text text-surface"
+                  : "text-muted hover:text-text hover:bg-hover"
+              }`}
+            >
+              {t.label}
+              <span className={`ml-1 ${activeTab === t.id ? "text-surface/70" : "text-dim"}`}>{t.count}</span>
+            </button>
+          ))}
         </div>
 
-        {/* Notes */}
-        {searchQuery.trim() && filteredNotes.length === 0 && filteredSources.length === 0 ? null : (
+        {activeTab === "sources" && (
+          <>
+            {loading && allSources.length === 0 ? (
+              <Spinner />
+            ) : searchQuery.trim() && filteredSources.length === 0 ? (
+              <div className="px-3 py-6"><EmptyState icon={Search} message="No sources match your search" /></div>
+            ) : filteredSources.length > 0 ? (
+              <div>
+                <div className="px-3 py-3">
+                  <div className="columns-2 xl:columns-3 gap-3">
+                    {filteredSources.map((s) => (
+                      <SourceTallCard key={s.id} item={s} type={s._type}
+                        sessionId={sessionId} wsId={activeId}
+                        isPinned={isPinned(s._type, s.id)}
+                        onPin={handlePin} onUnpin={handleUnpin}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {items.filter((i) => i.summary).length > 0 && (
+                  <div className="px-3 pb-2 space-y-1">
+                    {items.filter((i) => i.summary).map((item) => (
+                      <div key={item.id} className="bg-panel border border-border rounded-md px-3 py-2">
+                        <div className="flex items-center gap-1.5 text-xs text-text">
+                          <Sparkles size={13} />
+                          <span className="font-medium truncate">{item.title || "Untitled"}</span>
+                        </div>
+                        <p className="text-[14px] text-text leading-relaxed mt-1 whitespace-pre-line">{item.summary}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {compareOpen && (
+                  <ComparePanel sources={allSources} onClose={() => setCompareOpen(false)} onSave={handleSaveComparison} />
+                )}
+              </div>
+            ) : (
+              <div className="px-3 py-6"><EmptyState icon={Layers} message="Add sources to your workspace from Search Assist" /></div>
+            )}
+          </>
+        )}
+
+        {activeTab === "notes" && (
           <NotesSection notes={filteredNotes} sessionId={sessionId} wsId={activeId}
             pins={station.pins}
             onCreateNote={handleCreateNote} onUpdateNote={handleUpdateNote} onDeleteNote={handleDeleteNote}
@@ -626,28 +653,32 @@ export default function StationView() {
           />
         )}
 
-        {/* AI Tools + Compare */}
-        <div className="border-t border-border p-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <button onClick={() => setChatOpen(true)}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-text text-surface hover:opacity-80 transition-opacity"
-            ><MessageCircle size={12} /> Chat</button>
-            <button onClick={() => setCompareOpen(!compareOpen)}
-              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded border transition-colors ${
-                compareOpen ? "bg-hover text-text border-text/40" : "border-border text-text hover:bg-hover"
-              }`}
-            >Compare</button>
+        {activeTab === "comparisons" && (
+          <div>
+            <div className="flex items-center justify-between px-3 py-2">
+              <h3 className="text-sm font-semibold text-text">
+                Saved Comparisons
+                <span className="ml-1 text-dim font-normal">{station.comparisons.length}</span>
+              </h3>
+              <button onClick={() => setCompareOpen(!compareOpen)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
+                  compareOpen ? "bg-hover text-text border-text/40" : "border-border text-text hover:bg-hover"
+                }`}
+              ><Scale size={13} /> Compare</button>
+            </div>
+
+            {compareOpen && (
+              <ComparePanel sources={allSources} onClose={() => setCompareOpen(false)} onSave={handleSaveComparison} />
+            )}
+
+            {station.comparisons.length === 0 ? (
+              <div className="px-3 py-6"><EmptyState icon={Scale} message="Pick two sources with Compare to save a comparison here" /></div>
+            ) : (
+              <SavedComparisons comparisons={station.comparisons} onDelete={async (id) => { await station.deleteComparison(sessionId, activeId, id); }} />
+            )}
           </div>
-        </div>
-
-        {compareOpen && (
-          <ComparePanel sources={allSources} onClose={() => setCompareOpen(false)} onSave={handleSaveComparison} />
         )}
-
-        <SavedComparisons comparisons={station.comparisons} onDelete={async (id) => { await station.deleteComparison(sessionId, activeId, id); }} />
       </div>
-
-      {chatOpen && <ChatModal workspaceId={activeId} workspaceName={activeWs?.name} onClose={() => setChatOpen(false)} />}
     </div>
   );
 }

@@ -49,7 +49,7 @@ function DraggableResultCard({ result }) {
     (e) => {
       e.stopPropagation();
       if (activeId) {
-        addItem(sessionId, activeId, result.url, result.title, result.snippet, result.source);
+        addItem(sessionId, activeId, result.url, result.title, result.snippet, result.source, result.img_src || result.thumbnail);
       }
     },
     [sessionId, activeId, result, addItem]
@@ -105,7 +105,7 @@ function DraggableResultCard({ result }) {
             {result.title}
           </span>
           {result.category && result.category !== "general" && (
-            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-hover text-text shrink-0">
+            <span className="text-[14px] font-medium px-1.5 py-0.5 rounded-full bg-hover text-text shrink-0">
               {result.category}
             </span>
           )}
@@ -115,7 +115,7 @@ function DraggableResultCard({ result }) {
             {getHostname(result.url)}
           </span>
           {result.source && (
-            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-hover text-text">
+            <span className="text-[14px] font-medium px-1.5 py-0.5 rounded-full bg-hover text-text">
               {result.source}
             </span>
           )}
@@ -276,7 +276,7 @@ export default function SourcesPanel() {
                   title={f.label}
                 >
                   <Icon size={14} />
-                  <span className="text-[7px] leading-tight font-medium">{f.label}</span>
+                  <span className="text-[12px] leading-tight font-medium">{f.label}</span>
                 </button>
               );
             })}

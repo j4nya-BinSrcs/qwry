@@ -15,7 +15,7 @@ function WorkspaceBadge() {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const ws = workspaces.find((w) => w.id === activeId);
   if (!ws) return null;
-  return <span className="text-[10px] px-1.5 py-0.5 bg-hover rounded text-dim truncate max-w-28">{ws.name}</span>;
+  return <span className="text-[14px] px-1.5 py-0.5 bg-hover rounded text-dim truncate max-w-28">{ws.name}</span>;
 }
 
 export default function SummarizerView() {
@@ -137,7 +137,7 @@ export default function SummarizerView() {
       <div className="shrink-0 px-3 py-2 border-b border-border flex items-center justify-between">
         <div>
           <h2 className="text-sm font-semibold text-text">Summarizer</h2>
-          <p className="text-[10px] text-muted">{summaries.length} {summaries.length === 1 ? "summary" : "summaries"}</p>
+          <p className="text-[14px] text-muted">{summaries.length} {summaries.length === 1 ? "summary" : "summaries"}</p>
         </div>
         <WorkspaceBadge />
       </div>
@@ -152,7 +152,7 @@ export default function SummarizerView() {
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-medium text-text truncate">{s.title || getHostname(s.url)}</div>
                 <a href={s.url} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[10px] text-text hover:text-muted mt-0.5"
+                  className="flex items-center gap-1 text-[14px] text-text hover:text-muted mt-0.5"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <ExternalLink size={10} />
@@ -161,7 +161,7 @@ export default function SummarizerView() {
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {!s.loading && s.summary && (
-                  <span className="flex items-center gap-1 text-[10px] text-dim">
+                  <span className="flex items-center gap-1 text-[14px] text-dim">
                     <Sparkles size={10} />
                     {s.provider}
                   </span>
@@ -187,7 +187,7 @@ export default function SummarizerView() {
                 {s.error && (
                   <div className="py-3 text-center space-y-2">
                     <p className="text-xs text-muted">Could not generate a summary for this page.</p>
-                    <p className="text-[10px] text-dim">{s.error}</p>
+                    <p className="text-[14px] text-dim">{s.error}</p>
                     <a href={s.url} target="_blank" rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-text text-surface hover:bg-text/80 transition-colors"
                     ><ExternalLink size={11} /> Open in browser</a>

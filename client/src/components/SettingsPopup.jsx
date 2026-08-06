@@ -174,7 +174,7 @@ export default function SettingsPopup({ open, onToggle }) {
                         />
                         <button
                           onClick={handleSaveUsername}
-                          className="px-2 py-1 text-[10px] rounded bg-text text-surface hover:bg-text/80 transition-colors"
+                          className="px-2 py-1 text-[14px] rounded bg-text text-surface hover:bg-text/80 transition-colors"
                         >
                           Save
                         </button>
@@ -184,7 +184,7 @@ export default function SettingsPopup({ open, onToggle }) {
                         <span className="text-xs text-text">{profile?.username || "Anonymous"}</span>
                         <button
                           onClick={() => setEditing(true)}
-                          className="text-[10px] text-dim hover:text-text transition-colors"
+                          className="text-[14px] text-dim hover:text-text transition-colors"
                         >
                           Edit
                         </button>
@@ -195,7 +195,7 @@ export default function SettingsPopup({ open, onToggle }) {
                   {/* Session ID */}
                   <button
                     onClick={handleCopySession}
-                    className="flex items-center gap-1 text-[10px] text-dim hover:text-text transition-colors px-1"
+                    className="flex items-center gap-1 text-[14px] text-dim hover:text-text transition-colors px-1"
                   >
                     {copied ? <Check size={10} /> : <Copy size={10} />}
                     {copied ? "Copied!" : `Session: ${sessionId.slice(0, 8)}...`}
@@ -217,7 +217,7 @@ export default function SettingsPopup({ open, onToggle }) {
                           {p.username || "Anonymous"}
                         </span>
                         {p.session_id === sessionId && (
-                          <span className="text-[9px] opacity-70">active</span>
+                          <span className="text-[14px] opacity-70">active</span>
                         )}
                         {profiles.length > 1 && p.session_id !== sessionId && (
                           <button
@@ -246,7 +246,7 @@ export default function SettingsPopup({ open, onToggle }) {
                       />
                       <button
                         onClick={handleCreateProfile}
-                        className="px-2 py-1 text-[10px] rounded bg-text text-surface hover:bg-text/80 transition-colors"
+                        className="px-2 py-1 text-[14px] rounded bg-text text-surface hover:bg-text/80 transition-colors"
                       >
                         Add
                       </button>
@@ -254,7 +254,7 @@ export default function SettingsPopup({ open, onToggle }) {
                   ) : (
                     <button
                       onClick={() => setCreating(true)}
-                      className="flex items-center gap-1.5 w-full px-2 py-1.5 text-[10px] text-dim hover:text-text transition-colors"
+                      className="flex items-center gap-1.5 w-full px-2 py-1.5 text-[14px] text-dim hover:text-text transition-colors"
                     >
                       <Plus size={10} />
                       New profile
