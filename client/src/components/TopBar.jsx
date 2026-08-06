@@ -1,4 +1,4 @@
-import { Home, Search } from "lucide-react";
+import { Search, Settings } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchStore } from "../stores/searchStore";
 import { useUIStore } from "../stores/uiStore";
@@ -93,21 +93,26 @@ export default function TopBar() {
     }, 200);
   }, []);
 
-  return (
+return (
     <div className="relative z-50 flex items-center gap-4 px-4 py-3 bg-surface border-b border-border">
-      {/* Logo */}
-      <div className="flex items-center gap-2 shrink-0">
+      {/* Logo - clickable to go home */}
+      <button
+        onClick={() => setContextMode("home")}
+        className="flex items-center gap-2 shrink-0 text-dim hover:text-text transition-colors"
+        title="Home"
+        style={{ cursor: "pointer" }}
+      >
         <div className="size-6 rounded-lg bg-text flex items-center justify-center">
           <span className="text-surface text-base font-bold">Q</span>
         </div>
         <span className="text-sm font-semibold tracking-tight text-text">
           QWRY
         </span>
-      </div>
+      </button>
 
-      {/* Search bar - positioned to overlap Sources/Center boundary */}
-      <div className="relative flex-1 max-w-xl">
-        <div className="relative">
+      {/* Centered Search bar */}
+      <div className="absolute left-1/2 -translate-x-1/2 w-full max-w-xl pointer-events-none my-2">
+        <div className="relative pointer-events-auto">
           <Search
             size={16}
             className="absolute left-4 top-1/2 -translate-y-1/2 text-text"
@@ -120,7 +125,7 @@ export default function TopBar() {
             onKeyDown={handleKeyDown}
             onFocus={handleFocus}
             onBlur={handleBlur}
-            placeholder="Cofftset"
+            placeholder="Search the web..."
             className="w-full h-11 pl-12 pr-4 rounded-xl bg-elevated border border-border text-text text-sm placeholder:text-dim outline-none focus:border-text transition-colors"
           />
         </div>
@@ -141,15 +146,6 @@ export default function TopBar() {
 
       {/* Spacer */}
       <div className="flex-1" />
-
-      {/* Home */}
-      <button
-        onClick={() => setContextMode("home")}
-        className="flex items-center justify-center size-7 rounded-md text-dim hover:text-text hover:bg-hover transition-colors"
-        title="Home"
-      >
-        <Home size={16} />
-      </button>
 
       {/* Settings */}
       <SettingsPopup
