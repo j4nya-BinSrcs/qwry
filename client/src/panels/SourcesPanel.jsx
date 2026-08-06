@@ -1,5 +1,5 @@
-import { ExternalLink, GripVertical, Plus, BookOpen, Sparkles, Search, Newspaper, Youtube, MessageCircle, Image, Code, Globe, ChevronLeft, ChevronRight } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { ExternalLink, GripVertical, Plus, BookOpen, Sparkles, Search, Newspaper, Youtube, MessageCircle, Image, Code, Globe } from "lucide-react";
+import { useCallback } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { useSearchStore } from "../stores/searchStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
@@ -18,8 +18,6 @@ const FILTERS = [
   { id: "code", label: "Code", icon: Code },
 ];
 
-const ITEMS_PER_PAGE = 8;
-
 function getHostname(url) {
   try { return new URL(url).hostname; } catch { return ""; }
 }
@@ -29,7 +27,7 @@ function Favicon({ domain }) {
     <img
       src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
       alt=""
-      className="size-4 rounded shrink-0 opacity-80 group-hover:opacity-100 transition-opacity"
+      className="size-4 rounded shrink-0"
       onError={(e) => (e.target.style.display = "none")}
     />
   );
@@ -82,15 +80,15 @@ function DraggableResultCard({ result }) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative flex items-start gap-3 px-3.5 py-3 rounded-xl transition-all duration-200 cursor-default ${
+      className={`group relative flex items-start gap-2.5 px-3 py-2.5 rounded-md transition-all cursor-default ${
         isDragging
           ? "opacity-50"
-          : "glass-card hover:bg-hover/80 hover:border-violet-500/40 hover:shadow-lg hover:shadow-violet-500/5 border border-border/70"
+          : "hover:bg-hover border border-transparent hover:border-border hover:shadow-[var(--shadow-sm)]"
       }`}
     >
       <button
         {...listeners}
-        className="mt-1 shrink-0 text-dim cursor-grab active:cursor-grabbing hover:text-violet-400 transition-colors"
+        className="mt-0.5 shrink-0 text-dim cursor-grab active:cursor-grabbing hover:text-text transition-colors"
       >
         <GripVertical size={14} />
       </button>
@@ -99,32 +97,30 @@ function DraggableResultCard({ result }) {
         <img
           src={`/api/image-proxy?url=${encodeURIComponent(result.img_src)}`}
           alt=""
-          className="size-10 rounded-lg object-cover shrink-0 mt-0.5 border border-border/50 shadow-sm"
+          className="size-8 rounded object-cover shrink-0 mt-0.5"
           onError={(e) => (e.target.style.display = "none")}
         />
       ) : (
-        <div className="mt-0.5 p-1.5 rounded-lg bg-surface/80 border border-border/60">
-          <Favicon domain={getHostname(result.url)} />
-        </div>
+        <Favicon domain={getHostname(result.url)} />
       )}
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-text truncate group-hover:text-violet-300 transition-colors">
+          <span className="text-sm font-medium text-text truncate">
             {result.title}
           </span>
           {result.category && result.category !== "general" && (
-            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 shrink-0">
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-accent-soft text-accent shrink-0">
               {result.category}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-center gap-2 mt-0.5">
           <span className="text-xs text-muted truncate">
             {getHostname(result.url)}
           </span>
           {result.source && (
-            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300">
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-hover text-muted">
               {result.source}
             </span>
           )}
@@ -135,37 +131,37 @@ function DraggableResultCard({ result }) {
           )}
         </div>
         {result.snippet && (
-          <p className="text-xs text-muted mt-1.5 line-clamp-2 leading-relaxed opacity-90">
+          <p className="text-xs text-muted mt-1 line-clamp-2 leading-relaxed">
             {result.snippet}
           </p>
         )}
       </div>
 
-      <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200">
+      <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={handleReader}
-          className="p-1.5 rounded-lg text-muted hover:text-violet-300 hover:bg-violet-500/15 border border-transparent hover:border-violet-500/20 transition-all"
+          className="p-1 rounded text-dim hover:text-accent hover:bg-hover transition-all"
           title="Reader view"
         >
           <BookOpen size={13} />
         </button>
         <button
           onClick={handleSummarizer}
-          className="p-1.5 rounded-lg text-muted hover:text-cyan-300 hover:bg-cyan-500/15 border border-transparent hover:border-cyan-500/20 transition-all"
+          className="p-1 rounded text-dim hover:text-accent hover:bg-hover transition-all"
           title="Summarize"
         >
           <Sparkles size={13} />
         </button>
         <button
           onClick={() => window.open(result.url, "_blank")}
-          className="p-1.5 rounded-lg text-muted hover:text-text hover:bg-hover border border-transparent hover:border-border transition-all"
+          className="p-1 rounded text-dim hover:text-accent hover:bg-hover transition-all"
           title="Open"
         >
           <ExternalLink size={13} />
         </button>
         <button
           onClick={handleAdd}
-          className="p-1.5 rounded-lg text-muted hover:text-emerald-300 hover:bg-emerald-500/15 border border-transparent hover:border-emerald-500/20 transition-all"
+          className="p-1 rounded text-dim hover:text-accent hover:bg-hover transition-all"
           title="Add to workspace"
         >
           <Plus size={13} />
@@ -239,41 +235,21 @@ export default function SourcesPanel() {
   const error = useSearchStore((s) => s.error);
   const activeFilter = useSearchStore((s) => s.activeFilter);
   const setActiveFilter = useSearchStore((s) => s.setActiveFilter);
-  
-  const [currentPage, setCurrentPage] = useState(1);
-
   const filtered = results.filter((r) => matchFilter(r, activeFilter));
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-
-  // Reset to page 1 when filter or search changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeFilter, query, results]);
-
-  const paginatedResults = filtered.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
 
   return (
     <div className="h-full flex flex-col p-3">
-      <div className="flex-1 rounded-2xl border border-border/80 bg-panel/70 backdrop-blur-xl overflow-hidden flex flex-col shadow-lg">
-        {/* Header */}
-        <div className="shrink-0 px-4 py-3 border-b border-border/80 flex items-center justify-between bg-surface/40">
-          <div className="flex items-center gap-2">
-            <div className="size-2 rounded-full bg-violet-500 animate-pulse" />
-            <h2 className="text-xs font-bold text-text uppercase tracking-wider font-heading">
-              Pages
-            </h2>
-          </div>
-          <span className="text-xs text-muted font-medium px-2 py-0.5 rounded-full bg-hover border border-border/50">
-            {filtered.length} {filtered.length === 1 ? "page" : "pages"}
-          </span>
+      <div className="flex-1 rounded-xl border border-border bg-panel overflow-hidden flex flex-col elevation-sm">
+        <div className="shrink-0 px-4 py-3 border-b border-border flex items-center justify-between">
+          <h2 className="text-xs font-semibold text-text uppercase tracking-wider">
+            Pages
+          </h2>
+          <span className="text-xs text-dim font-mono">{filtered.length} pages</span>
         </div>
 
         <div className="flex-1 flex min-h-0">
-          {/* Filter sidebar with uniform button shapes */}
-          <div className="shrink-0 w-16 flex flex-col items-center gap-1.5 py-3 px-1.5 border-r border-border/80 bg-surface/30">
+          {/* Filter sidebar */}
+          <div className="shrink-0 w-fit flex flex-col items-center gap-3 py-3 px-1.5 border-r border-border">
             {FILTERS.map((f) => {
               const isActive = activeFilter === f.id;
               const Icon = f.icon;
@@ -281,103 +257,55 @@ export default function SourcesPanel() {
                 <button
                   key={f.id}
                   onClick={() => setActiveFilter(f.id)}
-                  className={`w-full h-12 flex flex-col items-center justify-center gap-1 rounded-xl transition-all duration-200 border ${
+                  className={`flex flex-col items-center gap-0.5 p-1.5 rounded-lg transition-colors ${
                     isActive
-                      ? "bg-gradient-to-b from-violet-600 to-indigo-600 text-white border-violet-400/60 shadow-md shadow-violet-500/25 scale-[1.03] font-semibold"
-                      : "bg-transparent text-muted hover:text-text hover:bg-hover/80 border-transparent hover:border-border/60"
+                      ? "bg-accent-soft text-accent"
+                      : "text-text hover:bg-hover"
                   }`}
                   title={f.label}
                 >
-                  <Icon size={15} />
-                  <span className="text-[9px] leading-none font-medium truncate w-full text-center px-0.5">{f.label}</span>
+                  <Icon size={14} />
+                  <span className="text-[7px] leading-tight font-medium">{f.label}</span>
                 </button>
               );
             })}
           </div>
 
-          {/* Results + Pagination */}
-          <div className="flex-1 flex flex-col min-h-0">
-            <div className="flex-1 overflow-y-auto p-2.5 space-y-2">
-              {loading && (
-                <div className="flex items-center justify-center py-16">
-                  <div className="size-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin shadow-lg" />
-                </div>
-              )}
-              {error && (
-                <div className="px-4 py-3 text-sm text-text bg-red-500/10 border border-red-500/20 rounded-xl mx-2 mt-2">
-                  {error}
-                </div>
-              )}
-              {!loading && !error && results.length === 0 && query && (
-                <div className="px-4 py-16 text-center text-sm text-muted">
-                  No results found for "{query}"
-                </div>
-              )}
-              {!loading && !error && results.length === 0 && !query && (
-                <div className="px-4 py-16 text-center text-sm text-muted">
-                  Search the web to explore pages here
-                </div>
-              )}
-              {!loading && !error && results.length > 0 && filtered.length === 0 && (
-                <div className="px-4 py-16 text-center text-sm text-muted">
-                  No results match the selected filter
-                </div>
-              )}
-
-              {paginatedResults.map((result, i) => (
+          {/* Results */}
+          <div className="flex-1 overflow-y-auto">
+            {loading && (
+              <div className="flex items-center justify-center py-12">
+                <div className="size-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            {error && (
+              <div className="px-4 py-3 text-sm text-text bg-hover border border-border rounded-md mx-2 mt-2">
+                {error}
+              </div>
+            )}
+            {!loading && !error && results.length === 0 && query && (
+              <div className="px-4 py-12 text-center text-sm text-muted">
+                No results found
+              </div>
+            )}
+            {!loading && !error && results.length === 0 && !query && (
+              <div className="px-4 py-12 text-center text-sm text-muted">
+                Search the web to see results here
+              </div>
+            )}
+            {!loading && !error && results.length > 0 && filtered.length === 0 && (
+              <div className="px-4 py-12 text-center text-sm text-muted">
+                No results match the selected filter
+              </div>
+            )}
+            <div className="space-y-0.5 px-1">
+              {filtered.map((result, i) => (
                 <DraggableResultCard key={`${result.url}-${i}`} result={result} />
               ))}
             </div>
-
-            {/* Pagination Controls */}
-            {!loading && !error && totalPages > 1 && (
-              <div className="shrink-0 px-4 py-2.5 border-t border-border/80 bg-surface/50 backdrop-blur-md flex items-center justify-between">
-                <span className="text-xs text-muted font-medium">
-                  Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
-                  {Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} of {filtered.length}
-                </span>
-
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="p-1.5 rounded-lg border border-border/80 text-text hover:bg-hover hover:border-violet-500/40 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-border/80 transition-all"
-                    title="Previous page"
-                  >
-                    <ChevronLeft size={14} />
-                  </button>
-
-                  <div className="flex items-center gap-1 px-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => (
-                      <button
-                        key={pg}
-                        onClick={() => setCurrentPage(pg)}
-                        className={`size-6 rounded-lg text-xs font-medium transition-all ${
-                          currentPage === pg
-                            ? "bg-violet-600 text-white shadow-md shadow-violet-500/25 scale-105"
-                            : "text-muted hover:text-text hover:bg-hover"
-                        }`}
-                      >
-                        {pg}
-                      </button>
-                    ))}
-                  </div>
-
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    className="p-1.5 rounded-lg border border-border/80 text-text hover:bg-hover hover:border-violet-500/40 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-border/80 transition-all"
-                    title="Next page"
-                  >
-                    <ChevronRight size={14} />
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
     </div>
   );
 }
-

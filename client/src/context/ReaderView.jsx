@@ -161,7 +161,7 @@ export default function ReaderView() {
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); removeRead(r.id, r.url); }}
-                  className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all shrink-0"
+                  className="p-1 rounded text-dim hover:text-accent hover:bg-hover transition-all shrink-0"
                   title="Remove"
                 >
                   <X size={11} />
@@ -180,7 +180,7 @@ export default function ReaderView() {
                       <p className="text-xs text-text">Unable to load this page.</p>
                       <p className="text-[10px] text-muted">{r.error}</p>
                       <a href={r.url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-text text-surface hover:bg-text/80 transition-colors"
+                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-surface hover:bg-accent-hover transition-colors"
                       ><ExternalLink size={11} /> Open in browser</a>
                     </div>
                   )}
@@ -190,7 +190,7 @@ export default function ReaderView() {
                       <p className="text-xs text-muted">Could not read this page automatically.</p>
                       <p className="text-[10px] text-dim">{data.error}</p>
                       <a href={r.url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-text text-surface hover:bg-text/80 transition-colors"
+                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-surface hover:bg-accent-hover transition-colors"
                       ><ExternalLink size={11} /> Open in browser</a>
                     </div>
                   )}
@@ -217,7 +217,7 @@ export default function ReaderView() {
                               className="w-full h-full object-cover"
                               onError={(e) => { e.target.style.display = "none"; }} />
                             <div className="absolute inset-0 flex items-center justify-center">
-                              <div className="size-12 rounded-full bg-text/60 flex items-center justify-center group-hover:bg-text/80 transition-colors">
+                              <div className="size-12 rounded-full bg-text/60 flex items-center justify-center group-hover:bg-accent-hover transition-colors">
                                 <Play size={22} className="text-surface ml-0.5" />
                               </div>
                             </div>
@@ -236,7 +236,7 @@ export default function ReaderView() {
                       <div className="py-4 text-center space-y-2">
                         <p className="text-xs text-muted">No readable content was found on this page.</p>
                         <a href={r.url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-text text-surface hover:bg-text/80 transition-colors"
+                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-surface hover:bg-accent-hover transition-colors"
                       ><ExternalLink size={11} /> Open in browser</a>
                       </div>
                     )
@@ -246,7 +246,7 @@ export default function ReaderView() {
                     <div className="py-4 text-center space-y-2">
                       <p className="text-xs text-muted">This content type could not be displayed.</p>
                       <a href={r.url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-text text-surface hover:bg-text/80 transition-colors"
+                        className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-surface hover:bg-accent-hover transition-colors"
                       ><ExternalLink size={11} /> Open in browser</a>
                     </div>
                   )}

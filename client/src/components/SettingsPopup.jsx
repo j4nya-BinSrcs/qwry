@@ -44,49 +44,49 @@ export default function SettingsPopup({ open, onToggle }) {
     <div className="relative shrink-0">
       <button
         onClick={onToggle}
-        className="flex items-center justify-center size-8 rounded-lg text-muted hover:text-text hover:bg-hover border border-transparent hover:border-border transition-all duration-200"
+        className="flex items-center justify-center size-7 rounded-md border border-border text-text hover:bg-hover hover:border-accent/40 transition-colors"
         title="Settings"
       >
-        <Settings size={15} />
+        <Settings size={14} />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={onToggle} />
-          <div className="absolute top-full right-0 mt-2 w-72 rounded-2xl bg-elevated/95 backdrop-blur-xl border border-violet-500/30 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="px-4 py-2.5 text-xs font-bold text-muted uppercase tracking-wider border-b border-border/80 bg-surface/40 font-heading">
-              Settings & Preferences
+          <div className="absolute top-full right-0 mt-1 w-64 rounded-lg bg-elevated border border-border overflow-hidden z-50 elevation-lg">
+            <div className="px-3 py-2 text-xs text-muted font-medium border-b border-border">
+              Settings
             </div>
 
             {/* Profile */}
-            <div className="px-4 py-3 border-b border-border/80">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-violet-300 mb-2">
-                <User size={13} />
-                <span>User Profile</span>
+            <div className="px-3 py-2 border-b border-border">
+              <div className="flex items-center gap-1.5 text-xs text-muted mb-1.5">
+                <User size={12} />
+                Profile
               </div>
               {editing ? (
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1">
                   <input
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Your display name"
-                    className="flex-1 px-2.5 py-1 text-xs rounded-xl bg-hover border border-border text-text outline-none focus:border-violet-500"
+                    placeholder="Your name"
+                    className="flex-1 px-2 py-1 text-xs rounded bg-hover border border-border text-text outline-none focus:border-accent"
                     autoFocus
                     onKeyDown={(e) => { if (e.key === "Enter") handleSaveUsername(); if (e.key === "Escape") setEditing(false); }}
                   />
                   <button
                     onClick={handleSaveUsername}
-                    className="px-2.5 py-1 text-[11px] font-semibold rounded-xl bg-violet-600 text-white hover:bg-violet-500 transition-colors"
+                    className="px-2 py-1 text-[10px] rounded bg-accent text-surface hover:bg-accent-hover transition-colors"
                   >
                     Save
                   </button>
                 </div>
               ) : (
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-text">{profile?.username || "Anonymous Researcher"}</span>
+                  <span className="text-xs text-text">{profile?.username || "Anonymous"}</span>
                   <button
                     onClick={() => setEditing(true)}
-                    className="text-[11px] font-semibold text-violet-400 hover:text-violet-300 transition-colors"
+                    className="text-[10px] text-accent hover:text-accent-hover transition-colors"
                   >
                     Edit
                   </button>
@@ -94,34 +94,32 @@ export default function SettingsPopup({ open, onToggle }) {
               )}
               <button
                 onClick={handleCopySession}
-                className="flex items-center gap-1.5 mt-2 text-[10px] font-mono text-dim hover:text-text transition-colors"
+                className="flex items-center gap-1 mt-1 text-[10px] text-dim hover:text-text transition-colors"
               >
-                {copied ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
-                <span>{copied ? "Copied Session ID!" : `ID: ${sessionId.slice(0, 12)}...`}</span>
+                {copied ? <Check size={10} /> : <Copy size={10} />}
+                {copied ? "Copied!" : `Session: ${sessionId.slice(0, 8)}...`}
               </button>
             </div>
 
             {/* Search provider */}
-            <div className="px-4 py-3">
-              <div className="text-xs font-semibold text-cyan-300 mb-2">Search Provider</div>
-              <div className="space-y-1">
-                {providers.map((p) => (
-                  <button
-                    key={p.label}
-                    onClick={() => {
-                      setProvider(p.value);
-                      if (query) search(query.trim(), 1, p.value);
-                    }}
-                    className={`w-full px-3 py-1.5 text-left text-xs font-medium transition-all rounded-xl ${
-                      provider === p.value
-                        ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-sm font-semibold"
-                        : "text-muted hover:text-text hover:bg-hover"
-                    }`}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
+            <div className="px-3 py-2">
+              <div className="text-xs text-muted mb-1.5">Search Provider</div>
+              {providers.map((p) => (
+                <button
+                  key={p.label}
+                  onClick={() => {
+                    setProvider(p.value);
+                    if (query) search(query.trim(), 1, p.value);
+                  }}
+                  className={`w-full px-2 py-1.5 text-left text-xs transition-colors rounded ${
+                    provider === p.value
+                      ? "bg-accent-soft text-accent font-medium"
+                      : "text-text hover:bg-hover"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
             </div>
           </div>
         </>
@@ -129,4 +127,3 @@ export default function SettingsPopup({ open, onToggle }) {
     </div>
   );
 }
-

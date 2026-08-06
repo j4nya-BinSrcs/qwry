@@ -37,18 +37,18 @@ function EmptyState({ icon: Icon, message }) {
 }
 
 function Spinner() {
-  return <div className="flex items-center justify-center py-12"><div className="size-4 border-2 border-text border-t-transparent rounded-full animate-spin" /></div>;
+  return <div className="flex items-center justify-center py-12"><div className="size-4 border-2 border-accent border-t-transparent rounded-full animate-spin" /></div>;
 }
 
 // ── Workspace Header ─────────────────────────────────────────────────────
 
 function WorkspaceHeader({ workspace, sessionId, onChatClick }) {
   const updateWorkspace = useWorkspaceStore((s) => s.updateWorkspace);
+  const createWorkspace = useWorkspaceStore((s) => s.createWorkspace);
   const deleteWorkspace = useWorkspaceStore((s) => s.deleteWorkspace);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const setActive = useWorkspaceStore((s) => s.setActiveWorkspace);
-  const openCreateWsModal = useUIStore((s) => s.openCreateWsModal);
   const [editing, setEditing] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [showWsMenu, setShowWsMenu] = useState(false);
@@ -69,35 +69,36 @@ function WorkspaceHeader({ workspace, sessionId, onChatClick }) {
   }, [nameInput, workspace, sessionId, updateWorkspace]);
 
   return (
-    <div className="shrink-0 px-4 py-3 border-b border-border/80 bg-surface/50 backdrop-blur-md flex items-center justify-between">
+    <div className="shrink-0 px-3 py-2 border-b border-border flex items-center justify-between">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <div className="relative">
             <button onClick={() => setShowWsMenu(!showWsMenu)}
-              className="flex items-center gap-2 text-sm font-bold text-text hover:text-violet-300 transition-colors font-heading"
+              className="flex items-center gap-2 text-sm font-semibold text-text hover:text-muted transition-colors"
             >
-              <span className="truncate max-w-36">{workspace?.name || "Workspace"}</span>
-              <span className="text-xs text-muted px-2 py-0.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 font-mono">{workspace?.item_count ?? 0}</span>
+              <span className="truncate max-w-28">{workspace?.name || "Workspace"}</span>
+              <span className="text-xs text-dim">{workspace?.item_count ?? 0}</span>
             </button>
             {showWsMenu && (
-              <div className="absolute top-full left-0 mt-2 w-52 rounded-2xl bg-elevated/95 backdrop-blur-xl border border-border/80 shadow-2xl overflow-hidden z-30 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="px-3.5 py-2 text-[10px] text-muted font-bold tracking-wider uppercase border-b border-border/80 font-heading">Workspaces</div>
+              <div className="absolute top-full left-0 mt-1 w-48 rounded bg-elevated border border-border shadow-xl overflow-hidden z-10">
+                <div className="px-3 py-1.5 text-[10px] text-muted font-medium border-b border-border">Workspaces</div>
                 {workspaces.map((ws) => (
                   <button key={ws.id}
                     onClick={() => { setActive(ws.id); setShowWsMenu(false); }}
-                    className={`w-full px-3.5 py-2 text-left text-xs font-medium transition-colors flex items-center justify-between ${
-                      ws.id === activeId ? "bg-violet-500/15 text-violet-300 font-semibold" : "text-text hover:bg-hover"
+                    className={`w-full px-3 py-1.5 text-left text-xs transition-colors flex items-center justify-between ${
+                      ws.id === activeId ? "bg-hover text-text" : "text-text hover:bg-hover"
                     }`}
                   >
                     <span className="truncate">{ws.name}</span>
                     <span className="text-[10px] text-dim">{ws.item_count}</span>
                   </button>
                 ))}
-                <button onClick={() => {
-                    openCreateWsModal();
+                <button onClick={async () => {
+                    const name = prompt("Workspace name:");
+                    if (name) await createWorkspace(sessionId, name);
                     setShowWsMenu(false);
                   }}
-                  className="w-full px-3.5 py-2 text-left text-xs font-semibold text-violet-400 hover:bg-hover transition-colors border-t border-border/80 flex items-center gap-1.5"
+                  className="w-full px-3 py-1.5 text-left text-xs text-text hover:bg-hover transition-colors border-t border-border"
                 >+ New Workspace</button>
                 <button onClick={async () => {
                     if (confirm(`Delete workspace "${workspace?.name}"? This cannot be undone.`)) {
@@ -107,33 +108,33 @@ function WorkspaceHeader({ workspace, sessionId, onChatClick }) {
                       setShowWsMenu(false);
                     }
                   }}
-                  className="w-full px-3.5 py-2 text-left text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+                  className="w-full px-3 py-1.5 text-left text-xs text-red-500 hover:bg-hover transition-colors"
                 >Delete Workspace</button>
               </div>
             )}
           </div>
           {workspace && (
             <button onClick={startEdit}
-              className="p-1 rounded-md text-dim opacity-0 group-hover/title:opacity-100 hover:text-text hover:bg-hover transition-all"
-            ><Pencil size={12} /></button>
+              className="p-0.5 rounded text-dim opacity-0 group-hover/title:opacity-100 hover:text-text transition-all"
+            ><Pencil size={11} /></button>
           )}
         </div>
         {editing && (
-          <div className="flex items-center gap-1.5 mt-1.5">
+          <div className="flex items-center gap-1 mt-1">
             <input type="text" value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") saveEdit(e); if (e.key === "Escape") setEditing(false); }}
               autoFocus
-              className="flex-1 bg-hover border border-border rounded-lg px-2.5 py-1 text-xs text-text outline-none focus:border-violet-500"
+              className="flex-1 bg-hover border border-border rounded px-2 py-0.5 text-xs text-text outline-none"
             />
-            <button onClick={saveEdit} className="p-1 rounded text-emerald-400 hover:bg-hover"><Check size={13} /></button>
-            <button onClick={() => setEditing(false)} className="p-1 rounded text-dim hover:text-text"><X size={13} /></button>
+            <button onClick={saveEdit} className="p-0.5 rounded text-dim hover:text-text"><Check size={12} /></button>
+            <button onClick={() => setEditing(false)} className="p-0.5 rounded text-dim hover:text-text"><X size={12} /></button>
           </div>
         )}
       </div>
       <button onClick={onChatClick}
-        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-violet-600/20 text-violet-300 border border-violet-500/30 hover:bg-violet-600/30 transition-all shadow-sm"
-      ><MessageCircle size={13} /> Chat Assistant</button>
+        className="flex items-center gap-1 text-xs text-muted hover:text-text transition-colors"
+      ><MessageCircle size={12} /> Chat</button>
     </div>
   );
 }
@@ -142,12 +143,12 @@ function WorkspaceHeader({ workspace, sessionId, onChatClick }) {
 
 function SearchBar({ value, onChange }) {
   return (
-    <div className="shrink-0 px-3.5 py-2.5 border-b border-border/80 bg-surface/30">
-      <div className="relative input-glow-focus rounded-xl">
-        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-dim" />
+    <div className="shrink-0 px-3 py-2 border-b border-border">
+      <div className="relative">
+        <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dim" />
         <input type="text" value={value} onChange={(e) => onChange(e.target.value)}
-          placeholder="Filter sources, notes, summaries..."
-          className="w-full h-8 pl-8 pr-3 rounded-xl bg-panel/80 border border-border/80 text-xs text-text outline-none placeholder:text-dim transition-all focus:border-violet-500/60"
+          placeholder="Search sources, notes, summaries..."
+          className="w-full h-8 pl-8 pr-3 rounded bg-hover border border-border text-xs text-text outline-none placeholder:text-dim"
         />
       </div>
     </div>
@@ -159,16 +160,16 @@ function SearchBar({ value, onChange }) {
 function PinnedChips({ pins, sessionId, wsId, onDeletePin }) {
   if (pins.length === 0) return null;
   return (
-    <div className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 border-b border-border/80 overflow-x-auto bg-violet-500/5">
-      <Pin size={12} className="text-violet-400 shrink-0" />
+    <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 border-b border-border overflow-x-auto">
+      <Pin size={11} className="text-dim shrink-0" />
       {pins.map((p) => (
         <span key={p.id}
-          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-panel border border-violet-500/30 text-[10px] font-medium text-text shrink-0 shadow-sm"
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-hover border border-border text-[10px] text-text shrink-0"
         >
-          <span className="capitalize text-violet-300">{p.pinnable_type}</span>
+          <span className="capitalize">{p.pinnable_type}</span>
           <span className="text-dim max-w-20 truncate">{p.pinnable_id}</span>
           <button onClick={() => onDeletePin(p.id)}
-            className="p-0.5 rounded-full text-dim hover:text-text hover:bg-hover transition-colors"
+            className="p-0.5 rounded text-dim hover:text-accent hover:bg-hover transition-colors"
           ><X size={9} /></button>
         </span>
       ))}
@@ -183,47 +184,47 @@ function SourceTallCard({ item, type, sessionId, wsId, isPinned, onPin, onUnpin 
   const openSummarizer = useUIStore((s) => s.openSummarizer);
 
   return (
-    <div className="group shrink-0 w-48 h-48 rounded-2xl glass-card flex flex-col overflow-hidden hover:border-violet-500/50 transition-all duration-300 shadow-md">
+    <div className="group shrink-0 w-44 h-44 bg-panel border border-border rounded-lg flex flex-col overflow-hidden hover:border-accent/40 transition-all">
       {/* Preview area */}
-      <div className="h-24 shrink-0 bg-surface/80 flex items-center justify-center overflow-hidden relative">
+      <div className="h-20 shrink-0 bg-hover flex items-center justify-center overflow-hidden relative">
         {(type === "image" || type === "video") && item.url ? (
           <img src={type === "video" ? item.thumbnail : item.url} alt=""
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover"
             onError={(e) => { e.target.style.display = "none"; }}
           />
         ) : (
-          <Layers size={26} className="text-dim opacity-30 group-hover:scale-110 transition-transform" />
+          <Layers size={24} className="text-dim opacity-40" />
         )}
         <button onClick={() => isPinned ? onUnpin(item.id) : onPin(type, item.id)}
-          className={`absolute top-1.5 right-1.5 p-1.5 rounded-lg backdrop-blur-md transition-all opacity-0 group-hover:opacity-100 ${
-            isPinned ? "bg-violet-600 text-white shadow-md shadow-violet-500/30" : "bg-black/60 text-white hover:bg-black/80"
+          className={`absolute top-1 right-1 p-1 rounded transition-all opacity-0 group-hover:opacity-100 ${
+            isPinned ? "bg-accent text-surface" : "bg-surface/80 text-dim hover:text-text"
           }`}
           title={isPinned ? "Unpin" : "Pin"}
-        ><Pin size={11} /></button>
+        ><Pin size={10} /></button>
       </div>
       {/* Info area */}
-      <div className="flex-1 px-3 py-2.5 min-w-0 flex flex-col justify-between">
-        <p className="text-xs font-semibold text-text truncate group-hover:text-violet-300 transition-colors">{item.title || "Untitled"}</p>
+      <div className="flex-1 px-2.5 py-2 min-w-0 flex flex-col justify-between">
+        <p className="text-xs text-text truncate">{item.title || "Untitled"}</p>
         <div className="flex items-center gap-1 mt-1">
           {item.url ? (
             <>
               <Favicon domain={getHostname(item.url)} />
               <span className="text-[10px] text-muted truncate flex-1">{getHostname(item.url)}</span>
               <button onClick={() => window.open(item.url, "_blank")}
-                className="p-1 rounded-md text-muted hover:text-text hover:bg-hover transition-colors shrink-0"
-              ><ExternalLink size={10} /></button>
+                className="p-0.5 rounded text-dim hover:text-accent hover:bg-hover transition-colors shrink-0"
+              ><ExternalLink size={9} /></button>
             </>
           ) : (
             <span className="text-[10px] text-muted truncate flex-1">{item.caption || item.platform || ""}</span>
           )}
           <button onClick={() => { if (item.url) openSummarizer(item.url, item.title); }}
-            className="p-1 rounded-md text-muted hover:text-cyan-300 hover:bg-hover transition-colors shrink-0"
+            className="p-0.5 rounded text-dim hover:text-accent hover:bg-hover transition-colors shrink-0"
             title="Summarize"
-          ><Sparkles size={10} /></button>
+          ><Sparkles size={9} /></button>
           <button onClick={() => { if (item.url) openReader(item.url, item.title); }}
-            className="p-1 rounded-md text-muted hover:text-violet-300 hover:bg-hover transition-colors shrink-0"
+            className="p-0.5 rounded text-dim hover:text-accent hover:bg-hover transition-colors shrink-0"
             title="Reader"
-          ><Book size={10} /></button>
+          ><Book size={9} /></button>
         </div>
       </div>
     </div>
@@ -274,7 +275,7 @@ function NotesSection({ notes, sessionId, wsId, pins, onCreateNote, onUpdateNote
             className="flex-[2] bg-hover border border-border rounded px-2 py-1.5 text-xs text-text outline-none placeholder:text-dim"
           />
           <button onClick={handleAdd} disabled={!title.trim()}
-            className="flex items-center gap-1 text-xs px-2.5 py-1 rounded bg-text text-surface hover:opacity-80 transition-opacity disabled:opacity-30 shrink-0"
+            className="flex items-center gap-1 text-xs px-2.5 py-1 rounded bg-accent text-surface hover:opacity-80 transition-opacity disabled:opacity-30 shrink-0"
           ><Plus size={12} /> Add</button>
         </div>
       </div>
@@ -294,7 +295,7 @@ function NotesSection({ notes, sessionId, wsId, pins, onCreateNote, onUpdateNote
                   />
                   <div className="flex gap-1">
                     <button onClick={() => handleUpdate(n.id)}
-                      className="text-xs px-2 py-0.5 rounded bg-text text-surface hover:opacity-80 transition-opacity"
+                      className="text-xs px-2 py-0.5 rounded bg-accent text-surface hover:opacity-80 transition-opacity"
                     ><Check size={11} className="inline" /> Save</button>
                     <button onClick={() => setEditingId(null)}
                       className="text-xs px-2 py-0.5 rounded border border-border text-dim hover:text-text transition-colors"
@@ -309,14 +310,14 @@ function NotesSection({ notes, sessionId, wsId, pins, onCreateNote, onUpdateNote
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <button onClick={() => pinned ? onUnpin(n.id) : onPin("note", n.id)}
-                      className={`p-1 rounded transition-all ${pinned ? "text-text" : "text-dim hover:text-text hover:bg-hover"}`}
+                      className={`p-1 rounded transition-all ${pinned ? "text-text" : "text-dim hover:text-accent hover:bg-hover"}`}
                       title={pinned ? "Unpin" : "Pin"}
                     ><Pin size={11} /></button>
                     <button onClick={() => startEdit(n)}
-                      className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
+                      className="p-1 rounded text-dim hover:text-accent hover:bg-hover transition-all"
                     ><Pencil size={11} /></button>
                     <button onClick={() => onDeleteNote(sessionId, wsId, n.id)}
-                      className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
+                      className="p-1 rounded text-dim hover:text-accent hover:bg-hover transition-all"
                     ><Trash2 size={11} /></button>
                   </div>
                 </div>
@@ -343,7 +344,7 @@ function ComparePanel({ sources, onClose }) {
       <div className="border-t border-border p-3">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-xs font-semibold text-text">Compare Sources</h3>
-          <button onClick={onClose} className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors"><X size={12} /></button>
+          <button onClick={onClose} className="p-1 rounded text-dim hover:text-accent hover:bg-hover transition-colors"><X size={12} /></button>
         </div>
         <div className="flex items-center gap-2 min-w-0">
           <select value={a} onChange={(e) => setA(e.target.value)}
@@ -380,7 +381,7 @@ function ComparePanel({ sources, onClose }) {
       <div className="px-3 py-2">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-xs font-semibold text-text">Compare Sources</h3>
-          <button onClick={onClose} className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors"><X size={12} /></button>
+          <button onClick={onClose} className="p-1 rounded text-dim hover:text-accent hover:bg-hover transition-colors"><X size={12} /></button>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
@@ -483,8 +484,6 @@ export default function StationView() {
     await station.deleteNote(sid, wsId, noteId);
   }, [station]);
 
-  const openCreateWsModal = useUIStore((s) => s.openCreateWsModal);
-
   if (!activeWs) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-6 text-center">
@@ -492,8 +491,8 @@ export default function StationView() {
           <Layers size={16} className="text-dim" />
         </div>
         <p className="text-xs text-muted max-w-xs mb-3">Select or create a workspace to get started</p>
-        <button onClick={openCreateWsModal}
-          className="text-xs px-3.5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold shadow-md hover:opacity-90 transition-opacity"
+        <button onClick={() => { const name = prompt("Workspace name:"); if (name) createWorkspace(sessionId, name); }}
+          className="text-xs px-3 py-1.5 rounded bg-accent text-surface hover:opacity-80 transition-opacity"
         >Create Workspace</button>
       </div>
     );
@@ -569,11 +568,11 @@ export default function StationView() {
         <div className="border-t border-border p-3 space-y-2">
           <div className="flex items-center gap-2">
             <button onClick={() => setChatOpen(true)}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-text text-surface hover:opacity-80 transition-opacity"
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-accent text-surface hover:opacity-80 transition-opacity"
             ><MessageCircle size={12} /> Chat</button>
             <button onClick={() => setCompareOpen(!compareOpen)}
               className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded border transition-colors ${
-                compareOpen ? "bg-hover text-text border-text/40" : "border-border text-text hover:bg-hover"
+                compareOpen ? "bg-hover text-text border-accent/40" : "border-border text-text hover:bg-hover"
               }`}
             >Compare</button>
           </div>

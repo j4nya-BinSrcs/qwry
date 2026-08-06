@@ -3,78 +3,74 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-sans: "Inter", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-  --font-heading: "Space Grotesk", "Inter", sans-serif;
-  
-  --color-surface: var(--bg-surface);
-  --color-panel: var(--bg-panel);
-  --color-elevated: var(--bg-elevated);
-  --color-hover: var(--bg-hover);
-  --color-border: var(--border-color);
-  --color-text: var(--text-color);
-  --color-muted: var(--text-muted);
-  --color-dim: var(--text-dim);
-  
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Source Serif 4", ui-serif, Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-surface: #fbfaf8;
+  --color-panel: #ffffff;
+  --color-elevated: #ffffff;
+  --color-hover: #f2efe9;
+  --color-border: #e8e3d9;
+  --color-text: #1c1a16;
+  --color-muted: #6b6455;
+  --color-dim: #a39c8a;
+
+  /* Signature accent — warm ink-amber, evokes a highlighter mark on a
+     research page. Used only for active/selected/focus states, never
+     as a base color, so the UI stays quiet everywhere else. */
+  --color-accent: #a8721c;
+  --color-accent-hover: #8f5f16;
+  --color-accent-soft: #f4e8d3;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --shadow-sm: 0 1px 2px rgba(28, 26, 22, 0.04), 0 1px 1px rgba(28, 26, 22, 0.03);
+  --shadow-md: 0 4px 12px rgba(28, 26, 22, 0.06), 0 2px 4px rgba(28, 26, 22, 0.04);
+  --shadow-lg: 0 12px 32px rgba(28, 26, 22, 0.10), 0 4px 8px rgba(28, 26, 22, 0.05);
 }
 
-:root {
-  /* Cosmic Dark Mode (Default) */
-  --bg-deepest: #070817;
-  --bg-surface: #0b0d21;
-  --bg-panel: rgba(18, 22, 48, 0.72);
-  --bg-elevated: #131738;
-  --bg-hover: rgba(29, 36, 76, 0.85);
+.dark {
+  --color-surface: #14130f;
+  --color-panel: #1b1a15;
+  --color-elevated: #211f19;
+  --color-hover: #29271f;
+  --color-border: #35322a;
+  --color-text: #f2efe7;
+  --color-muted: #a39c8a;
+  --color-dim: #6e6858;
 
-  --border-color: rgba(139, 92, 246, 0.22);
-  --border-hover: rgba(6, 182, 212, 0.5);
+  --color-accent: #d9a24b;
+  --color-accent-hover: #e8b667;
+  --color-accent-soft: #3a2f1a;
 
-  --accent-primary: #8b5cf6;
-  --accent-primary-hover: #a78bfa;
-  --accent-primary-glow: rgba(139, 92, 246, 0.35);
-  --accent-secondary: #06b6d4;
-  --accent-secondary-glow: rgba(6, 182, 212, 0.35);
-  --accent-tertiary: #ec4899;
-
-  --text-color: #f0f4ff;
-  --text-muted: rgba(210, 222, 250, 0.75);
-  --text-dim: rgba(150, 170, 215, 0.55);
-
-  --logo-gradient: linear-gradient(135deg, #a855f7 0%, #06b6d4 45%, #ec4899 80%, #f43f5e 100%);
-  --glow-shadow: 0 0 25px rgba(139, 92, 246, 0.25);
-  --glow-cyan: 0 0 25px rgba(6, 182, 212, 0.25);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24), 0 1px 1px rgba(0, 0, 0, 0.18);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.32), 0 2px 6px rgba(0, 0, 0, 0.22);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.44), 0 4px 10px rgba(0, 0, 0, 0.28);
 }
 
-.light, html:not(.dark) {
-  --bg-deepest: #f4f3fa;
-  --bg-surface: #ffffff;
-  --bg-panel: rgba(255, 255, 255, 0.85);
-  --bg-elevated: #ffffff;
-  --bg-hover: #f0ecfe;
-
-  --border-color: rgba(124, 58, 237, 0.18);
-  --border-hover: rgba(124, 58, 237, 0.45);
-
-  --accent-primary: #7c3aed;
-  --accent-primary-hover: #6d28d9;
-  --accent-primary-glow: rgba(124, 58, 237, 0.2);
-  --accent-secondary: #0891b2;
-  --accent-secondary-glow: rgba(8, 145, 178, 0.2);
-  --accent-tertiary: #db2777;
-
-  --text-color: #0f172a;
-  --text-muted: #475569;
-  --text-dim: #94a3b8;
-
-  --logo-gradient: linear-gradient(135deg, #7c3aed 0%, #0284c7 45%, #db2777 80%, #ea580c 100%);
-  --glow-shadow: 0 4px 20px rgba(124, 58, 237, 0.12);
-  --glow-cyan: 0 4px 20px rgba(8, 145, 178, 0.12);
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
 }
 
-/* Base Styles */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
+}
+
 html, body, #root {
   height: 100%;
   margin: 0;
@@ -86,155 +82,54 @@ html, body, #root {
 }
 
 body {
-  background-color: var(--bg-deepest);
-  color: var(--text-color);
-  background-image: 
-    radial-gradient(circle at 15% 30%, rgba(139, 92, 246, 0.08), transparent 35%),
-    radial-gradient(circle at 85% 70%, rgba(6, 182, 212, 0.06), transparent 35%);
-  background-attachment: fixed;
+  background-color: var(--color-surface);
 }
 
 ::selection {
-  background: rgba(139, 92, 246, 0.3);
-  color: var(--text-color);
+  background: var(--color-accent-soft);
+  color: var(--color-text);
 }
 
 ::placeholder {
-  color: var(--text-dim);
+  color: var(--color-dim);
 }
 
-/* Custom Scrollbars */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-color) transparent;
+/* Visible keyboard focus, kept subtle and consistent with the accent */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
 }
 
-::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-primary);
-}
-
-/* Glassmorphism Utilities */
-.glass-panel {
-  background: var(--bg-panel);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-color);
-}
-
-.glass-card {
-  background: var(--bg-panel);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--border-color);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.glass-card:hover {
-  border-color: var(--border-hover);
-  box-shadow: var(--glow-shadow);
-  transform: translateY(-1.5px);
-}
-
-.brand-gradient-text {
-  background: var(--logo-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-/* Glow Focus for Inputs */
-.input-glow-focus {
-  transition: all 0.3s ease;
-}
-.input-glow-focus:focus-within {
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 20px var(--accent-primary-glow), inset 0 0 10px rgba(139, 92, 246, 0.1);
-}
-
-/* Resizable Panels Handler */
 [data-panel-group-direction="horizontal"] > [data-panel-resize-handle] {
-  width: 4px;
+  width: 3px;
   background: transparent;
-  transition: background 0.2s, box-shadow 0.2s;
+  transition: background 0.15s;
   position: relative;
 }
 
-[data-panel-group-direction="horizontal"] > [data-panel-resize-handle]::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 2px;
-  height: 36px;
-  border-radius: 999px;
-  background: var(--border-color);
-  transition: all 0.2s;
+[data-panel-group-direction="horizontal"] > [data-panel-resize-handle]:hover,
+[data-panel-group-direction="horizontal"] > [data-panel-resize-handle][data-resize-handle-active] {
+  background: var(--color-accent);
 }
 
-[data-panel-group-direction="horizontal"] > [data-panel-resize-handle]:hover::before,
-[data-panel-group-direction="horizontal"] > [data-panel-resize-handle][data-resize-handle-active]::before {
-  background: var(--accent-primary);
-  box-shadow: 0 0 10px var(--accent-primary);
-  height: 50px;
-}
-
-/* Drag overlay styling */
 .drag-overlay {
   opacity: 0.92;
-  transform: scale(1.03);
-  border: 1px solid var(--accent-primary);
-  background: var(--bg-elevated);
-  box-shadow: 0 8px 30px rgba(139, 92, 246, 0.4);
-  backdrop-filter: blur(16px);
+  transform: scale(1.02);
+  border: 1px solid var(--color-accent);
+  background: var(--color-elevated);
+  box-shadow: var(--shadow-lg);
 }
 
-/* Keyframe Animations */
-@keyframes aurora-float-1 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(30px, -20px) scale(1.1); }
-}
+/* Shared surface elevation classes, used in place of ad-hoc shadow
+   utility strings so panels/cards read as physical layers. */
+.elevation-sm { box-shadow: var(--shadow-sm); }
+.elevation-md { box-shadow: var(--shadow-md); }
+.elevation-lg { box-shadow: var(--shadow-lg); }
 
-@keyframes aurora-float-2 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-30px, 20px) scale(1.15); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
-
-@keyframes shimmer-sweep {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-
-.animate-aurora-1 {
-  animation: aurora-float-1 18s ease-in-out infinite;
-}
-
-.animate-aurora-2 {
-  animation: aurora-float-2 22s ease-in-out infinite;
-}
-
-.shimmer-skeleton {
-  position: relative;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.shimmer-skeleton::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-  animation: shimmer-sweep 1.8s infinite;
-}
-

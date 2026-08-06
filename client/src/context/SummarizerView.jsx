@@ -168,7 +168,7 @@ export default function SummarizerView() {
                 )}
                 <button
                   onClick={(e) => { e.stopPropagation(); removeSummary(s.id, s.url); }}
-                  className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-all"
+                  className="p-1 rounded text-dim hover:text-accent hover:bg-hover transition-all"
                   title="Remove"
                 >
                   <X size={11} />
@@ -189,7 +189,7 @@ export default function SummarizerView() {
                     <p className="text-xs text-muted">Could not generate a summary for this page.</p>
                     <p className="text-[10px] text-dim">{s.error}</p>
                     <a href={s.url} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-text text-surface hover:bg-text/80 transition-colors"
+                      className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-surface hover:bg-accent-hover transition-colors"
                     ><ExternalLink size={11} /> Open in browser</a>
                   </div>
                 )}

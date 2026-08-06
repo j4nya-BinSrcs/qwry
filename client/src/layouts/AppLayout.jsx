@@ -5,7 +5,6 @@ import HomeView from "../context/HomeView";
 import SourcesPanel from "../panels/SourcesPanel";
 import ContextPanel from "../panels/ContextPanel";
 import DiscoveryPanel from "../panels/DiscoveryPanel";
-import CreateWorkspaceModal from "../components/CreateWorkspaceModal";
 import { useUIStore } from "../stores/uiStore";
 
 const PANEL_DEFAULTS = { sources: 30, context: 40, discovery: 30 };
@@ -16,19 +15,19 @@ function PanelContent({ id }) {
   switch (id) {
     case "sources":
       return (
-        <div className="h-full bg-surface/60 backdrop-blur-md transition-colors">
+        <div className="h-full bg-surface">
           <SourcesPanel />
         </div>
       );
     case "context":
       return (
-        <div className="h-full bg-surface/60 backdrop-blur-md transition-colors">
+        <div className="h-full bg-surface">
           <ContextPanel />
         </div>
       );
     case "discovery":
       return (
-        <div className="h-full bg-surface/60 backdrop-blur-md border-l border-border transition-colors">
+        <div className="h-full bg-surface border-l border-border shadow-[inset_1px_0_0_rgba(0,0,0,0.02)]">
           <DiscoveryPanel />
         </div>
       );
@@ -43,15 +42,9 @@ export default function AppLayout() {
   const expandedPanel = useUIStore((s) => s.expandedPanel);
 
   return (
-    <div className="relative h-full flex flex-col overflow-hidden bg-surface text-text">
-      {/* Background Ambient Glow Orbs */}
-      <div className="pointer-events-none absolute -top-32 -left-32 size-96 rounded-full bg-violet-600/10 blur-[100px] animate-aurora-1" />
-      <div className="pointer-events-none absolute top-1/2 -right-32 size-96 rounded-full bg-cyan-500/10 blur-[100px] animate-aurora-2" />
-      <div className="pointer-events-none absolute -bottom-32 left-1/3 size-80 rounded-full bg-pink-500/10 blur-[90px] animate-aurora-1" />
-
+    <div className="h-full flex flex-col">
       {contextMode !== "home" && <TopBar />}
-      
-      <div className="relative z-10 flex-1 min-h-0">
+      <div className="flex-1 min-h-0">
         {contextMode === "home" ? (
           <HomeView />
         ) : expandedPanel ? (
@@ -77,11 +70,6 @@ export default function AppLayout() {
           </PanelGroup>
         )}
       </div>
-
-      {/* Global Create Workspace Modal */}
-      <CreateWorkspaceModal />
     </div>
   );
 }
-
-

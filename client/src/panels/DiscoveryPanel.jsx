@@ -18,15 +18,15 @@ const FILTERS = [
 function SectionHeader({ title, icon: Icon, count, children }) {
   const [open, setOpen] = useState(true);
   return (
-    <div className="py-1">
+    <div>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full px-3.5 py-2 text-xs font-bold text-muted uppercase tracking-wider hover:text-text transition-colors group"
+        className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-muted uppercase tracking-wider hover:text-text transition-colors"
       >
-        {open ? <ChevronDown size={13} className="text-violet-400" /> : <ChevronRight size={13} className="text-dim group-hover:text-text" />}
-        {Icon && <Icon size={14} className="text-violet-400" />}
-        <span className="font-heading">{title}</span>
-        {count != null && <span className="text-xs text-dim font-normal px-1.5 py-0.5 rounded-full bg-hover">{count}</span>}
+        {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+        {Icon && <Icon size={13} />}
+        <span>{title}</span>
+        {count != null && <span className="text-dim font-normal font-mono">{count}</span>}
       </button>
       {open && children}
     </div>
@@ -37,7 +37,7 @@ function HorizontalScroll({ children }) {
   const scrollRef = useRef(null);
   return (
     <div ref={scrollRef} className="overflow-x-auto scrollbar-none">
-      <div className="flex gap-3 px-3.5 pb-3 min-w-min">
+      <div className="flex gap-3 px-3 pb-3 min-w-min">
         {children}
       </div>
     </div>
@@ -53,7 +53,7 @@ function MultiRowScroll({ children, rows = 3 }) {
   );
   return (
     <div ref={scrollRef} className="overflow-x-auto scrollbar-none">
-      <div className="grid grid-flow-col gap-3 px-3.5 pb-3" style={{ gridTemplateRows: `repeat(${rows}, auto)` }}>
+      <div className="grid grid-flow-col gap-3 px-3 pb-3" style={{ gridTemplateRows: `repeat(${rows}, auto)` }}>
         {grid.flat().map((child, i) => (
           <div key={i} className="contents">{child}</div>
         ))}
@@ -85,44 +85,44 @@ function DraggableImageCard({ result }) {
 
   return (
     <div ref={setNodeRef} style={style}
-      className={`group flex-shrink-0 w-36 cursor-default ${isDragging ? "opacity-50" : ""}`}
+      className={`group flex-shrink-0 w-32 cursor-default ${isDragging ? "opacity-50" : ""}`}
     >
-      <div className="relative rounded-xl overflow-hidden glass-card hover:border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/10 transition-all duration-300">
-        <div className="aspect-square bg-surface/80">
+      <div className="relative rounded overflow-hidden bg-hover border border-border hover:border-accent transition-all">
+        <div className="aspect-square">
           {imgSrc ? (
             <img
               src={`/api/image-proxy?url=${encodeURIComponent(imgSrc)}`}
-              alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              alt="" className="w-full h-full object-cover"
               onError={(e) => { e.target.style.display = "none"; }}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-dim text-xs">No image</div>
+            <div className="w-full h-full flex items-center justify-center text-dim text-[10px]">No image</div>
           )}
         </div>
         {/* Hover actions overlay */}
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-all duration-200 flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100">
-          <button {...listeners} className="p-1.5 rounded-lg bg-surface/80 text-text hover:bg-violet-600 hover:text-white transition-colors cursor-grab active:cursor-grabbing">
+        <div className="absolute inset-0 bg-text/0 group-hover:bg-text/30 transition-all flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
+          <button {...listeners} className="p-1.5 rounded bg-accent/70 text-surface hover:bg-accent transition-colors cursor-grab active:cursor-grabbing">
             <GripVertical size={13} />
           </button>
           <button onClick={(e) => { e.stopPropagation(); openReader(result.url, result.title, imgSrc); }}
-            className="p-1.5 rounded-lg bg-surface/80 text-text hover:bg-violet-600 hover:text-white transition-colors" title="Reader"
+            className="p-1.5 rounded bg-accent/70 text-surface hover:bg-accent transition-colors" title="Reader"
           >
             <BookOpen size={13} />
           </button>
           <button onClick={handleSave} disabled={!activeWsId}
-            className="p-1.5 rounded-lg bg-surface/80 text-text hover:bg-emerald-600 hover:text-white transition-colors disabled:opacity-30" title="Save"
+            className="p-1.5 rounded bg-accent/70 text-surface hover:bg-accent transition-colors disabled:opacity-30" title="Save"
           >
             {saved ? <Check size={13} /> : <Plus size={13} />}
           </button>
           <button onClick={() => window.open(result.url, "_blank")}
-            className="p-1.5 rounded-lg bg-surface/80 text-text hover:bg-cyan-600 hover:text-white transition-colors" title="Open"
+            className="p-1.5 rounded bg-accent/70 text-surface hover:bg-accent transition-colors" title="Open"
           >
             <ExternalLink size={13} />
           </button>
         </div>
       </div>
-      <div className="mt-1.5 px-0.5">
-        <div className="text-[11px] text-text font-medium leading-tight line-clamp-2 group-hover:text-violet-300 transition-colors">{result.title}</div>
+      <div className="mt-1 px-0.5">
+        <div className="text-[11px] text-text font-medium leading-tight line-clamp-2">{result.title}</div>
         <div className="text-[10px] text-dim truncate mt-0.5">{result.engine || result.source || result.category}</div>
       </div>
     </div>
@@ -152,46 +152,46 @@ function DraggableVideoCard({ result }) {
 
   return (
     <div ref={setNodeRef} style={style}
-      className={`group flex-shrink-0 w-60 cursor-default ${isDragging ? "opacity-50" : ""}`}
+      className={`group flex-shrink-0 w-56 cursor-default ${isDragging ? "opacity-50" : ""}`}
     >
-      <div className="relative rounded-xl overflow-hidden glass-card hover:border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/10 transition-all duration-300">
-        <div className="aspect-video bg-surface/80">
+      <div className="relative rounded overflow-hidden bg-hover border border-border hover:border-accent transition-all">
+        <div className="aspect-video">
           {imgSrc ? (
             <img
               src={`/api/image-proxy?url=${encodeURIComponent(imgSrc)}`}
-              alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              alt="" className="w-full h-full object-cover"
               onError={(e) => { e.target.style.display = "none"; }}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-dim text-xs">No thumbnail</div>
+            <div className="w-full h-full flex items-center justify-center text-dim text-[10px]">No thumbnail</div>
           )}
         </div>
-        <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-xs text-[10px] text-white font-medium">
+        <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-text/70 text-[10px] text-surface font-medium">
           {result.published_date || result.engine || "Video"}
         </div>
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-all duration-200 flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100">
-          <button {...listeners} className="p-1.5 rounded-lg bg-surface/80 text-text hover:bg-violet-600 hover:text-white transition-colors cursor-grab active:cursor-grabbing">
+        <div className="absolute inset-0 bg-text/0 group-hover:bg-text/30 transition-all flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
+          <button {...listeners} className="p-1.5 rounded bg-accent/70 text-surface hover:bg-accent transition-colors cursor-grab active:cursor-grabbing">
             <GripVertical size={13} />
           </button>
           <button onClick={(e) => { e.stopPropagation(); openReader(result.url, result.title, imgSrc); }}
-            className="p-1.5 rounded-lg bg-surface/80 text-text hover:bg-violet-600 hover:text-white transition-colors" title="Reader"
+            className="p-1.5 rounded bg-accent/70 text-surface hover:bg-accent transition-colors" title="Reader"
           >
             <BookOpen size={13} />
           </button>
           <button onClick={handleSave} disabled={!activeWsId}
-            className="p-1.5 rounded-lg bg-surface/80 text-text hover:bg-emerald-600 hover:text-white transition-colors disabled:opacity-30" title="Save"
+            className="p-1.5 rounded bg-accent/70 text-surface hover:bg-accent transition-colors disabled:opacity-30" title="Save"
           >
             {saved ? <Check size={13} /> : <Plus size={13} />}
           </button>
           <button onClick={() => window.open(result.url, "_blank")}
-            className="p-1.5 rounded-lg bg-surface/80 text-text hover:bg-cyan-600 hover:text-white transition-colors" title="Open"
+            className="p-1.5 rounded bg-accent/70 text-surface hover:bg-accent transition-colors" title="Open"
           >
             <ExternalLink size={13} />
           </button>
         </div>
       </div>
-      <div className="mt-1.5 px-0.5">
-        <div className="text-[11px] text-text font-medium leading-tight line-clamp-2 group-hover:text-violet-300 transition-colors">{result.title}</div>
+      <div className="mt-1 px-0.5">
+        <div className="text-[11px] text-text font-medium leading-tight line-clamp-2">{result.title}</div>
         <div className="text-[10px] text-dim truncate mt-0.5">{result.engine || result.source || result.category}</div>
       </div>
     </div>
@@ -221,18 +221,18 @@ function DraggableNewsCard({ result }) {
 
   return (
     <div ref={setNodeRef} style={style}
-      className={`group flex-shrink-0 w-72 rounded-xl glass-card hover:border-violet-500/50 transition-all duration-200 cursor-default ${isDragging ? "opacity-50" : ""}`}
+      className={`group flex-shrink-0 w-72 rounded border border-border hover:border-accent transition-all cursor-default ${isDragging ? "opacity-50" : "hover:bg-hover"}`}
     >
-      <div className="p-3">
+      <div className="p-2.5">
         <div className="flex items-start gap-2.5">
-          <button {...listeners} className="mt-0.5 shrink-0 text-dim cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity hover:text-violet-400">
-            <GripVertical size={13} />
+          <button {...listeners} className="mt-0.5 shrink-0 text-dim cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity">
+            <GripVertical size={12} />
           </button>
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-semibold text-text leading-snug line-clamp-2 group-hover:text-violet-300 transition-colors">
+            <div className="text-xs font-medium text-text leading-snug line-clamp-2">
               {result.title}
             </div>
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-2 mt-1.5">
               {result.img_src && (
                 <img
                   src={`/api/image-proxy?url=${encodeURIComponent(result.img_src)}`}
@@ -240,7 +240,7 @@ function DraggableNewsCard({ result }) {
                   onError={(e) => { e.target.style.display = "none"; }}
                 />
               )}
-              <span className="text-[10px] text-muted truncate">
+              <span className="text-[10px] text-dim truncate">
                 {result.engine || result.source || result.category}
               </span>
               {result.published_date && (
@@ -252,26 +252,26 @@ function DraggableNewsCard({ result }) {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-1 mt-2.5 opacity-0 group-hover:opacity-100 transition-opacity justify-end border-t border-border/40 pt-2">
+        <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
           <button onClick={(e) => { e.stopPropagation(); openReader(result.url, result.title, result.img_src); }}
-            className="p-1 rounded-md text-muted hover:text-violet-300 hover:bg-hover transition-all" title="Reader"
+            className="p-1 rounded text-dim hover:text-accent hover:bg-hover transition-all" title="Reader"
           >
-            <BookOpen size={12} />
+            <BookOpen size={11} />
           </button>
           <button onClick={(e) => { e.stopPropagation(); openSummarizer(result.url, result.title); }}
-            className="p-1 rounded-md text-muted hover:text-cyan-300 hover:bg-hover transition-all" title="Summarize"
+            className="p-1 rounded text-dim hover:text-accent hover:bg-hover transition-all" title="Summarize"
           >
-            <Sparkles size={12} />
+            <Sparkles size={11} />
           </button>
           <button onClick={handleSave} disabled={!activeWsId}
-            className="p-1 rounded-md text-muted hover:text-emerald-300 hover:bg-hover transition-all disabled:opacity-30" title="Save"
+            className="p-1 rounded text-dim hover:text-accent hover:bg-hover transition-all disabled:opacity-30" title="Save"
           >
-            {saved ? <Check size={12} /> : <Plus size={12} />}
+            {saved ? <Check size={11} /> : <Plus size={11} />}
           </button>
           <button onClick={() => window.open(result.url, "_blank")}
-            className="p-1 rounded-md text-muted hover:text-text hover:bg-hover transition-all" title="Open"
+            className="p-1 rounded text-dim hover:text-accent hover:bg-hover transition-all" title="Open"
           >
-            <ExternalLink size={12} />
+            <ExternalLink size={11} />
           </button>
         </div>
       </div>
@@ -301,32 +301,32 @@ function DraggableShoppingCard({ result }) {
 
   return (
     <div ref={setNodeRef} style={style}
-      className={`group flex-shrink-0 w-40 cursor-default ${isDragging ? "opacity-50" : ""}`}
+      className={`group flex-shrink-0 w-36 cursor-default ${isDragging ? "opacity-50" : ""}`}
     >
-      <div className="rounded-xl glass-card overflow-hidden hover:border-violet-500/50 transition-all duration-200">
-        <div className="aspect-square bg-surface/80 relative overflow-hidden">
+      <div className="rounded border border-border overflow-hidden hover:border-accent transition-all">
+        <div className="aspect-square bg-hover relative">
           {imgSrc ? (
             <img src={`/api/image-proxy?url=${encodeURIComponent(imgSrc)}`}
-              alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              alt="" className="w-full h-full object-cover"
               onError={(e) => { e.target.style.display = "none"; }}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-dim text-xs">No image</div>
+            <div className="w-full h-full flex items-center justify-center text-dim text-[10px]">No image</div>
           )}
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-all duration-200 flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100">
-            <button {...listeners} className="p-1.5 rounded-lg bg-surface/80 text-text hover:bg-violet-600 hover:text-white transition-colors cursor-grab active:cursor-grabbing">
-              <GripVertical size={13} />
+          <div className="absolute inset-0 bg-text/0 group-hover:bg-text/30 transition-all flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
+            <button {...listeners} className="p-1 rounded bg-accent/70 text-surface hover:bg-accent transition-colors cursor-grab active:cursor-grabbing">
+              <GripVertical size={12} />
             </button>
             <button onClick={handleSave} disabled={!activeWsId}
-              className="p-1.5 rounded-lg bg-surface/80 text-text hover:bg-emerald-600 hover:text-white transition-colors disabled:opacity-30" title="Save"
+              className="p-1 rounded bg-accent/70 text-surface hover:bg-accent transition-colors disabled:opacity-30" title="Save"
             >
-              {saved ? <Check size={13} /> : <Plus size={13} />}
+              {saved ? <Check size={12} /> : <Plus size={12} />}
             </button>
           </div>
         </div>
-        <div className="p-2.5">
-          <div className="text-xs text-text line-clamp-2 leading-snug font-medium group-hover:text-violet-300 transition-colors">{result.title}</div>
-          <div className="text-[10px] text-cyan-400 font-semibold mt-1">{result.engine || result.source || "—"}</div>
+        <div className="p-1.5">
+          <div className="text-[10px] text-text line-clamp-2 leading-snug font-medium">{result.title}</div>
+          <div className="text-[10px] text-text font-semibold mt-0.5">{result.engine || result.source || "—"}</div>
         </div>
       </div>
     </div>
@@ -357,36 +357,32 @@ export default function DiscoveryPanel() {
     newsResults.length > 0 || shoppingResults.length > 0
   );
 
-  const showAll = activeFilter === "all";
+  const showAll = activeFilter === "all" || activeFilter === "all";
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header & Filter Pills */}
-      <div className="shrink-0 px-4 py-3 border-b border-border/80 bg-surface/40 backdrop-blur-md">
-        <div className="flex items-center justify-between mb-2.5">
-          <div className="flex items-center gap-2">
-            <div className="size-2 rounded-full bg-cyan-400 animate-pulse" />
-            <h2 className="text-xs font-bold text-text uppercase tracking-wider font-heading">
-              Discovery
-            </h2>
-          </div>
+      <div className="shrink-0 px-3 py-2 border-b border-border">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-xs font-semibold text-muted uppercase tracking-wider">
+            Discovery
+          </h2>
           <button
             onClick={() => toggleExpand("discovery")}
-            className="p-1.5 rounded-lg text-muted hover:text-text hover:bg-hover border border-transparent hover:border-border/60 transition-all"
+            className="p-1 rounded text-dim hover:text-accent hover:bg-hover transition-colors"
             title={isExpanded ? "Collapse" : "Expand"}
           >
             {isExpanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
           </button>
         </div>
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+        <div className="flex gap-1 overflow-x-auto scrollbar-none">
           {FILTERS.map((f) => (
             <button
               key={f.id}
               onClick={() => setActiveFilter(f.id)}
-              className={`shrink-0 px-3 py-1 text-xs font-semibold rounded-xl transition-all duration-200 ${
+              className={`shrink-0 px-2.5 py-1 text-xs rounded-md transition-colors ${
                 activeFilter === f.id
-                  ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-500/20 scale-105"
-                  : "text-muted hover:text-text hover:bg-hover/80 border border-transparent"
+                  ? "bg-accent-soft text-accent font-medium"
+                  : "text-muted hover:text-text hover:bg-hover"
               }`}
             >
               {f.label}
@@ -395,15 +391,14 @@ export default function DiscoveryPanel() {
         </div>
       </div>
 
-      {/* Discovery Content */}
-      <div className="flex-1 overflow-y-auto py-2 space-y-3">
+      <div className="flex-1 overflow-y-auto py-1">
         {!query ? (
-          <div className="px-4 py-16 text-center text-sm text-muted">
-            Search to discover images, videos, news, and overviews here
+          <div className="px-4 py-12 text-center text-sm text-muted">
+            Search to see related content here
           </div>
         ) : !hasContent ? (
-          <div className="px-4 py-12 text-center text-sm text-muted">
-            No additional discovery media found
+          <div className="px-4 py-8 text-center text-sm text-muted">
+            No additional content found
           </div>
         ) : (
           <>
@@ -416,7 +411,7 @@ export default function DiscoveryPanel() {
             )}
 
             {(showAll || activeFilter === "images") && imageResults.length > 0 && (
-              <div className="border-t border-border/60 pt-1">
+              <div className="border-t border-border">
                 <SectionHeader title="Images" icon={Image} count={imageResults.length}>
                   <MultiRowScroll rows={3}>
                     {imageResults.map((r, i) => (
@@ -428,7 +423,7 @@ export default function DiscoveryPanel() {
             )}
 
             {(showAll || activeFilter === "videos") && videoResults.length > 0 && (
-              <div className="border-t border-border/60 pt-1">
+              <div className="border-t border-border">
                 <SectionHeader title="Videos" icon={Youtube} count={videoResults.length}>
                   <MultiRowScroll rows={3}>
                     {videoResults.map((r, i) => (
@@ -440,7 +435,7 @@ export default function DiscoveryPanel() {
             )}
 
             {(showAll || activeFilter === "news") && newsResults.length > 0 && (
-              <div className="border-t border-border/60 pt-1">
+              <div className="border-t border-border">
                 <SectionHeader title="News" icon={Newspaper} count={newsResults.length}>
                   <HorizontalScroll>
                     {newsResults.map((r, i) => (
@@ -452,7 +447,7 @@ export default function DiscoveryPanel() {
             )}
 
             {(showAll || activeFilter === "shopping") && shoppingResults.length > 0 && (
-              <div className="border-t border-border/60 pt-1">
+              <div className="border-t border-border">
                 <SectionHeader title="Shopping" icon={ShoppingBag} count={shoppingResults.length}>
                   <HorizontalScroll>
                     {shoppingResults.map((r, i) => (
@@ -468,4 +463,3 @@ export default function DiscoveryPanel() {
     </div>
   );
 }
-

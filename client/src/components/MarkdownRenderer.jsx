@@ -35,7 +35,7 @@ export default function MarkdownRenderer({ children }) {
         a: ({ href, children }) => (
           <a
             href={href}
-            className="text-text hover:underline"
+            className="text-accent hover:text-accent-hover hover:underline"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -67,7 +67,7 @@ export default function MarkdownRenderer({ children }) {
           <li className="leading-relaxed">{children}</li>
         ),
         blockquote: ({ children }) => (
-          <blockquote className="border-l-2 border-border pl-3 my-2 italic text-muted text-xs">
+          <blockquote className="border-l-2 border-accent/50 bg-accent-soft/40 pl-3 py-1 my-2 italic text-muted text-xs rounded-r">
             {children}
           </blockquote>
         ),

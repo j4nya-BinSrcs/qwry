@@ -45,15 +45,11 @@ export const useUIStore = create((set, get) => ({
   summarizeUrl: null,
   summarizeTitle: null,
   summarizeVersion: 0,
-  createWsModalOpen: false,
 
   setPanelOrder: (order) => {
     savePanelOrder(order);
     set({ panelOrder: order });
   },
-
-  openCreateWsModal: () => set({ createWsModalOpen: true }),
-  closeCreateWsModal: () => set({ createWsModalOpen: false }),
 
   toggleExpand: (panelId) => {
     const { expandedPanel } = get();
@@ -87,4 +83,3 @@ export const useUIStore = create((set, get) => ({
       return { theme: next };
     }),
 }));
-

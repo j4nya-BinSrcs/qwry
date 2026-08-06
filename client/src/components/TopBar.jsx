@@ -1,28 +1,23 @@
-import { Home, Search, Sparkles } from "lucide-react";
+import { Home, Moon, Search, Settings, Sun } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchStore } from "../stores/searchStore";
 import { useUIStore } from "../stores/uiStore";
 import { fetchSuggestions } from "../api/search";
-import ProfileMenu from "./ProfileMenu";
+import SettingsPopup from "./SettingsPopup";
 
 export default function TopBar() {
-  const query = useSearchStore((s) => s.query);
-  const search = useSearchStore((s) => s.search);
-
-  const [input, setInput] = useState(query || "");
+  const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const submittedRef = useRef(false);
   const inputRef = useRef(null);
 
   const contextMode = useUIStore((s) => s.contextMode);
   const setContextMode = useUIStore((s) => s.setContextMode);
-
-  useEffect(() => {
-    if (query !== undefined) {
-      setInput(query);
-    }
-  }, [query]);
+  const theme = useUIStore((s) => s.theme);
+  const toggleTheme = useUIStore((s) => s.toggleTheme);
+  const search = useSearchStore((s) => s.search);
 
   const dismissSuggestions = useCallback(() => {
     setShowSuggestions(false);
@@ -92,28 +87,23 @@ export default function TopBar() {
   }, []);
 
   return (
-    <div className="relative z-50 flex items-center gap-4 px-5 py-2.5 bg-panel/80 backdrop-blur-xl border-b border-border shadow-sm transition-all">
+    <div className="relative z-50 flex items-center gap-4 px-4 py-3 bg-surface border-b border-border elevation-sm">
       {/* Logo */}
-      <div 
-        onClick={() => setContextMode("home")}
-        className="flex items-center gap-2.5 shrink-0 cursor-pointer group"
-      >
-        <div className="size-7 rounded-lg bg-gradient-to-br from-violet-500 via-cyan-500 to-pink-500 p-[1px] shadow-md group-hover:shadow-violet-500/30 transition-all duration-300">
-          <div className="w-full h-full bg-surface rounded-[7px] flex items-center justify-center">
-            <span className="brand-gradient-text text-xs font-black tracking-widest">Q</span>
-          </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <div className="size-6 rounded-md bg-accent flex items-center justify-center elevation-sm">
+          <span className="text-surface text-[11px] font-serif font-semibold">Q</span>
         </div>
-        <span className="text-sm font-bold tracking-wider brand-gradient-text font-heading">
+        <span className="text-sm font-semibold tracking-tight text-text">
           QWRY
         </span>
       </div>
 
-      {/* Search bar with Aceternity style glow focus (wider max-w-3xl layout) */}
-      <div className="relative flex-1 max-w-3xl mx-auto">
-        <div className="relative input-glow-focus rounded-full">
+      {/* Search bar - positioned to overlap Sources/Center boundary */}
+      <div className="relative flex-1 max-w-xl">
+        <div className="relative">
           <Search
-            size={15}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-violet-400 transition-colors"
+            size={16}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-dim"
           />
           <input
             ref={inputRef}
@@ -123,44 +113,56 @@ export default function TopBar() {
             onKeyDown={handleKeyDown}
             onFocus={handleFocus}
             onBlur={handleBlur}
-            placeholder="Search topics, pages, articles, media..."
-            className="w-full h-10 pl-11 pr-4 rounded-full bg-elevated/80 backdrop-blur-sm border border-border/80 text-text text-sm placeholder:text-dim outline-none transition-all duration-300 focus:bg-elevated focus:border-violet-500/60"
+            placeholder="Search anything..."
+            className="w-full h-11 pl-11 pr-4 rounded-full bg-elevated border border-border text-text text-sm placeholder:text-dim outline-none focus:border-accent transition-colors"
           />
         </div>
-        
-        {/* Dropdown Suggestions */}
         {showSuggestions && (
-          <div className="absolute top-full left-0 right-0 mt-2 rounded-xl bg-elevated/95 backdrop-blur-xl border border-border/80 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="absolute top-full left-0 right-0 mt-1.5 rounded-lg bg-elevated border border-border overflow-hidden elevation-md">
             {suggestions.map((s, i) => (
               <button
                 key={i}
                 onMouseDown={() => handleSuggestionClick(s)}
-                className="w-full px-4 py-2.5 text-left text-sm text-text hover:bg-hover hover:text-violet-400 transition-all flex items-center gap-2.5 group"
+                className="w-full px-4 py-2 text-left text-sm text-text hover:bg-hover transition-colors"
               >
-                <Sparkles size={13} className="text-dim group-hover:text-violet-400 transition-colors" />
-                <span>{s}</span>
+                {s}
               </button>
             ))}
           </div>
         )}
       </div>
 
-      {/* Action Controls */}
-      <div className="flex items-center gap-2.5">
-        {/* Home Button */}
-        <button
-          onClick={() => setContextMode("home")}
-          className="flex items-center justify-center size-8 rounded-lg text-muted hover:text-text hover:bg-hover border border-transparent hover:border-border transition-all duration-200"
-          title="Home"
-        >
-          <Home size={15} />
-        </button>
+      {/* Spacer */}
+      <div className="flex-1" />
 
-        {/* Profile Avatar & Settings Popup */}
-        <ProfileMenu />
+      {/* Home */}
+      <button
+        onClick={() => setContextMode("home")}
+        className="flex items-center justify-center size-7 rounded-md text-dim hover:text-accent hover:bg-hover transition-colors"
+        title="Home"
+      >
+        <Home size={14} />
+      </button>
+
+      {/* Theme toggle */}
+      <button
+        onClick={toggleTheme}
+        className="flex items-center justify-center size-7 rounded-md text-dim hover:text-accent hover:bg-hover transition-colors"
+        title={theme === "dark" ? "Light mode" : "Dark mode"}
+      >
+        {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+      </button>
+
+      {/* Profile */}
+      <div className="size-7 rounded-full border border-border bg-hover flex items-center justify-center text-xs font-semibold text-text shrink-0">
+        U
       </div>
+
+      {/* Settings */}
+      <SettingsPopup
+        open={settingsOpen}
+        onToggle={() => setSettingsOpen(!settingsOpen)}
+      />
     </div>
   );
 }
-
-

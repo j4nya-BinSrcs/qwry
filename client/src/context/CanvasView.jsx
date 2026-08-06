@@ -111,7 +111,7 @@ function NodeCard({ node, onClick, onDragStart, onDelete, onConnect, isSelected,
   return (
     <div
       className={`absolute rounded-lg border-2 bg-panel shadow-md cursor-grab active:cursor-grabbing transition-shadow hover:shadow-lg overflow-hidden ${
-        isSelected ? "ring-2 ring-text" : connectionMode === node.id ? "ring-2 ring-text/60" : ""
+        isSelected ? "ring-2 ring-accent" : connectionMode === node.id ? "ring-2 ring-accent/60" : ""
       }`}
       style={{
         left: node.x, top: node.y, width: node.width || 200,
@@ -129,7 +129,7 @@ function NodeCard({ node, onClick, onDragStart, onDelete, onConnect, isSelected,
           <button
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); onConnect(node.id); }}
-            className="p-0.5 rounded text-dim hover:text-text hover:bg-hover transition-colors"
+            className="p-0.5 rounded text-dim hover:text-accent hover:bg-hover transition-colors"
             title="Connect"
           >
             <Plus size={10} />
@@ -138,7 +138,7 @@ function NodeCard({ node, onClick, onDragStart, onDelete, onConnect, isSelected,
         <button
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => { e.stopPropagation(); onDelete(node.id); }}
-          className="p-0.5 rounded text-dim hover:text-text hover:bg-hover transition-colors"
+          className="p-0.5 rounded text-dim hover:text-accent hover:bg-hover transition-colors"
           title="Remove"
         >
           <Trash2 size={10} />
@@ -605,15 +605,15 @@ export default function CanvasView() {
         {/* Toolbar */}
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-1.5 rounded-lg bg-surface/90 backdrop-blur-sm border border-border shadow-md z-10">
           <button onClick={() => setViewport((v) => ({ ...v, zoom: Math.max(0.1, v.zoom - 0.2) }))}
-            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors" title="Zoom out"
+            className="p-1 rounded text-dim hover:text-accent hover:bg-hover transition-colors" title="Zoom out"
           ><ZoomOut size={14} /></button>
           <span className="text-[10px] text-dim w-10 text-center font-mono">{Math.round(viewport.zoom * 100)}%</span>
           <button onClick={() => setViewport((v) => ({ ...v, zoom: Math.min(5, v.zoom + 0.2) }))}
-            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors" title="Zoom in"
+            className="p-1 rounded text-dim hover:text-accent hover:bg-hover transition-colors" title="Zoom in"
           ><ZoomIn size={14} /></button>
           <div className="w-px h-4 bg-border mx-1" />
           <button onClick={fitToScreen}
-            className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors" title="Fit to screen"
+            className="p-1 rounded text-dim hover:text-accent hover:bg-hover transition-colors" title="Fit to screen"
           ><Minus size={14} /></button>
           <div className="flex items-center gap-1 ml-2">
             <input type="text" value={noteInput} onChange={(e) => setNoteInput(e.target.value)}
@@ -622,7 +622,7 @@ export default function CanvasView() {
               onKeyDown={(e) => { if (e.key === "Enter") handleCreateNote(); }}
             />
             <button onClick={handleCreateNote}
-              className="p-1 rounded text-dim hover:text-text hover:bg-hover transition-colors" title="Add note"
+              className="p-1 rounded text-dim hover:text-accent hover:bg-hover transition-colors" title="Add note"
             ><Plus size={12} /></button>
           </div>
         </div>

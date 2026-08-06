@@ -1,12 +1,11 @@
-import { ArrowRight, BookOpen, Layers, Plus, Search, Sparkles } from "lucide-react";
+import { BookOpen, Layers, Moon, Plus, Search, Settings, Sparkles, Sun } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useContentStore } from "../stores/contentStore";
 import { useSearchStore } from "../stores/searchStore";
 import { useSessionStore } from "../stores/sessionStore";
 import { useUIStore } from "../stores/uiStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
-import ProfileMenu from "../components/ProfileMenu";
-import GradientWaves from "../components/GradientWaves";
+import SettingsPopup from "../components/SettingsPopup";
 
 function getHostname(url) {
   try { return new URL(url).hostname; } catch { return ""; }
@@ -26,134 +25,182 @@ function timeAgo(date) {
 
 export default function HomeView() {
   const sessionId = useSessionStore((s) => s.sessionId);
+
+  const workspaces = useWorkspaceStore((s) => s.workspaces);
   const loadWorkspaces = useWorkspaceStore((s) => s.loadWorkspaces);
+  const createWorkspace = useWorkspaceStore((s) => s.createWorkspace);
+  const setActive = useWorkspaceStore((s) => s.setActiveWorkspace);
+
+  const reads = useContentStore((s) => s.reads);
+  const summaries = useContentStore((s) => s.summaries);
+
   const setSearchQuery = useSearchStore((s) => s.setQuery);
   const search = useSearchStore((s) => s.search);
   const setContextMode = useUIStore((s) => s.setContextMode);
+  const openReader = useUIStore((s) => s.openReader);
+  const openSummarizer = useUIStore((s) => s.openSummarizer);
+
   const [quickQuery, setQuickQuery] = useState("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const theme = useUIStore((s) => s.theme);
+  const toggleTheme = useUIStore((s) => s.toggleTheme);
 
   useEffect(() => {
     loadWorkspaces(sessionId);
   }, [sessionId, loadWorkspaces]);
 
-  const handleQuickSearch = useCallback((q) => {
-    const queryToSearch = (typeof q === "string" ? q : quickQuery).trim();
-    if (!queryToSearch) return;
-    setSearchQuery(queryToSearch);
-    search(queryToSearch);
+  const handleQuickSearch = useCallback((e) => {
+    e.preventDefault();
+    const q = quickQuery.trim();
+    if (!q) return;
+    setSearchQuery(q);
+    search(q);
     setContextMode("search-assist");
   }, [quickQuery, setSearchQuery, search, setContextMode]);
 
-  const TOPIC_SUGGESTIONS = [
-    "Generative AI",
-    "Quantum Computing",
-    "Machine Learning Papers",
-    "Tech Trends 2026",
-    "Market Research",
-  ];
+  const handleCreateWs = useCallback(async () => {
+    const name = prompt("Workspace name:");
+    if (name) await createWorkspace(sessionId, name);
+  }, [sessionId, createWorkspace]);
+
+  const handleWsClick = useCallback((wsId) => {
+    setActive(wsId);
+    setContextMode("workspace");
+  }, [setActive, setContextMode]);
+
+  const handleReadClick = useCallback((read) => {
+    openReader(read.url, read.title, read.mediaUrl);
+  }, [openReader]);
+
+  const handleSummaryClick = useCallback((s) => {
+    openSummarizer(s.url, s.title);
+  }, [openSummarizer]);
+
+  const recentReads = [...reads].reverse().slice(0, 5);
+  const recentSummaries = [...summaries].reverse().slice(0, 5);
 
   return (
-    <div className="h-full relative flex flex-col bg-transparent text-text overflow-hidden">
-      {/* Full Viewport Background GradientWaves (Fixed & Non-interactive) */}
-      <div className="fixed inset-0 z-0 pointer-events-none opacity-85 overflow-hidden">
-        <GradientWaves
-          horizonColor="#070817"
-          waveColor="#6d28d9"
-          crestColor="#06b6d4"
-          speed={0.4}
-          amplitude={3.0}
-          waveScale={0.8}
-          waveRatio={0.85}
-          swell={30}
-          turbulence={15}
-          tilt={1.15}
-          zoom={1.0}
-          height={5.0}
-          fogDepth={25}
-          detail="high"
-          brightness={1.25}
-          opacity={0.85}
-          mouseInteraction={false}
-          parallaxStrength={0}
-          grain={true}
-          grainIntensity={0.04}
-        />
+    <div className="h-full overflow-y-auto relative">
+      {/* Top controls */}
+      <div className="sticky top-0 z-10 flex items-center justify-end gap-2 px-6 py-3 bg-surface/80 backdrop-blur-sm">
+        <button onClick={toggleTheme}
+          className="flex items-center justify-center size-7 rounded-md text-dim hover:text-accent hover:bg-hover transition-colors"
+          title={theme === "dark" ? "Light mode" : "Dark mode"}
+        >{theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}</button>
+        <div className="size-7 rounded-full border border-border bg-hover flex items-center justify-center text-xs font-semibold text-text shrink-0">
+          U
+        </div>
+        <SettingsPopup open={settingsOpen} onToggle={() => setSettingsOpen(!settingsOpen)} />
       </div>
 
-      {/* Top Profile Control Bar */}
-      <div className="sticky top-0 z-20 flex items-center justify-end px-6 py-3 bg-panel/40 backdrop-blur-xl border-b border-border/40">
-        <ProfileMenu />
-      </div>
-
-      {/* Vertically and Horizontally Centered Content */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 py-12 max-w-3xl mx-auto w-full text-center -mt-8">
-        {/* Badge */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-violet-500/15 border border-violet-500/25 text-violet-300 text-xs font-semibold mb-6 backdrop-blur-md shadow-lg shadow-violet-500/10">
-          <Sparkles size={13} className="text-violet-400 animate-spin" style={{ animationDuration: '4s' }} />
-          <span>AI-Powered Knowledge & Research Hub</span>
+      <div className="mx-auto max-w-3xl px-8 pt-12 pb-16">
+        {/* Hero section */}
+        <div className="text-center mb-12">
+          <div className="size-14 rounded-2xl bg-accent mb-5 flex items-center justify-center mx-auto elevation-md">
+            <span className="text-surface text-2xl font-serif font-semibold">Q</span>
+          </div>
+          <h1 className="text-3xl font-serif font-medium text-text tracking-tight">Welcome to QWRY</h1>
+          <p className="text-sm text-muted mt-2.5 max-w-md mx-auto">Your research workspace. Search, save, summarize, and organize.</p>
         </div>
 
-        {/* Hero Title */}
-        <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-text font-heading leading-tight mb-3">
-          Welcome to <span className="brand-gradient-text">QWRY</span>
-        </h1>
-        
-        {/* Subtitle */}
-        <p className="text-sm sm:text-base text-muted max-w-lg mx-auto leading-relaxed mb-8">
-          Your personal research workspace. Search, collect, summarize, and visualize with fluid AI tools.
-        </p>
-
-        {/* Quick search input (longer max-w-2xl width with prominent magnifying glass & thin separator line) */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleQuickSearch();
-          }}
-          className="w-full max-w-2xl mx-auto mb-6"
-        >
-          <div className="relative flex items-center group input-glow-focus rounded-2xl">
-            {/* Left Magnifying Glass Icon + Super Thin Vertical Line */}
-            <div className="absolute left-4 z-10 flex items-center gap-3 pointer-events-none">
-              <Search size={20} className="text-violet-400 group-focus-within:text-violet-300 group-focus-within:scale-110 transition-all shrink-0" />
-              <div className="h-5 w-[1px] bg-border/80 group-focus-within:bg-violet-500/50 transition-colors" />
-            </div>
-
-            <input
-              type="text"
-              value={quickQuery}
-              onChange={(e) => setQuickQuery(e.target.value)}
-              placeholder="Search topics, articles, papers, or media..."
-              className="w-full h-14 pl-14 pr-14 rounded-2xl bg-panel/75 backdrop-blur-2xl border border-border/80 text-base text-text outline-none placeholder:text-dim transition-all duration-300 focus:bg-elevated focus:border-violet-500/80 shadow-2xl shadow-violet-500/10"
+        {/* Quick search */}
+        <form onSubmit={handleQuickSearch} className="mb-14">
+          <div className="relative max-w-lg mx-auto">
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-dim" />
+            <input type="text" value={quickQuery} onChange={(e) => setQuickQuery(e.target.value)}
+              placeholder="Search the web or jump to a workspace..."
+              className="w-full h-11 pl-10 pr-4 rounded-xl bg-panel border border-border text-sm text-text outline-none placeholder:text-dim focus:border-accent transition-colors elevation-sm"
             />
-
-            <button
-              type="submit"
-              disabled={!quickQuery.trim()}
-              className="absolute right-2.5 z-10 p-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md hover:opacity-90 hover:scale-105 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-              title="Search"
-            >
-              <ArrowRight size={18} />
-            </button>
           </div>
         </form>
 
-        {/* Topic Suggestion Pills */}
-        <div className="flex flex-wrap items-center justify-center gap-2 max-w-2xl">
-          <span className="text-xs text-dim font-medium mr-1">Trending Topics:</span>
-          {TOPIC_SUGGESTIONS.map((topic) => (
-            <button
-              key={topic}
-              onClick={() => handleQuickSearch(topic)}
-              className="px-3 py-1.5 rounded-xl bg-surface/60 hover:bg-violet-500/15 border border-border/60 hover:border-violet-500/30 text-xs font-medium text-muted hover:text-violet-300 backdrop-blur-md transition-all duration-200"
-            >
-              {topic}
-            </button>
-          ))}
+        {/* Workspaces section */}
+        <div className="mb-12">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-text uppercase tracking-wider">Workspaces</h2>
+            <button onClick={handleCreateWs}
+              className="flex items-center gap-1.5 text-xs text-dim hover:text-accent transition-colors"
+            ><Plus size={13} /> New</button>
+          </div>
+          {workspaces.length === 0 ? (
+            <div className="text-center py-10 rounded-xl border border-dashed border-border">
+              <Layers size={24} className="text-dim mx-auto mb-3" />
+              <p className="text-sm text-muted">No workspaces yet</p>
+              <button onClick={handleCreateWs}
+                className="mt-3 text-sm px-4 py-2 rounded-lg bg-accent text-surface hover:bg-accent-hover transition-colors elevation-sm"
+              >Create your first workspace</button>
+            </div>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {workspaces.map((ws) => (
+                <button key={ws.id} onClick={() => handleWsClick(ws.id)}
+                  className="group shrink-0 w-44 h-28 bg-panel border border-border rounded-xl flex flex-col items-start justify-between p-4 elevation-sm hover:border-accent/50 hover:shadow-[var(--shadow-md)] transition-all text-left"
+                >
+                  <Layers size={16} className="text-dim group-hover:text-accent transition-colors" />
+                  <div>
+                    <p className="text-sm font-medium text-text truncate max-w-full">{ws.name}</p>
+                    <p className="text-xs text-muted mt-0.5 font-mono">{ws.item_count ?? 0} items</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-6">
+          {/* Recent Reads */}
+          <div>
+            <h2 className="text-sm font-semibold text-text uppercase tracking-wider mb-4">Recent Reads</h2>
+            {recentReads.length === 0 ? (
+              <div className="text-center py-8 rounded-xl border border-dashed border-border">
+                <BookOpen size={20} className="text-dim mx-auto mb-2" />
+                <p className="text-xs text-muted">Open a source in Reader to see it here</p>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {recentReads.map((r) => (
+                  <button key={r.id} onClick={() => handleReadClick(r)}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-panel border border-border hover:border-accent/40 transition-all text-left"
+                  >
+                    <BookOpen size={14} className="text-dim shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-text truncate">{r.title || "Untitled"}</p>
+                      <p className="text-xs text-muted truncate mt-0.5">{getHostname(r.url)}</p>
+                    </div>
+                    {r.created_at && <span className="text-[11px] text-dim shrink-0 font-mono">{timeAgo(r.created_at)}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Recent Summaries */}
+          <div>
+            <h2 className="text-sm font-semibold text-text uppercase tracking-wider mb-4">Recent Summaries</h2>
+            {recentSummaries.length === 0 ? (
+              <div className="text-center py-8 rounded-xl border border-dashed border-border">
+                <Sparkles size={20} className="text-dim mx-auto mb-2" />
+                <p className="text-xs text-muted">Summarize a source to see it here</p>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {recentSummaries.map((s) => (
+                  <button key={s.id} onClick={() => handleSummaryClick(s)}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-panel border border-border hover:border-accent/40 transition-all text-left"
+                  >
+                    <Sparkles size={14} className="text-accent shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-text truncate">{s.title || "Untitled"}</p>
+                      <p className="text-xs text-muted truncate mt-0.5">{s.provider || getHostname(s.url)}</p>
+                    </div>
+                    {s.created_at && <span className="text-[11px] text-dim shrink-0 font-mono">{timeAgo(s.created_at)}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
-
-
-
