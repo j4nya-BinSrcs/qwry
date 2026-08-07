@@ -94,7 +94,7 @@ export default function TopBar() {
   }, []);
 
 return (
-    <div className="relative z-50 flex items-center gap-4 px-4 py-3 bg-surface border-b border-border">
+    <div className="relative z-50 flex items-center gap-4 px-4 py-3 bg-surface">
       {/* Logo - clickable to go home */}
       <button
         onClick={() => setContextMode("home")}

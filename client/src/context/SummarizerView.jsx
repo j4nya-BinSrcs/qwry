@@ -23,7 +23,7 @@ function WorkspaceSummariesContainer({ summaries, workspace, expanded, toggleSum
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="rounded-lg bg-elevated shadow-raised overflow-hidden border border-border">
+    <div className="rounded-lg bg-accent/[0.06] shadow-raised overflow-hidden border border-accent/25">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full flex items-center gap-2 px-3 py-2 border-b border-border cursor-pointer hover:bg-hover transition-colors text-left"
@@ -106,11 +106,35 @@ export default function SummarizerView() {
   const storeSummaries = useContentStore((s) => s.summaries);
   const addSummary = useContentStore((s) => s.addSummary);
   const removeSummaryFromStore = useContentStore((s) => s.removeSummary);
+  const hydrateSummaries = useContentStore((s) => s.hydrateSummaries);
 
   const [expanded, setExpanded] = useState(new Set());
   const [loadingUrl, setLoadingUrl] = useState(null);
   const [loadingId, setLoadingId] = useState(null);
   const loadingRef = useRef(null);
+
+  // Restore summaries saved on the server so they survive reloads
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch("/api/history/summaries")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list) => {
+        if (cancelled) return;
+        const entries = (list || []).map((e) => ({
+          id: e.id,
+          url: e.url,
+          title: e.title,
+          workspaceId: e.workspace_id || null,
+          loading: false,
+          error: null,
+          summary: e.summary,
+          provider: e.model || "unknown",
+        }));
+        hydrateSummaries(entries);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [hydrateSummaries]);
 
   // Merge store summaries with in-progress loading entry
   const summaries = useMemo(() => {

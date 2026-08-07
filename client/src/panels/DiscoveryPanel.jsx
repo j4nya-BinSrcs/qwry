@@ -1,5 +1,5 @@
 import { Image, Youtube, Maximize2, Minimize2, Newspaper, ExternalLink, BookOpen, Sparkles, Plus, Check, GripVertical, Loader2, Play } from "lucide-react";
-import { Children, useCallback, useState } from "react";
+import { Children, useCallback, useEffect, useRef, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { useSearchStore } from "../stores/searchStore";
 import { useUIStore } from "../stores/uiStore";
@@ -36,6 +36,26 @@ function formatDuration(result) {
   const m = Math.floor(secs / 60);
   const s = Math.round(secs % 60);
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function useElementWidth() {
+  const ref = useRef(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) setWidth(entry.contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, width];
+}
+
+function resultThumb(result) {
+  return result.img_src || result.thumbnail || "";
 }
 
 function LoadMoreButton({ loading, hasMore, onClick }) {
@@ -106,25 +126,27 @@ function useSaveHandler(result, imgSrc) {
   return { sessionId, activeWsId, saved, handleSave, handleReader, handleSummarizer };
 }
 
-function DraggableImageCard({ result, featured = false }) {
+const IMAGE_ASPECTS = ["aspect-[3/4]", "aspect-[4/5]", "aspect-square"];
+
+function DraggableImageCard({ result, featured = false, imgAspect, onThumbError }) {
   const { listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `discover-img-${result.url}`,
     data: { type: "search-result", result },
   });
   const style = transform ? { transform: `translate(${transform.x}px, ${transform.y}px)`, zIndex: 50 } : undefined;
-  const imgSrc = result.img_src || result.thumbnail;
-  const { activeWsId, saved, handleSave, handleReader } = useSaveHandler(result, imgSrc);
+  const imgSrc = resultThumb(result);
+  const { activeWsId, saved, handleSave, handleReader, handleSummarizer } = useSaveHandler(result, imgSrc);
 
   return (
     <div ref={setNodeRef} style={style}
-      className={`group relative mb-3 rounded-xl overflow-hidden bg-panel cursor-default ${isDragging ? "opacity-50" : ""}`}
+      className={`group relative mb-3 rounded-xl overflow-hidden bg-panel cursor-default break-inside-avoid ${isDragging ? "opacity-50" : ""}`}
     >
-      <div className={`relative overflow-hidden ${featured ? "aspect-[4/5]" : "aspect-[3/4]"}`}>
+      <div className={`relative overflow-hidden ${featured ? "aspect-[4/5]" : imgAspect || "aspect-[3/4]"}`}>
         {imgSrc ? (
           <img
             src={`/api/image-proxy?url=${encodeURIComponent(imgSrc)}`}
             alt="" className="w-full h-full object-cover transition-transform duration-slow ease-out group-hover:scale-[1.04]"
-            onError={(e) => { e.target.style.display = "none"; }}
+            onError={(e) => { e.target.style.display = "none"; onThumbError?.(imgSrc); }}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-dim text-sm">No image</div>
@@ -145,27 +167,27 @@ function DraggableImageCard({ result, featured = false }) {
   );
 }
 
-function DraggableVideoCard({ result }) {
+function DraggableVideoCard({ result, onThumbError }) {
   const { listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `discover-vid-${result.url}`,
     data: { type: "search-result", result },
   });
   const style = transform ? { transform: `translate(${transform.x}px, ${transform.y}px)`, zIndex: 50 } : undefined;
-  const imgSrc = result.img_src || result.thumbnail;
-  const { activeWsId, saved, handleSave, handleReader } = useSaveHandler(result, imgSrc);
+  const imgSrc = resultThumb(result);
+  const { activeWsId, saved, handleSave, handleReader, handleSummarizer } = useSaveHandler(result, imgSrc);
   const duration = formatDuration(result);
   const domain = getHostname(result.url);
 
   return (
     <div ref={setNodeRef} style={style}
-      className={`group relative mb-3 rounded-xl overflow-hidden bg-panel cursor-default ${isDragging ? "opacity-50" : ""}`}
+      className={`group relative mb-3 rounded-xl overflow-hidden bg-panel cursor-default break-inside-avoid ${isDragging ? "opacity-50" : ""}`}
     >
       <div className="relative aspect-video overflow-hidden bg-hover">
         {imgSrc ? (
           <img
             src={`/api/image-proxy?url=${encodeURIComponent(imgSrc)}`}
             alt="" className="w-full h-full object-cover transition-transform duration-slow ease-out group-hover:scale-[1.04]"
-            onError={(e) => { e.target.style.display = "none"; }}
+            onError={(e) => { e.target.style.display = "none"; onThumbError?.(imgSrc); }}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-dim text-sm">No thumbnail</div>
@@ -209,19 +231,19 @@ function DraggableVideoCard({ result }) {
   );
 }
 
-function DraggableNewsCard({ result }) {
+function DraggableNewsCard({ result, onThumbError }) {
   const { listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `discover-news-${result.url}`,
     data: { type: "search-result", result },
   });
   const style = transform ? { transform: `translate(${transform.x}px, ${transform.y}px)`, zIndex: 50 } : undefined;
-  const imgSrc = result.img_src || result.thumbnail;
+  const imgSrc = resultThumb(result);
   const { activeWsId, saved, handleSave, handleReader, handleSummarizer } = useSaveHandler(result, imgSrc);
   const domain = getHostname(result.url);
 
   return (
     <div ref={setNodeRef} style={style}
-      className={`group relative flex items-start gap-3.5 px-3.5 py-3 rounded-xl cursor-default transition-all duration-slow ease-out ${
+      className={`group relative flex items-start gap-3.5 px-3.5 py-3 rounded-xl cursor-default transition-all duration-slow ease-out break-inside-avoid ${
         isDragging ? "opacity-50" : "hover:bg-elevated hover:shadow-surface"
       }`}
     >
@@ -230,7 +252,7 @@ function DraggableNewsCard({ result }) {
           <img
             src={`/api/image-proxy?url=${encodeURIComponent(imgSrc)}`}
             alt="" className="w-full h-full object-cover transition-transform duration-slow ease-out group-hover:scale-[1.05]"
-            onError={(e) => { e.target.style.display = "none"; }}
+            onError={(e) => { e.target.style.display = "none"; onThumbError?.(imgSrc); }}
           />
         ) : (
           <Favicon domain={domain} />
@@ -324,9 +346,40 @@ export default function DiscoveryPanel() {
   const toggleExpand = useUIStore((s) => s.toggleExpand);
   const isExpanded = expandedPanel === "discovery";
 
+  const [failedThumbs, setFailedThumbs] = useState({});
+  const markThumbFailed = useCallback((url) => {
+    if (!url) return;
+    setFailedThumbs((prev) => (prev[url] ? prev : { ...prev, [url]: true }));
+  }, []);
+  const visible = useCallback(
+    (list) => list.filter((r) => {
+      const src = resultThumb(r);
+      return src && !failedThumbs[src];
+    }),
+    [failedThumbs]
+  );
+  const visibleImages = visible(imageResults);
+  const visibleVideos = visible(videoResults);
+  const visibleNews = visible(newsResults);
+
+  const autoLoads = useRef(0);
+  useEffect(() => {
+    if (Object.keys(failedThumbs).length === 0 || autoLoads.current >= 3) return;
+    autoLoads.current += 1;
+    if (hasMoreImages) loadMoreImages();
+    if (hasMoreVideos) loadMoreVideos();
+    if (hasMoreNews) loadMoreNews();
+  }, [failedThumbs, hasMoreImages, hasMoreVideos, hasMoreNews, loadMoreImages, loadMoreVideos, loadMoreNews]);
+
+  const [measureRef, panelWidth] = useElementWidth();
+  const base = panelWidth || 400;
+  const imagesCols = Math.max(2, Math.floor(base / 172));
+  const videosCols = Math.max(1, Math.floor(base / 270));
+  const newsCols = Math.max(1, Math.floor(base / 360));
+
   const hasContent = query && (
-    imageResults.length > 0 || videoResults.length > 0 ||
-    newsResults.length > 0
+    visibleImages.length > 0 || visibleVideos.length > 0 ||
+    visibleNews.length > 0
   );
 
   const showAll = activeFilter === "all";
@@ -363,7 +416,7 @@ export default function DiscoveryPanel() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 pb-4">
+      <div className="flex-1 overflow-y-auto px-3 pb-4" ref={measureRef}>
         {loading ? (
           <SkeletonDiscovery />
         ) : !query ? (
@@ -376,60 +429,60 @@ export default function DiscoveryPanel() {
           </div>
         ) : (
           <div key={activeFilter} className="animate-fade-in">
-            {(showAll || activeFilter === "images") && imageResults.length > 0 && (
+            {(showAll || activeFilter === "images") && visibleImages.length > 0 && (
               <div>
-              <SectionHeader icon={Image} label="Images" count={imageResults.length}
+              <SectionHeader icon={Image} label="Images" count={visibleImages.length}
                 loading={loading} hasMore={hasMoreImages} onLoadMore={loadMoreImages} />
               {showAll ? (
-                <MultiRowScroll itemClass="w-32">
-                  {imageResults.map((r, i) => (
-                    <DraggableImageCard key={`img-${r.url}-${i}`} result={r} featured={i === 0} />
+                <MultiRowScroll itemClass="w-[154px]">
+                  {visibleImages.map((r, i) => (
+                    <DraggableImageCard key={`img-${r.url}-${i}`} result={r} featured={i === 0} onThumbError={markThumbFailed} />
                   ))}
                 </MultiRowScroll>
               ) : (
-                <div className="columns-2 gap-3">
-                  {imageResults.map((r, i) => (
-                    <DraggableImageCard key={`img-${r.url}-${i}`} result={r} featured={i === 0} />
+                <div className="gap-3" style={{ columnCount: imagesCols }}>
+                  {visibleImages.map((r, i) => (
+                    <DraggableImageCard key={`img-${r.url}-${i}`} result={r} featured={i === 0} imgAspect={IMAGE_ASPECTS[i % IMAGE_ASPECTS.length]} onThumbError={markThumbFailed} />
                   ))}
                 </div>
               )}
               </div>
             )}
 
-            {(showAll || activeFilter === "videos") && videoResults.length > 0 && (
+            {(showAll || activeFilter === "videos") && visibleVideos.length > 0 && (
               <div>
-                <SectionHeader icon={Youtube} label="Videos" count={videoResults.length}
+                <SectionHeader icon={Youtube} label="Videos" count={visibleVideos.length}
                   loading={loading} hasMore={hasMoreVideos} onLoadMore={loadMoreVideos} />
                 {showAll ? (
                   <MultiRowScroll itemClass="w-56">
-                    {videoResults.map((r, i) => (
-                      <DraggableVideoCard key={`vid-${r.url}-${i}`} result={r} />
+                    {visibleVideos.map((r, i) => (
+                      <DraggableVideoCard key={`vid-${r.url}-${i}`} result={r} onThumbError={markThumbFailed} />
                     ))}
                   </MultiRowScroll>
                 ) : (
-                  <div className="columns-2 gap-3">
-                    {videoResults.map((r, i) => (
-                      <DraggableVideoCard key={`vid-${r.url}-${i}`} result={r} />
+                  <div className="gap-3" style={{ columnCount: videosCols }}>
+                    {visibleVideos.map((r, i) => (
+                      <DraggableVideoCard key={`vid-${r.url}-${i}`} result={r} onThumbError={markThumbFailed} />
                     ))}
                   </div>
                 )}
               </div>
             )}
 
-            {(showAll || activeFilter === "news") && newsResults.length > 0 && (
+            {(showAll || activeFilter === "news") && visibleNews.length > 0 && (
               <div>
-                <SectionHeader icon={Newspaper} label="News" count={newsResults.length}
+                <SectionHeader icon={Newspaper} label="News" count={visibleNews.length}
                   loading={loading} hasMore={hasMoreNews} onLoadMore={loadMoreNews} />
                 {showAll ? (
                   <MultiRowScroll itemClass="w-72">
-                    {newsResults.map((r, i) => (
-                      <DraggableNewsCard key={`news-${r.url}-${i}`} result={r} />
+                    {visibleNews.map((r, i) => (
+                      <DraggableNewsCard key={`news-${r.url}-${i}`} result={r} onThumbError={markThumbFailed} />
                     ))}
                   </MultiRowScroll>
                 ) : (
-                  <div className="space-y-1.5 px-0.5">
-                    {newsResults.map((r, i) => (
-                      <DraggableNewsCard key={`news-${r.url}-${i}`} result={r} />
+                  <div className="gap-3" style={{ columnCount: newsCols }}>
+                    {visibleNews.map((r, i) => (
+                      <DraggableNewsCard key={`news-${r.url}-${i}`} result={r} onThumbError={markThumbFailed} />
                     ))}
                   </div>
                 )}

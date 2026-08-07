@@ -18,7 +18,7 @@ function getHostname(url) {
   try { return new URL(url).hostname; } catch { return ""; }
 }
 
-function DraggableResultCard({ result, selected, onSelect }) {
+function DraggableResultCard({ result }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: `result-${result.url}`,
@@ -85,22 +85,15 @@ function DraggableResultCard({ result, selected, onSelect }) {
       {...listeners}
       {...attributes}
       style={style}
-      onClick={() => onSelect?.(result.url)}
-      className={`group relative rounded-xl bg-elevated shadow-surface px-3.5 pt-3.5 cursor-grab active:cursor-grabbing transition-all duration-slow ease-out ${
+      className={`group relative rounded-2xl bg-panel shadow-surface px-3.5 pt-3.5 cursor-grab active:cursor-grabbing transition-all duration-slow ease-out ${
         isDragging
           ? "opacity-50 shadow-pop"
-          : selected
-            ? "bg-accent/[0.06] shadow-raised ring-1 ring-accent/30"
-            : "hover:-translate-y-0.5 hover:shadow-raised"
+          : "hover:-translate-y-0.5 hover:shadow-raised hover:ring-1 hover:ring-accent/50 hover:bg-accent/[0.04]"
       }`}
     >
       <div className="flex items-start gap-3">
         {/* Large media / favicon */}
-        <div
-          className={`size-11 shrink-0 rounded-lg overflow-hidden bg-hover flex items-center justify-center transition-transform duration-slow ease-out group-hover:scale-[1.05] ${
-            selected ? "ring-1 ring-accent/40" : ""
-          }`}
-        >
+        <div className="size-11 shrink-0 rounded-xl overflow-hidden bg-hover flex items-center justify-center transition-transform duration-slow ease-out group-hover:scale-[1.05]">
           {imgSrc ? (
             <img
               src={`/api/image-proxy?url=${encodeURIComponent(imgSrc)}`}
@@ -243,7 +236,6 @@ export default function SourcesPanel() {
   const uniqueCount = new Set(results.map((r) => r.url)).size;
   const hasMore = results.length < totalResults;
   const [transferMsg, setTransferMsg] = useState("");
-  const [selectedUrl, setSelectedUrl] = useState(null);
 
   const handleTransferAll = useCallback(async () => {
     if (!activeId) return;
@@ -340,8 +332,6 @@ export default function SourcesPanel() {
             <DraggableResultCard
               key={`${result.url}-${i}`}
               result={result}
-              selected={selectedUrl === result.url}
-              onSelect={setSelectedUrl}
             />
           ))}
         </div>

@@ -101,6 +101,7 @@ export const useUIStore = create((set, get) => ({
   openReader: (url, title, mediaUrl) =>
     set((state) => ({
       contextMode: "reader",
+      expandedPanel: null,
       readerUrl: url,
       readerTitle: title || null,
       readerMediaUrl: mediaUrl || null,
@@ -110,6 +111,7 @@ export const useUIStore = create((set, get) => ({
   openSummarizer: (url, title) =>
     set((state) => ({
       contextMode: "summarizer",
+      expandedPanel: null,
       summarizeUrl: url,
       summarizeTitle: title || null,
       summarizeVersion: state.summarizeVersion + 1,

@@ -10,6 +10,7 @@ import { useWorkspaceStore } from "../stores/workspaceStore";
 import { useWorkspaceStationStore } from "../stores/workspaceStationStore";
 import { useUIStore } from "../stores/uiStore";
 import { SkeletonTallCard } from "../components/Skeleton";
+import ChatModal from "../components/ChatModal";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -85,17 +86,37 @@ function SourceCard({ item, type, isPinned, onPin, onDelete, onReader, onSummary
   const domain = getHostname(item.url || "");
   const updatedAt = formatDate(item.updated_at || item.created_at);
   const isPage = type === "page";
+  const [natRatio, setNatRatio] = useState(null);
+  const imgAspect = type === "image" && natRatio ? Math.min(2.2, Math.max(0.5, natRatio)) : null;
 
   return (
     <div className={`group rounded-xl bg-panel shadow-card border border-border hover:shadow-card-hover transition-all duration-slow ease-out overflow-hidden ${isPage ? "max-w-xs shrink-0" : "shrink-0"}`}>
-      <div className={`relative overflow-hidden bg-hover ${isPage ? "aspect-square" : type === "video" ? "aspect-video" : "aspect-[4/3]"}`}>
-        {isPage ? (
-          <PagePlaceholder title={item.title} />
-        ) : thumbSrc ? (
+      <div
+        className={`relative overflow-hidden bg-hover ${type === "video" ? "aspect-video" : "aspect-[4/3]"}`}
+        style={imgAspect ? { aspectRatio: `${imgAspect}` } : undefined}
+      >
+        {thumbSrc ? (
           <img src={thumbSrc} alt=""
             className="w-full h-full object-cover transition-transform duration-slow group-hover:scale-105"
+            onLoad={(e) => {
+              if (type !== "image") return;
+              const w = e.target.naturalWidth;
+              const h = e.target.naturalHeight;
+              if (w && h) setNatRatio(w / h);
+            }}
             onError={(e) => { e.target.style.display = "none"; }}
           />
+        ) : isPage && domain ? (
+          <div className="w-full h-full flex items-center justify-center bg-hover">
+            <img
+              src={`https://www.google.com/s2/favicons?domain=${domain}&sz=256`}
+              alt=""
+              className="w-full h-full object-contain p-2"
+              onError={(e) => { e.target.style.display = "none"; }}
+            />
+          </div>
+        ) : isPage ? (
+          <PagePlaceholder title={item.title} />
         ) : (
           <Layers size={28} className="text-dim opacity-40" />
         )}
@@ -196,17 +217,15 @@ function ComparisonCard({ comp, onDelete }) {
   return (
     <div className="group rounded-xl bg-panel shadow-card border border-border hover:shadow-card-hover transition-all duration-slow ease-out overflow-hidden">
       <div className="p-3">
-        <div className="flex items-center justify-between">
+        <button onClick={() => setExpanded(!expanded)}
+          className="w-full flex items-center justify-between gap-2 text-left"
+          title={expanded ? "Collapse" : "Expand"}
+        >
           <h3 className="text-sm font-medium text-text line-clamp-2 leading-snug">{comp.title || "Comparison"}</h3>
-          <button onClick={() => setExpanded(!expanded)}
-            className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors"
-            title={expanded ? "Collapse" : "Expand"}
-          >
-            {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
-        </div>
-        {s1 && s2 && (
-          <div className="grid grid-cols-2 gap-2 mt-2">
+          {expanded ? <ChevronUp size={14} className="text-dim shrink-0" /> : <ChevronDown size={14} className="text-dim shrink-0" />}
+        </button>
+        {expanded && s1 && s2 && (
+          <div className="grid grid-cols-2 gap-2 mt-3">
             <div className="bg-hover rounded-md p-3 min-w-0">
               <p className="font-medium text-text truncate mb-2">{s1.title || "Untitled"}</p>
               <p className="text-dim text-xs truncate mb-2">{s1.url ? getHostname(s1.url) : s1._type}</p>
@@ -576,7 +595,7 @@ function ComparePanel({ sources, onClose, onSave }) {
 function SavedComparisons({ comparisons, onDelete }) {
   if (comparisons.length === 0) return null;
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 gap-3 items-start">
       {comparisons.map((c) => (
         <ComparisonCard key={c.id} comp={c} onDelete={onDelete} />
       ))}
@@ -745,30 +764,34 @@ export default function StationView({ mode, setMode, chatOpen, setChatOpen }) {
             ) : searchQuery.trim() && filteredSources.length === 0 ? (
               <EmptyState icon={Search} message="No sources match your search" />
             ) : filteredSources.length > 0 ? (
-              <div className="flex gap-3 overflow-x-auto pb-4 -mx-3 px-3 snap-x snap-mandatory">
-                {/* Row 1 - Pages */}
-                <div className="flex gap-2 min-w-0 snap-start" style={{ width: "max-content" }}>
-                  {filteredSources.filter(s => s._type === "page").map((s) => (
-                    <SourceCard key={s.id} item={s} type={s._type}
-                      isPinned={isPinned(s._type, s.id)}
-                      onPin={handlePin} onUnpin={handleUnpin}
-                      onDelete={handleDeleteSource}
-                      onReader={(url, title) => openReader(url, title, s.media_url)}
-                      onSummary={(url, title) => openSummarizer(url, title)}
-                    />
-                  ))}
-                </div>
-                {/* Row 2 - Images & Videos */}
-                <div className="flex gap-2 min-w-0 snap-start" style={{ width: "max-content" }}>
-                  {filteredSources.filter(s => s._type === "image" || s._type === "video").map((s) => (
-                    <SourceCard key={s.id} item={s} type={s._type}
-                      isPinned={isPinned(s._type, s.id)}
-                      onPin={handlePin} onUnpin={handleUnpin}
-                      onDelete={handleDeleteSource}
-                      onReader={(url, title) => openReader(url, title, s.media_url)}
-                      onSummary={(url, title) => openSummarizer(url, title)}
-                    />
-                  ))}
+              <div className="flex overflow-x-auto overflow-y-hidden pb-4 -mx-3 px-3">
+                <div className="flex flex-col gap-2 shrink-0">
+                  {filteredSources.some((s) => s._type === "page") && (
+                    <div className="flex gap-2">
+                      {filteredSources.filter((s) => s._type === "page").map((s) => (
+                        <SourceCard key={s.id} item={s} type={s._type}
+                          isPinned={isPinned(s._type, s.id)}
+                          onPin={handlePin} onUnpin={handleUnpin}
+                          onDelete={handleDeleteSource}
+                          onReader={(url, title) => openReader(url, title, s.media_url)}
+                          onSummary={(url, title) => openSummarizer(url, title)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {filteredSources.some((s) => s._type === "image" || s._type === "video") && (
+                    <div className="flex gap-2">
+                      {filteredSources.filter((s) => s._type === "image" || s._type === "video").map((s) => (
+                        <SourceCard key={s.id} item={s} type={s._type}
+                          isPinned={isPinned(s._type, s.id)}
+                          onPin={handlePin} onUnpin={handleUnpin}
+                          onDelete={handleDeleteSource}
+                          onReader={(url, title) => openReader(url, title, s.media_url)}
+                          onSummary={(url, title) => openSummarizer(url, title)}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (

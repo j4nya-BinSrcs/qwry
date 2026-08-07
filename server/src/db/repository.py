@@ -300,7 +300,7 @@ class ReadingListRepo:
             select(ReadingListItem)
             .where(ReadingListItem.session_id == session_id)
             .order_by(ReadingListItem.saved_at.desc())
-            .limit(limit),
+            .limit(limit)
         )
         if workspace_id is not None:
             stmt = stmt.where(ReadingListItem.workspace_id == workspace_id)
@@ -365,7 +365,7 @@ class SummaryListRepo:
             select(SummaryListItem)
             .where(SummaryListItem.session_id == session_id)
             .order_by(SummaryListItem.saved_at.desc())
-            .limit(limit),
+            .limit(limit)
         )
         if workspace_id is not None:
             stmt = stmt.where(SummaryListItem.workspace_id == workspace_id)

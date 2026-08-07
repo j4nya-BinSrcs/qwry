@@ -18,6 +18,20 @@ export const useContentStore = create(
           summaries: [summary, ...s.summaries.filter((ss) => ss.url !== summary.url)],
         })),
 
+      hydrateReads: (list) =>
+        set((s) => {
+          const existing = new Set(s.reads.map((r) => r.url));
+          const fresh = list.filter((r) => !existing.has(r.url) && !r.loading);
+          return { reads: [...s.reads, ...fresh] };
+        }),
+
+      hydrateSummaries: (list) =>
+        set((s) => {
+          const existing = new Set(s.summaries.map((ss) => ss.url));
+          const fresh = list.filter((x) => !existing.has(x.url) && !x.loading);
+          return { summaries: [...s.summaries, ...fresh] };
+        }),
+
       setOverview: (query, overview) =>
         set((s) => ({
           overviews: { ...s.overviews, [query]: overview },

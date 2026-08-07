@@ -1,6 +1,6 @@
 import { Clock, ExternalLink, ImageIcon, Play, BookOpen, ChevronDown, ChevronRight, X, FolderOpen, FolderClosed } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { readUrl } from "../api/reader";
+import { readUrl, readHistory } from "../api/reader";
 import { useContentStore } from "../stores/contentStore";
 import { useUIStore } from "../stores/uiStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
@@ -20,7 +20,7 @@ function WorkspaceReadsContainer({ reads, workspace, openId, toggleRead, removeR
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="rounded-lg bg-elevated shadow-raised overflow-hidden border border-border">
+    <div className="rounded-lg bg-accent/[0.06] shadow-raised overflow-hidden border border-accent/25">
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center gap-2 px-3 py-2 border-b border-border cursor-pointer hover:bg-hover transition-colors text-left"
@@ -168,11 +168,23 @@ export default function ReaderView() {
   const storeReads = useContentStore((s) => s.reads);
   const addRead = useContentStore((s) => s.addRead);
   const removeReadFromStore = useContentStore((s) => s.removeRead);
+  const hydrateReads = useContentStore((s) => s.hydrateReads);
 
   const [openId, setOpenId] = useState(null);
   const [loadingId, setLoadingId] = useState(null);
   const [loadingUrl, setLoadingUrl] = useState(null);
   const loadingRef = useRef(null);
+
+  // Restore reads saved on the server so they survive reloads
+  useEffect(() => {
+    let cancelled = false;
+    readHistory()
+      .then((entries) => {
+        if (!cancelled) hydrateReads(entries);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [hydrateReads]);
 
   // Merge store reads with in-progress loading entry for display
   const reads = useMemo(() => {
