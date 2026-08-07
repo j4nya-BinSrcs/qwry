@@ -386,13 +386,14 @@
   min-height: 0;
 }
 
-.bento-ws-masonry {
-  columns: 2;
-  column-gap: 5px;
-  flex: none;
-  height: 220px;
-  overflow-y: auto;
-}
+ .bento-ws-masonry {
+   columns: 2;
+   column-gap: 5px;
+   flex: 1;
+   min-height: 0;
+   max-height: 220px;
+   overflow-y: auto;
+ }
 
 .bento-ws-card {
   break-inside: avoid;
@@ -520,18 +521,7 @@
   background: rgba(248, 113, 113, 0.12);
 }
 
-.bento-ws-more {
-  border-style: dashed;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  padding: 12px 6px;
-  text-align: center;
-}
-
-.bento-ws-create {
+ .bento-ws-create {
   margin-top: 3px;
   display: flex;
   align-items: center;

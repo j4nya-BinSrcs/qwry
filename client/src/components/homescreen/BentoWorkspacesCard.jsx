@@ -2,7 +2,6 @@ import { useCallback, useMemo, useState } from 'react';
 import { Layers, Plus, Pencil, Trash2 } from 'lucide-react';
 import { useSessionStore } from '../../stores/sessionStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { useUIStore } from '../../stores/uiStore';
 import BentoPixelBg from './BentoPixelBg';
 import WorkspaceNameModal from './WorkspaceNameModal';
 
@@ -64,7 +63,6 @@ export default function BentoWorkspacesCard({ workspaces, itemsByWorkspace, load
   const createWorkspace = useWorkspaceStore((s) => s.createWorkspace);
   const updateWorkspace = useWorkspaceStore((s) => s.updateWorkspace);
   const deleteWorkspace = useWorkspaceStore((s) => s.deleteWorkspace);
-  const setContextMode = useUIStore((s) => s.setContextMode);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState(null);
@@ -98,12 +96,6 @@ export default function BentoWorkspacesCard({ workspaces, itemsByWorkspace, load
   }, [workspaces, itemsByWorkspace]);
 
   const total = workspaces?.length ?? 0;
-  const overflow = Math.max(0, total - cards.length);
-
-  const handleViewAll = useCallback(() => {
-    if (onOpen && cards.length > 0) onOpen(cards[0].ws.id);
-    else setContextMode('workspace');
-  }, [onOpen, cards, setContextMode]);
 
   const handleCreateConfirm = useCallback(
     async (name) => {
@@ -208,25 +200,6 @@ export default function BentoWorkspacesCard({ workspaces, itemsByWorkspace, load
                   </div>
                 </div>
               ))}
-              {overflow > 0 && (
-                <div
-                  className="bento-ws-card is-sm bento-ws-more"
-                  onClick={handleViewAll}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleViewAll();
-                    }
-                  }}
-                >
-                  <span className="bento-ws-card-name" style={{ color: 'var(--color-accent)' }}>
-                    +{overflow} more
-                  </span>
-                  <span className="bento-ws-card-count">View all</span>
-                </div>
-              )}
             </div>
           </>
         )}
