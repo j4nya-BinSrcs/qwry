@@ -33,7 +33,7 @@ function WorkspaceReadsContainer({ reads, workspace, openId, toggleRead, removeR
       </button>
 
       {expanded && (
-        <div className="space-y-2.5 p-3">
+        <div className="space-y-3 p-3.5">
           {reads.map((r) => {
             const data = r.data;
             const hostname = data ? getHostname(data.url) : getHostname(r.url);
@@ -296,7 +296,7 @@ export default function ReaderView() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="shrink-0 px-4 pt-4 pb-2 flex items-center justify-between">
+      <div className="shrink-0 px-5 pt-5 pb-3 flex items-center justify-between">
         <div>
           <h2 className="text-base font-semibold text-text tracking-tight">Reader</h2>
           <p className="text-sm text-muted mt-0.5">{reads.length} read{reads.length !== 1 ? "s" : ""}</p>
@@ -304,10 +304,10 @@ export default function ReaderView() {
         <WorkspaceBadge />
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 pt-3 pb-6 space-y-4">
         {/* Reads with no workspace */}
         {readsByWorkspace.noWorkspace.length > 0 && (
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             {readsByWorkspace.noWorkspace.map((r) => {
               const data = r.data;
               const hostname = data ? getHostname(data.url) : getHostname(r.url);

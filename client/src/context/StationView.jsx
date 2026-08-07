@@ -86,11 +86,14 @@ function SourceCard({ item, type, isPinned, onPin, onDelete, onReader, onSummary
   const domain = getHostname(item.url || "");
   const updatedAt = formatDate(item.updated_at || item.created_at);
   const isPage = type === "page";
+  const cardWidth = isPage
+    ? thumbSrc ? "max-w-[272px]" : "max-w-[240px]"
+    : "w-[272px]";
   const [natRatio, setNatRatio] = useState(null);
   const imgAspect = type === "image" && natRatio ? Math.min(2.2, Math.max(0.5, natRatio)) : null;
 
   return (
-    <div className={`group rounded-xl bg-panel shadow-card border border-border hover:shadow-card-hover transition-all duration-slow ease-out overflow-hidden ${isPage ? "max-w-xs shrink-0" : "shrink-0"}`}>
+    <div className={`group rounded-xl bg-panel shadow-card border border-border hover:shadow-card-hover transition-all duration-slow ease-out overflow-hidden shrink-0 ${cardWidth}`}>
       <div
         className={`relative overflow-hidden bg-hover ${type === "video" ? "aspect-video" : "aspect-[4/3]"}`}
         style={imgAspect ? { aspectRatio: `${imgAspect}` } : undefined}
@@ -276,7 +279,7 @@ function WorkspaceHeader({ workspace, sessionId, searchQuery, onSearchChange, mo
   const [showWsMenu, setShowWsMenu] = useState(false);
 
   return (
-    <div className="shrink-0 px-3 py-3">
+    <div className="shrink-0 px-5 pt-5 pb-3">
       <div className="flex items-center gap-3 mb-3">
         <div className="relative flex-1 min-w-0">
           <button onClick={() => setShowWsMenu(!showWsMenu)}
@@ -754,7 +757,7 @@ export default function StationView({ mode, setMode, chatOpen, setChatOpen }) {
 
         <div className="animate-fade-in">
           {/* Sources Section - Horizontally Scrollable Masonry with 2 Rows */}
-          <div className="mx-3 mb-6">
+          <div className="px-4 mb-6">
             <h3 className="text-xs font-semibold text-dim uppercase tracking-wider mb-3 flex items-center gap-2">
               <Layers size={14} className="text-accent" />
               Sources ({filteredSources.length})
@@ -764,7 +767,7 @@ export default function StationView({ mode, setMode, chatOpen, setChatOpen }) {
             ) : searchQuery.trim() && filteredSources.length === 0 ? (
               <EmptyState icon={Search} message="No sources match your search" />
             ) : filteredSources.length > 0 ? (
-              <div className="flex overflow-x-auto overflow-y-hidden pb-4 -mx-3 px-3">
+              <div className="flex overflow-x-auto overflow-y-hidden pb-4 -mx-4 px-4">
                 <div className="flex flex-col gap-2 shrink-0">
                   {filteredSources.some((s) => s._type === "page") && (
                     <div className="flex gap-2">
@@ -800,7 +803,7 @@ export default function StationView({ mode, setMode, chatOpen, setChatOpen }) {
           </div>
 
           {/* Notes Section */}
-          <div className="mx-3 mb-6">
+          <div className="px-4 mb-6">
             <h3 className="text-xs font-semibold text-dim uppercase tracking-wider mb-3 flex items-center gap-2">
               <ListChecks size={14} className="text-accent" />
               Notes ({station.notes.length})
@@ -822,7 +825,7 @@ export default function StationView({ mode, setMode, chatOpen, setChatOpen }) {
           </div>
 
           {/* Comparisons Section */}
-          <div className="mx-3 mb-6">
+          <div className="px-4 mb-6">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-semibold text-dim uppercase tracking-wider flex items-center gap-2">
                 <Scale size={14} className="text-accent" /> Comparisons ({station.comparisons.length})

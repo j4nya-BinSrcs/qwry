@@ -126,7 +126,8 @@ function useSaveHandler(result, imgSrc) {
   return { sessionId, activeWsId, saved, handleSave, handleReader, handleSummarizer };
 }
 
-const IMAGE_ASPECTS = ["aspect-[3/4]", "aspect-[4/5]", "aspect-square"];
+const IMAGE_ASPECTS = ["aspect-[3/4]", "aspect-[4/5]", "aspect-square", "aspect-[2/3]", "aspect-[4/3]"];
+const VIDEO_ASPECTS = ["aspect-video", "aspect-video", "aspect-[4/3]", "aspect-video", "aspect-[3/2]"];
 
 function DraggableImageCard({ result, featured = false, imgAspect, onThumbError }) {
   const { listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -167,7 +168,7 @@ function DraggableImageCard({ result, featured = false, imgAspect, onThumbError 
   );
 }
 
-function DraggableVideoCard({ result, onThumbError }) {
+function DraggableVideoCard({ result, imgAspect = "aspect-video", onThumbError }) {
   const { listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `discover-vid-${result.url}`,
     data: { type: "search-result", result },
@@ -182,7 +183,7 @@ function DraggableVideoCard({ result, onThumbError }) {
     <div ref={setNodeRef} style={style}
       className={`group relative mb-3 rounded-xl overflow-hidden bg-panel cursor-default break-inside-avoid ${isDragging ? "opacity-50" : ""}`}
     >
-      <div className="relative aspect-video overflow-hidden bg-hover">
+      <div className={`relative overflow-hidden bg-hover ${imgAspect}`}>
         {imgSrc ? (
           <img
             src={`/api/image-proxy?url=${encodeURIComponent(imgSrc)}`}
@@ -317,7 +318,7 @@ function MultiRowScroll({ children, itemClass }) {
   return (
     <div className="space-y-2.5">
       {rows.map((row, ri) => (
-        <div key={ri} className="overflow-x-auto overflow-y-hidden scrollbar-none -mx-3 px-3">
+        <div key={ri} className="overflow-x-auto overflow-y-hidden scrollbar-none -mx-4 px-4">
           <div className="flex gap-2.5 w-max items-stretch">
             {row.map((child, i) => (
               <div key={i} className={`shrink-0 ${itemClass}`}>{child}</div>
@@ -373,9 +374,9 @@ export default function DiscoveryPanel() {
 
   const [measureRef, panelWidth] = useElementWidth();
   const base = panelWidth || 400;
-  const imagesCols = Math.max(2, Math.floor(base / 172));
-  const videosCols = Math.max(1, Math.floor(base / 270));
-  const newsCols = Math.max(1, Math.floor(base / 360));
+  const imagesCols = Math.max(2, Math.floor(base / 189));
+  const videosCols = Math.max(1, Math.floor(base / 297));
+  const newsCols = Math.max(1, Math.floor(base / 340));
 
   const hasContent = query && (
     visibleImages.length > 0 || visibleVideos.length > 0 ||
@@ -386,7 +387,7 @@ export default function DiscoveryPanel() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="shrink-0 px-4 pt-4 pb-2">
+      <div className="shrink-0 px-5 pt-5 pb-3">
         <div className="flex items-center justify-between mb-2.5">
           <div className="flex items-baseline gap-2">
             <h2 className="text-base font-semibold text-text tracking-tight">Discovery</h2>
@@ -416,7 +417,7 @@ export default function DiscoveryPanel() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 pb-4" ref={measureRef}>
+      <div className="flex-1 overflow-y-auto px-4 pb-6" ref={measureRef}>
         {loading ? (
           <SkeletonDiscovery />
         ) : !query ? (
@@ -442,7 +443,7 @@ export default function DiscoveryPanel() {
               ) : (
                 <div className="gap-3" style={{ columnCount: imagesCols }}>
                   {visibleImages.map((r, i) => (
-                    <DraggableImageCard key={`img-${r.url}-${i}`} result={r} featured={i === 0} imgAspect={IMAGE_ASPECTS[i % IMAGE_ASPECTS.length]} onThumbError={markThumbFailed} />
+                    <DraggableImageCard key={`img-${r.url}-${i}`} result={r} featured={i === 0} imgAspect={IMAGE_ASPECTS[(i * 3) % IMAGE_ASPECTS.length]} onThumbError={markThumbFailed} />
                   ))}
                 </div>
               )}
@@ -460,11 +461,11 @@ export default function DiscoveryPanel() {
                     ))}
                   </MultiRowScroll>
                 ) : (
-                  <div className="gap-3" style={{ columnCount: videosCols }}>
-                    {visibleVideos.map((r, i) => (
-                      <DraggableVideoCard key={`vid-${r.url}-${i}`} result={r} onThumbError={markThumbFailed} />
-                    ))}
-                  </div>
+                <div className="gap-3" style={{ columnCount: videosCols }}>
+                  {visibleVideos.map((r, i) => (
+                    <DraggableVideoCard key={`vid-${r.url}-${i}`} result={r} imgAspect={VIDEO_ASPECTS[i % VIDEO_ASPECTS.length]} onThumbError={markThumbFailed} />
+                  ))}
+                </div>
                 )}
               </div>
             )}

@@ -22,7 +22,7 @@ export default function ContextPanel() {
   return (
     <div className="h-full flex flex-col">
       {/* Mode tabs */}
-      <div className="shrink-0 flex items-center px-3 pt-2">
+      <div className="shrink-0 flex items-center px-5 pt-4">
         <div className="flex-1 flex gap-1">
           {MODES.map((m) => (
             <button

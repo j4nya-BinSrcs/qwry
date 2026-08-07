@@ -85,7 +85,7 @@ function DraggableResultCard({ result }) {
       {...listeners}
       {...attributes}
       style={style}
-      className={`group relative rounded-2xl bg-panel shadow-surface px-3.5 pt-3.5 cursor-grab active:cursor-grabbing transition-all duration-slow ease-out ${
+      className={`group relative rounded-2xl bg-panel shadow-surface p-4 cursor-grab active:cursor-grabbing transition-all duration-slow ease-out ${
         isDragging
           ? "opacity-50 shadow-pop"
           : "hover:-translate-y-0.5 hover:shadow-raised hover:ring-1 hover:ring-accent/50 hover:bg-accent/[0.04]"
@@ -265,7 +265,7 @@ export default function SourcesPanel() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="shrink-0 px-4 pt-4 pb-3 flex items-center justify-between">
+      <div className="shrink-0 px-5 pt-5 pb-4 flex items-center justify-between">
         <div className="flex items-baseline gap-2 min-w-0">
           <h2 className="text-base font-semibold text-text tracking-tight">Pages</h2>
           <span className="text-sm text-dim">{uniqueCount} result{uniqueCount !== 1 ? "s" : ""}</span>
@@ -281,7 +281,7 @@ export default function SourcesPanel() {
       </div>
 
       {/* Filters */}
-      <div className="shrink-0 flex items-center gap-1 px-4 pb-3 overflow-x-auto scrollbar-none">
+      <div className="shrink-0 flex items-center gap-1 px-5 pb-4 overflow-x-auto scrollbar-none">
         {FILTERS.map((f) => {
           const isActive = activeFilter === f.id;
           const Icon = f.icon;
@@ -303,7 +303,7 @@ export default function SourcesPanel() {
       </div>
 
       {/* Results */}
-       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 pb-4 space-y-2">
+       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 pb-6 space-y-3">
         {loading && (
           <SkeletonRow count={6} />
         )}

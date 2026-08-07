@@ -36,7 +36,7 @@ function WorkspaceSummariesContainer({ summaries, workspace, expanded, toggleSum
       </button>
 
       {isExpanded && (
-        <div className="space-y-2.5 p-3">
+        <div className="space-y-3 p-3.5">
           {summaries.map((s) => (
             <div key={s.id} className="rounded-lg bg-panel shadow-card border border-border overflow-hidden">
               <div
@@ -260,7 +260,7 @@ export default function SummarizerView() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="shrink-0 px-4 pt-4 pb-2 flex items-center justify-between">
+      <div className="shrink-0 px-5 pt-5 pb-3 flex items-center justify-between">
         <div>
           <h2 className="text-base font-semibold text-text tracking-tight">Summarizer</h2>
           <p className="text-sm text-muted mt-0.5">{summaries.length} {summaries.length === 1 ? "summary" : "summaries"}</p>
@@ -268,10 +268,10 @@ export default function SummarizerView() {
         <WorkspaceBadge />
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 pt-3 pb-6 space-y-4">
         {/* Summaries with no workspace */}
         {summariesByWorkspace.noWorkspace.length > 0 && (
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             {summariesByWorkspace.noWorkspace.map((s) => (
               <div key={s.id} className="rounded-lg bg-elevated shadow-raised overflow-hidden">
                 <div

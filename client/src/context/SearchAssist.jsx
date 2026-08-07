@@ -187,7 +187,7 @@ export default function SearchAssist() {
   const iconBtn = "size-8 flex items-center justify-center rounded-lg text-dim hover:text-text hover:bg-hover transition-colors disabled:opacity-30 disabled:cursor-not-allowed";
 
   return (
-    <div className="h-full overflow-y-auto p-3 space-y-4">
+    <div className="h-full overflow-y-auto px-4 pt-3 pb-6 space-y-4">
       {/* Short overview loading */}
       {loadingShort && !shortOverview && (
         <SkeletonOverview />

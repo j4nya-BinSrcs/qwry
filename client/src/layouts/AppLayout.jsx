@@ -46,32 +46,34 @@ export default function AppLayout() {
       {contextMode !== "home" && <TopBar />}
       <div className="flex-1 min-h-0 relative">
         <div className={contextMode === "home" ? "hidden" : "contents"}>
-          {expandedPanel ? (
-            <PanelGroup direction="horizontal">
-              <Panel defaultSize={100} minSize={100}>
-                <PanelContent id={expandedPanel} />
-              </Panel>
-            </PanelGroup>
-          ) : (
-            <PanelGroup direction="horizontal">
-              {panelOrder.map((id, index) => (
-                <Fragment key={id}>
-                  {index > 0 && (
-                    <PanelResizeHandle className="group relative w-1 bg-transparent shrink-0">
-                      <div className="absolute inset-y-0 left-0 w-px bg-border/25 group-hover:bg-accent/60 transition-colors duration-fast" />
-                    </PanelResizeHandle>
-                  )}
-                  <Panel
-                    defaultSize={PANEL_DEFAULTS[id]}
-                    minSize={PANEL_MINS[id]}
-                    maxSize={PANEL_MAXS[id]}
-                  >
-                    <PanelContent id={id} />
-                  </Panel>
-                </Fragment>
-              ))}
-            </PanelGroup>
-          )}
+          <div className="h-full p-3">
+            {expandedPanel ? (
+              <PanelGroup direction="horizontal">
+                <Panel defaultSize={100} minSize={100}>
+                  <PanelContent id={expandedPanel} />
+                </Panel>
+              </PanelGroup>
+            ) : (
+              <PanelGroup direction="horizontal">
+                {panelOrder.map((id, index) => (
+                  <Fragment key={id}>
+                    {index > 0 && (
+                      <PanelResizeHandle className="group relative w-2 bg-transparent shrink-0">
+                        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-border/25 group-hover:bg-accent/60 transition-colors duration-fast" />
+                      </PanelResizeHandle>
+                    )}
+                    <Panel
+                      defaultSize={PANEL_DEFAULTS[id]}
+                      minSize={PANEL_MINS[id]}
+                      maxSize={PANEL_MAXS[id]}
+                    >
+                      <PanelContent id={id} />
+                    </Panel>
+                  </Fragment>
+                ))}
+              </PanelGroup>
+            )}
+          </div>
         </div>
         {contextMode === "home" && <HomeView />}
       </div>
