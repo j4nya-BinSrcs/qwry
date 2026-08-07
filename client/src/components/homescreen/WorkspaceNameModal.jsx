@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { X } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
 export default function WorkspaceNameModal({
@@ -40,32 +41,41 @@ export default function WorkspaceNameModal({
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
-      <div className="relative w-full max-w-sm rounded-2xl border border-border bg-elevated shadow-pop p-5 animate-pop-in">
-        <h3 className="text-base font-semibold text-text mb-1">{title}</h3>
-        <p className="text-xs text-muted mb-4">{subtitle}</p>
-        <input
-          ref={inputRef}
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') submit();
-            if (e.key === 'Escape') onCancel();
-          }}
-          placeholder={placeholder}
-          className="w-full px-3 py-2 rounded-lg bg-hover border border-border text-text text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 mb-4"
-        />
-        <div className="flex items-center justify-end gap-2">
+      <div className="relative w-full max-w-sm rounded-2xl qwry-popup animate-pop-in">
+        <div className="qwry-popup-header">
+          <h3 className="qwry-popup-title">
+            {title}
+          </h3>
+          <button onClick={onCancel} className="qwry-popup-close" title="Close">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="qwry-popup-body">
+          <p className="text-xs text-dim mb-3">{subtitle}</p>
+          <input
+            ref={inputRef}
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submit();
+              if (e.key === "Escape") onCancel();
+            }}
+            placeholder={placeholder}
+            className="qwry-popup-input"
+          />
+        </div>
+        <div className="qwry-popup-footer">
           <button
             onClick={onCancel}
-            className="px-4 py-2 rounded-lg text-sm text-text hover:bg-hover transition-colors"
+            className="qwry-popup-btn qwry-popup-btn--secondary"
           >
             Cancel
           </button>
           <button
             onClick={submit}
             disabled={!name.trim()}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-accent text-surface hover:bg-accent-hover transition-colors disabled:opacity-40"
+            className="qwry-popup-btn qwry-popup-btn--primary"
           >
             {confirmLabel}
           </button>

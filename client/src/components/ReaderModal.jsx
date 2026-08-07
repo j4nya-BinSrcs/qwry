@@ -51,10 +51,10 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
       <div className="absolute inset-0 bg-text/60" />
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-3xl max-h-[calc(100vh-6rem)] mx-4 bg-elevated border border-border rounded-xl overflow-hidden flex flex-col"
+        className="relative w-full max-w-3xl max-h-[calc(100vh-6rem)] mx-4 qwry-popup animate-pop-in"
       >
         {/* Header */}
-        <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-border">
+        <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-border qwry-popup-header">
           <div className="flex-1 min-w-0">
             <h2 className="text-base font-semibold text-text truncate">
               {data?.title || initialTitle || "Reader"}
@@ -98,14 +98,15 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-md text-dim hover:text-text hover:bg-hover transition-all"
+            className="qwry-popup-close"
+            title="Close"
           >
             <X size={16} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-5">
+        <div className="qwry-popup-body">
           {loading && (
             <div className="flex items-center justify-center py-20">
               <Loader2 size={20} className="animate-spin text-text" />
@@ -168,11 +169,11 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-text text-surface hover:bg-text/80 transition-colors"
-              >
-                <ExternalLink size={16} />
-                Open in browser instead
-              </a>
+                  className="inline-flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-text text-surface hover:bg-text/80 transition-colors"
+                >
+                  <ExternalLink size={16} />
+                  Open in browser instead
+                </a>
               </div>
             </div>
           )}
@@ -209,11 +210,11 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-text text-surface hover:bg-text/80 transition-colors"
-              >
-                <Play size={16} />
-                Watch on YouTube
-              </a>
+                  className="inline-flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-text text-surface hover:bg-text/80 transition-colors"
+                >
+                  <Play size={16} />
+                  Watch on YouTube
+                </a>
               </div>
             </div>
           )}
@@ -227,7 +228,7 @@ export default function ReaderModal({ url, mediaUrl, title: initialTitle, onClos
                 <div className="sticky bottom-0 pt-4 pb-2 bg-elevated border-t border-border mt-2">
                   <button
                     onClick={() => setExpanded(true)}
-                    className="block mx-auto text-xs px-4 py-2 rounded-lg bg-text text-surface hover:bg-text/80 transition-colors"
+                    className="qwry-popup-btn qwry-popup-btn--primary mx-auto"
                   >
                     Show all ({data.content.length.toLocaleString()} chars)
                   </button>

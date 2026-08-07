@@ -493,31 +493,35 @@ function CompareDialog({ sources, onClose, onCreate }) {
   };
 
   return (
-    <div className="absolute inset-0 z-30 flex items-center justify-center bg-text/20" onClick={onClose}>
+    <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40" onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()}
-        className="w-80 max-w-[90%] rounded-lg bg-elevated border border-border shadow-pop p-3">
-        <div className="flex items-center justify-between mb-2">
+        className="w-80 max-w-[90%] qwry-popup animate-pop-in">
+        <div className="qwry-popup-header">
           <h3 className="text-xs font-semibold text-text">Compare Sources</h3>
           <IconBtn title="Close" onClick={onClose}><X size={16} /></IconBtn>
         </div>
-        <div className="flex items-center gap-2 mb-2">
-          <select value={a} onChange={(e) => setA(e.target.value)}
-            className="flex-1 min-w-0 truncate bg-hover border border-border rounded-md px-2 py-1 text-xs text-text outline-none"
-          >
-            <option value="">Source A...</option>
-            {sources.map((s) => <option key={s.id} value={s.id}>{s.title || s.id?.slice(0, 12)}</option>)}
-          </select>
-          <span className="text-base text-dim shrink-0">vs</span>
-          <select value={b} onChange={(e) => setB(e.target.value)}
-            className="flex-1 min-w-0 truncate bg-hover border border-border rounded-md px-2 py-1 text-xs text-text outline-none"
-          >
-            <option value="">Source B...</option>
-            {sources.map((s) => <option key={s.id} value={s.id}>{s.title || s.id?.slice(0, 12)}</option>)}
-          </select>
+        <div className="qwry-popup-body">
+          <div className="flex items-center gap-2 mb-2">
+            <select value={a} onChange={(e) => setA(e.target.value)}
+              className="qwry-popup-input"
+            >
+              <option value="">Source A...</option>
+              {sources.map((s) => <option key={s.id} value={s.id}>{s.title || s.id?.slice(0, 12)}</option>)}
+            </select>
+            <span className="qwry-popup-item-count">vs</span>
+            <select value={b} onChange={(e) => setB(e.target.value)}
+              className="qwry-popup-input"
+            >
+              <option value="">Source B...</option>
+              {sources.map((s) => <option key={s.id} value={s.id}>{s.title || s.id?.slice(0, 12)}</option>)}
+            </select>
+          </div>
         </div>
-        <button onClick={handleCreate} disabled={!srcA || !srcB || srcA.id === srcB.id}
-          className="w-full flex items-center justify-center gap-1 text-xs px-3 py-2 rounded-md bg-text text-surface hover:opacity-80 transition-opacity disabled:opacity-30"
-        ><Scale size={16} /> Create Comparison</button>
+        <div className="qwry-popup-footer">
+          <button onClick={handleCreate} disabled={!srcA || !srcB || srcA.id === srcB.id}
+            className="qwry-popup-btn qwry-popup-btn--primary"
+          ><Scale size={16} /> Create Comparison</button>
+        </div>
       </div>
     </div>
   );

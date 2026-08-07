@@ -369,3 +369,248 @@ body {
     animation: none;
   }
 }
+
+/* ── Unified popup / modal styling ─────────────────────────────── */
+.qwry-popup {
+  background: var(--color-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-pop);
+  color: var(--color-text);
+  display: flex;
+  flex-direction: column;
+}
+
+.qwry-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.qwry-popup-header h3 {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.qwry-popup-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.qwry-popup-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  color: var(--color-dim);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+}
+
+.qwry-popup-close:hover {
+  color: var(--color-text);
+  background: var(--color-hover);
+}
+
+.qwry-popup-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+  font-size: 0.875rem;
+}
+
+.qwry-popup-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+.qwry-popup-input {
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--color-hover);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.qwry-popup-input:focus {
+  border-color: var(--color-accent);
+}
+
+.qwry-popup-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+}
+
+.qwry-popup-btn--primary {
+  background: var(--color-text);
+  color: var(--color-surface);
+}
+
+.qwry-popup-btn--primary:hover {
+  opacity: 0.9;
+}
+
+.qwry-popup-btn--secondary {
+  color: var(--color-text);
+  background: var(--color-hover);
+  border: 1px solid var(--color-border);
+}
+
+.qwry-popup-btn--secondary:hover {
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-hover));
+}
+
+.qwry-popup-btn:disabled,
+.qwry-popup-btn--primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.qwry-popup-section-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+
+.qwry-popup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.qwry-popup-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  color: var(--color-text);
+  background: var(--color-hover);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+}
+
+.qwry-popup-item:hover {
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-hover));
+}
+
+.qwry-popup-item.is-active {
+  background: color-mix(in srgb, var(--color-accent) 16%, var(--color-hover));
+  border-color: var(--color-accent);
+}
+
+.qwry-popup-item.is-active svg {
+  color: var(--color-accent);
+}
+
+.qwry-popup-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  color: var(--color-dim);
+  flex-shrink: 0;
+}
+
+.qwry-popup-item-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.qwry-popup-item-count {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--color-dim);
+  font-weight: 500;
+}
+
+.qwry-popup-separator {
+  height: 1px;
+  background: var(--color-border);
+  margin: 4px 0;
+}
+
+/* Dropdown variant (no shadow-pop, lighter) */
+.qwry-dropdown {
+  background: var(--color-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-pop);
+  color: var(--color-text);
+  min-width: 240px;
+}
+
+ .qwry-dropdown-item {
+   display: flex;
+   align-items: center;
+   gap: 8px;
+   padding: 6px 10px;
+   font-size: 0.8125rem;
+   color: var(--color-text);
+   background: transparent;
+   border: none;
+   cursor: pointer;
+   transition: background-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+   text-align: left;
+ }
+
+ .qwry-dropdown-item.gap-3 {
+   gap: 0.75rem;
+ }
+
+.qwry-dropdown-item:hover {
+  background: var(--color-hover);
+}
+
+.qwry-dropdown-item.text-danger {
+  color: #f87171;
+}
+
+.qwry-dropdown-item.text-danger:hover {
+  background: rgba(248, 113, 113, 0.12);
+}

@@ -81,7 +81,7 @@ function SuggestionItem({ suggestion, onClick, index }) {
     <button
       key={index}
       onMouseDown={onClick}
-      className="w-full px-4 py-3 text-left text-sm text-text hover:bg-hover transition-colors flex items-center gap-3"
+      className="qwry-dropdown-item flex items-center gap-3"
     >
       <Search size={16} className="text-dim shrink-0" />
       <span className="truncate">{suggestion}</span>
@@ -94,7 +94,7 @@ function QuickActionItem({ action, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="w-full px-4 py-2.5 text-left text-sm text-text hover:bg-hover transition-colors flex items-center gap-3"
+      className="qwry-dropdown-item flex items-center gap-3"
     >
       <div className="size-8 rounded-lg bg-elevated flex items-center justify-center shrink-0">
         <Icon size={16} className="text-accent" />
@@ -265,7 +265,7 @@ export default function SearchBar({
         <div
           ref={dropdownRef}
           id="search-suggestions"
-          className="absolute top-full left-0 right-0 mt-2 rounded-xl bg-elevated/95 backdrop-blur-sm border border-border shadow-pop overflow-hidden animate-pop-in z-50"
+          className="absolute top-full left-0 right-0 mt-2 rounded-xl qwry-dropdown shadow-pop overflow-hidden animate-pop-in z-50"
           role="listbox"
         >
           {suggestions.length > 0 && (
@@ -288,7 +288,7 @@ export default function SearchBar({
           )}
           <div className="px-2 py-2 border-t border-border">
             <p className="text-xs text-dim uppercase tracking-wider mb-2">Quick Actions</p>
-            <div className="space-y-1">
+            <div className="qwry-popup-list">
               {QUICK_ACTIONS.map((action, i) => (
                 <QuickActionItem key={i} action={action} onClick={() => handleQuickAction(action)} />
               ))}

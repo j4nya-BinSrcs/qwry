@@ -121,46 +121,47 @@ export default function SettingsPopup({ open, onToggle }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={onToggle} />
-          <div className="absolute top-full right-0 mt-1 w-72 rounded-lg bg-elevated border border-border shadow-pop overflow-hidden z-50 max-h-[80vh] overflow-y-auto">
-            <div className="px-3 py-2 text-xs text-muted font-medium border-b border-border">
+          <div className="absolute top-full right-0 mt-1 w-72 rounded-xl border border-border bg-elevated shadow-pop overflow-hidden z-50 max-h-[80vh] overflow-y-auto qwry-dropdown animate-pop-in">
+            <div className="px-3 py-2 text-xs text-muted font-medium border-b border-border qwry-popup-header">
               Settings
             </div>
 
             {/* Theme */}
             <div className="px-3 py-2 border-b border-border">
-              <div className="text-xs text-muted mb-2">Theme</div>
-              <div className="flex flex-col gap-1">
+              <div className="qwry-popup-section-title">
+                <Sun size={12} />
+                Theme
+              </div>
+              <div className="qwry-popup-list">
                 {THEME_OPTIONS.map(({ id, label, icon: Icon }) => (
                   <button
                     key={id}
                     onClick={() => setTheme(id)}
-                    className={`flex items-center gap-2 px-2 py-2 text-left text-xs transition-colors rounded-md ${
-                      theme === id
-                        ? "bg-text text-surface"
-                        : "text-text hover:bg-hover"
-                    }`}
+                    className={`qwry-popup-item ${theme === id ? 'is-active' : ''}`}
                   >
-                    <Icon size={16} />
-                    {label}
+                    <span className="qwry-popup-item-icon">
+                      <Icon size={15} />
+                    </span>
+                    <span className="qwry-popup-item-label">{label}</span>
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Profiles */}
-            <div className="px-3 py-2 border-b border-border">
+            <div className="px-3 py-2">
               <button
                 onClick={() => setShowProfiles(!showProfiles)}
                 className="flex items-center gap-2 w-full text-xs text-muted mb-2"
               >
-                {showProfiles ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                <User size={16} />
+                {showProfiles ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                <User size={14} />
                 <span>Profiles</span>
-                <span className="text-dim ml-auto">{profiles.length}</span>
+                <span className="qwry-popup-item-count">{profiles.length}</span>
               </button>
 
               {showProfiles && (
-                <div className="space-y-1">
+                <div className="qwry-popup-list">
                   {/* Current profile name */}
                   <div className="flex items-center justify-between px-1 py-1">
                     {editing ? (
@@ -170,14 +171,11 @@ export default function SettingsPopup({ open, onToggle }) {
                           value={username}
                           onChange={(e) => setUsername(e.target.value)}
                           placeholder="Your name"
-                          className="flex-1 px-2 py-1 text-xs rounded-md bg-hover border border-border text-text outline-none focus:border-text"
+                          className="qwry-popup-input"
                           autoFocus
                           onKeyDown={(e) => { if (e.key === "Enter") handleSaveUsername(); if (e.key === "Escape") setEditing(false); }}
                         />
-                        <button
-                          onClick={handleSaveUsername}
-                          className="px-2 py-1 text-base rounded-md bg-text text-surface hover:bg-text/80 transition-colors"
-                        >
+                        <button onClick={handleSaveUsername} className="qwry-popup-btn qwry-popup-btn--primary">
                           Save
                         </button>
                       </div>
@@ -186,7 +184,7 @@ export default function SettingsPopup({ open, onToggle }) {
                         <span className="text-xs text-text">{profile?.username || "Anonymous"}</span>
                         <button
                           onClick={() => setEditing(true)}
-                          className="text-base text-dim hover:text-text transition-colors"
+                          className="text-xs text-dim hover:text-text transition-colors"
                         >
                           Edit
                         </button>
@@ -197,42 +195,41 @@ export default function SettingsPopup({ open, onToggle }) {
                   {/* Session ID */}
                   <button
                     onClick={handleCopySession}
-                    className="flex items-center gap-1 text-base text-dim hover:text-text transition-colors px-1"
+                    className="qwry-popup-item"
                   >
-                    {copied ? <Check size={16} /> : <Copy size={16} />}
-                    {copied ? "Copied!" : `Session: ${sessionId.slice(0, 8)}...`}
+                    <span className="qwry-popup-item-icon">
+                      {copied ? <Check size={14} /> : <Copy size={14} />}
+                    </span>
+                    <span className="qwry-popup-item-label">
+                      {copied ? "Copied!" : `Session: ${sessionId.slice(0, 8)}...`}
+                    </span>
                   </button>
 
                   {/* Profile list */}
-                  <div className="mt-2 space-y-1">
-                    {profiles.map((p) => (
-                      <div
-                        key={p.session_id}
-                        className={`flex items-center gap-2 px-2 py-2 rounded-md text-xs cursor-pointer transition-colors ${
-                          p.session_id === sessionId
-                            ? "bg-text text-surface"
-                            : "text-text hover:bg-hover"
-                        }`}
-                        onClick={() => handleSwitchProfile(p.session_id)}
-                      >
-                        <span className="flex-1 truncate">
-                          {p.username || "Anonymous"}
-                        </span>
-                        {p.session_id === sessionId && (
-                          <span className="text-base opacity-70">active</span>
-                        )}
-                        {profiles.length > 1 && p.session_id !== sessionId && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDeleteProfile(p.session_id); }}
-                            className="shrink-0 text-dim hover:text-red-400 transition-colors"
-                            title="Delete profile"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                  {profiles.map((p) => (
+                    <div
+                      key={p.session_id}
+                      className={`qwry-popup-item ${p.session_id === sessionId ? 'is-active' : ''}`}
+                      onClick={() => handleSwitchProfile(p.session_id)}
+                      role="button"
+                    >
+                      <span className="qwry-popup-item-label truncate">
+                        {p.username || "Anonymous"}
+                      </span>
+                      {p.session_id === sessionId && (
+                        <span className="qwry-popup-item-count">active</span>
+                      )}
+                      {profiles.length > 1 && p.session_id !== sessionId && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteProfile(p.session_id); }}
+                          className="qwry-popup-close hover:text-red-500"
+                          title="Delete profile"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
 
                   {/* Create new */}
                   {creating ? (
@@ -242,24 +239,23 @@ export default function SettingsPopup({ open, onToggle }) {
                         value={newName}
                         onChange={(e) => setNewName(e.target.value)}
                         placeholder="Profile name"
-                        className="flex-1 px-2 py-1 text-xs rounded-md bg-hover border border-border text-text outline-none focus:border-text"
+                        className="qwry-popup-input"
                         autoFocus
                         onKeyDown={(e) => { if (e.key === "Enter") handleCreateProfile(); if (e.key === "Escape") setCreating(false); }}
                       />
-                      <button
-                        onClick={handleCreateProfile}
-                        className="px-2 py-1 text-base rounded-md bg-text text-surface hover:bg-text/80 transition-colors"
-                      >
+                      <button onClick={handleCreateProfile} className="qwry-popup-btn qwry-popup-btn--primary">
                         Add
                       </button>
                     </div>
                   ) : (
                     <button
                       onClick={() => setCreating(true)}
-                      className="flex items-center gap-2 w-full px-2 py-2 text-base text-dim hover:text-text transition-colors"
+                      className="qwry-popup-item"
                     >
-                      <Plus size={16} />
-                      New profile
+                      <span className="qwry-popup-item-icon">
+                        <Plus size={14} />
+                      </span>
+                      <span className="qwry-popup-item-label">New profile</span>
                     </button>
                   )}
                 </div>
@@ -268,23 +264,24 @@ export default function SettingsPopup({ open, onToggle }) {
 
             {/* Search provider */}
             <div className="px-3 py-2">
-              <div className="text-xs text-muted mb-2">Search Provider</div>
-              {providers.map((p) => (
-                <button
-                  key={p.label}
-                  onClick={() => {
-                    setProvider(p.value);
-                    if (query) search(query.trim(), 1, p.value);
-                  }}
-                  className={`w-full px-2 py-2 text-left text-xs transition-colors rounded-md ${
-                    provider === p.value
-                      ? "bg-text text-surface"
-                      : "text-text hover:bg-hover"
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
+              <div className="qwry-popup-section-title">
+                <Search size={12} />
+                Search Provider
+              </div>
+              <div className="qwry-popup-list">
+                {providers.map((p) => (
+                  <button
+                    key={p.label}
+                    onClick={() => {
+                      setProvider(p.value);
+                      if (query) search(query.trim(), 1, p.value);
+                    }}
+                    className={`qwry-popup-item ${provider === p.value ? 'is-active' : ''}`}
+                  >
+                    <span className="qwry-popup-item-label">{p.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </>

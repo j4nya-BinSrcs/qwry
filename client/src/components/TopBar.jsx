@@ -126,16 +126,16 @@ return (
             onFocus={handleFocus}
             onBlur={handleBlur}
             placeholder="Search the web..."
-            className="w-full h-11 pl-12 pr-4 rounded-xl bg-elevated border border-border text-text text-sm placeholder:text-dim outline-none focus:border-text transition-colors"
+            className="w-full h-11 pl-12 pr-4 rounded-xl bg-elevated border border-border text-text text-sm placeholder:text-dim outline-none focus:border-accent transition-colors"
           />
         </div>
         {showSuggestions && (
-          <div className="absolute top-full left-0 right-0 mt-2 rounded-lg bg-elevated border border-border shadow-pop overflow-hidden">
+          <div className="absolute top-full left-0 right-0 mt-2 rounded-xl qwry-dropdown shadow-pop overflow-hidden z-10 animate-pop-in">
             {suggestions.map((s, i) => (
               <button
                 key={i}
                 onMouseDown={() => handleSuggestionClick(s)}
-                className="w-full px-4 py-2 text-left text-sm text-text hover:bg-hover transition-colors"
+                className="qwry-dropdown-item"
               >
                 {s}
               </button>

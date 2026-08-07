@@ -11,6 +11,7 @@ import { useWorkspaceStationStore } from "../stores/workspaceStationStore";
 import { useUIStore } from "../stores/uiStore";
 import { SkeletonTallCard } from "../components/Skeleton";
 import ChatModal from "../components/ChatModal";
+import WorkspaceNameModal from "../components/homescreen/WorkspaceNameModal";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -277,6 +278,14 @@ function WorkspaceHeader({ workspace, sessionId, searchQuery, onSearchChange, mo
   const activeId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const setActive = useWorkspaceStore((s) => s.setActiveWorkspace);
   const [showWsMenu, setShowWsMenu] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const handleCreateConfirm = useCallback(async (name) => {
+    if (name) {
+      await createWorkspace(sessionId, name);
+      setShowWsMenu(false);
+    }
+  }, [sessionId, createWorkspace]);
 
   return (
     <div className="shrink-0 px-5 pt-5 pb-3">
@@ -289,26 +298,29 @@ function WorkspaceHeader({ workspace, sessionId, searchQuery, onSearchChange, mo
             <span className="text-xs text-dim shrink-0">{workspace?.item_count ?? 0}</span>
           </button>
           {showWsMenu && (
-            <div className="absolute top-full left-0 right-0 mt-1 rounded-lg bg-panel border border-border shadow-pop overflow-hidden z-10">
-              <div className="px-3 py-2 text-xs text-muted font-medium border-b border-border">Workspaces</div>
+            <div className="absolute top-full left-0 right-0 mt-1 rounded-xl qwry-dropdown shadow-pop overflow-hidden z-10 animate-pop-in">
+              <div className="px-3 py-2 text-xs text-muted font-medium border-b border-border qwry-popup-header">Workspaces</div>
               {workspaces.map((ws) => (
                 <button key={ws.id}
                   onClick={() => { setActive(ws.id); setShowWsMenu(false); }}
-                  className={`w-full px-3 py-2 text-left text-xs transition-colors flex items-center justify-between ${
+                  className={`qwry-dropdown-item flex items-center justify-between ${
                     ws.id === activeId ? "bg-hover text-text" : "text-text hover:bg-hover"
                   }`}
                 >
                   <span className="truncate">{ws.name}</span>
-                  <span className="text-sm text-dim">{ws.item_count}</span>
+                  <span className="text-xs text-dim">{ws.item_count ?? 0}</span>
                 </button>
               ))}
+              <div className="qwry-popup-separator" />
               <button onClick={async () => {
-                  const name = prompt("Workspace name:");
-                  if (name) await createWorkspace(sessionId, name);
+                  setCreateOpen(true);
                   setShowWsMenu(false);
-              }}
-                className="w-full px-3 py-2 text-left text-xs text-text hover:bg-hover transition-colors border-t border-border"
-              >+ New Workspace</button>
+                }}
+                className="qwry-dropdown-item"
+              >
+                <Plus size={14} />
+                New Workspace
+              </button>
               <button onClick={async () => {
                   if (confirm(`Delete workspace "${workspace?.name}"? This cannot be undone.`)) {
                     await deleteWorkspace(sessionId, workspace?.id);
@@ -316,9 +328,12 @@ function WorkspaceHeader({ workspace, sessionId, searchQuery, onSearchChange, mo
                     if (remaining.length > 0) setActive(remaining[0].id);
                     setShowWsMenu(false);
                   }
-              }}
-                className="w-full px-3 py-2 text-left text-xs text-red-500 hover:bg-hover transition-colors"
-              >Delete Workspace</button>
+                }}
+                className="qwry-dropdown-item text-danger"
+              >
+                <Trash2 size={14} />
+                Delete Workspace
+              </button>
             </div>
           )}
         </div>
@@ -352,6 +367,15 @@ function WorkspaceHeader({ workspace, sessionId, searchQuery, onSearchChange, mo
           ><MessageCircle size={14} /> Chat</button>
         </div>
       </div>
+      <WorkspaceNameModal
+        open={createOpen}
+        title="New Workspace"
+        subtitle="Give your workspace a name to start organizing your research."
+        placeholder="Workspace name"
+        confirmLabel="Create"
+        onCancel={() => setCreateOpen(false)}
+        onConfirm={handleCreateConfirm}
+      />
     </div>
   );
 }
@@ -552,43 +576,47 @@ function ComparePanel({ sources, onClose, onSave }) {
   };
 
   return (
-    <div className="p-3">
-      <div className="flex items-center justify-between mb-3">
+    <div className="qwry-popup-body">
+      <div className="qwry-popup-header">
         <h3 className="text-sm font-semibold text-text flex items-center gap-2">
           <Scale size={16} className="text-accent" /> Compare Sources
         </h3>
-        <button onClick={onClose} className="p-1 rounded-md text-dim hover:text-text"><X size={14} /></button>
+        <button onClick={onClose} className="qwry-popup-close"><X size={14} /></button>
       </div>
-      <div className="flex items-center gap-2 mb-3">
-        <select value={a} onChange={(e) => setA(e.target.value)}
-          className="flex-1 min-w-0 truncate bg-panel border border-border rounded-md px-2 py-1 text-xs text-text outline-none"
-        >
-          <option value="">Source A...</option>
-          {sources.map((s) => <option key={s.id} value={s.id}>{s.title || s.id?.slice(0, 12)}</option>)}
-        </select>
-        <span className="text-sm text-dim shrink-0">vs</span>
-        <select value={b} onChange={(e) => setB(e.target.value)}
-          className="flex-1 min-w-0 truncate bg-panel border border-border rounded-md px-2 py-1 text-xs text-text outline-none"
-        >
-          <option value="">Source B...</option>
-          {sources.map((s) => <option key={s.id} value={s.id}>{s.title || s.id?.slice(0, 12)}</option>)}
-        </select>
-      </div>
-      {srcA && srcB && srcA.id !== srcB.id && (
-        <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
-          <div className="bg-hover rounded-md p-2 min-w-0">
-            <p className="font-medium text-text truncate">{srcA.title || "Untitled"}</p>
-            {srcA.snippet && <p className="text-dim mt-1 line-clamp-2">{srcA.snippet.slice(0, 80)}...</p>}
-          </div>
-          <div className="bg-hover rounded-md p-2 min-w-0">
-            <p className="font-medium text-text truncate">{srcB.title || "Untitled"}</p>
-            {srcB.snippet && <p className="text-dim mt-1 line-clamp-2">{srcB.snippet.slice(0, 80)}...</p>}
-          </div>
+      <div className="qwry-popup-body">
+        <div className="flex items-center gap-2 mb-3">
+          <select value={a} onChange={(e) => setA(e.target.value)}
+            className="qwry-popup-input"
+          >
+            <option value="">Source A...</option>
+            {sources.map((s) => <option key={s.id} value={s.id}>{s.title || s.id?.slice(0, 12)}</option>)}
+          </select>
+          <span className="qwry-popup-item-count">vs</span>
+          <select value={b} onChange={(e) => setB(e.target.value)}
+            className="qwry-popup-input"
+          >
+            <option value="">Source B...</option>
+            {sources.map((s) => <option key={s.id} value={s.id}>{s.title || s.id?.slice(0, 12)}</option>)}
+          </select>
         </div>
-      )}
-      <button onClick={handleCreate} disabled={!srcA || !srcB || srcA.id === srcB.id}
-        className="w-full flex items-center gap-1 text-xs px-3 py-2 rounded-md bg-text text-surface hover:opacity-80 transition-opacity disabled:opacity-30"
-      ><Scale size={14} /> Create Comparison</button>
+        {srcA && srcB && srcA.id !== srcB.id && (
+          <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+            <div className="bg-hover rounded-md p-2 min-w-0">
+              <p className="font-medium text-text truncate">{srcA.title || "Untitled"}</p>
+              {srcA.snippet && <p className="text-dim mt-1 line-clamp-2">{srcA.snippet.slice(0, 80)}...</p>}
+            </div>
+            <div className="bg-hover rounded-md p-2 min-w-0">
+              <p className="font-medium text-text truncate">{srcB.title || "Untitled"}</p>
+              {srcB.snippet && <p className="text-dim mt-1 line-clamp-2">{srcB.snippet.slice(0, 80)}...</p>}
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="qwry-popup-footer">
+        <button onClick={handleCreate} disabled={!srcA || !srcB || srcA.id === srcB.id}
+          className="qwry-popup-btn qwry-popup-btn--primary"
+        ><Scale size={14} /> Create Comparison</button>
+      </div>
     </div>
   );
 }
