@@ -185,6 +185,27 @@ export default function BentoSettingsCard() {
             <h4 className="bento-settings-section-title">
               <User size={12} />
               Profiles <span className="bento-settings-count">{profiles.length}</span>
+              {creating ? (
+                <div className="bento-profile-edit bento-profile-edit--inline">
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="Profile name"
+                    className="bento-settings-input"
+                    autoFocus
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleCreateProfile(); if (e.key === 'Escape') setCreating(false); }}
+                  />
+                  <button onClick={handleCreateProfile} className="bento-settings-save">
+                    Add
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => setCreating(true)} className="bento-profile-new bento-profile-new--inline">
+                  <Plus size={12} />
+                  New profile
+                </button>
+              )}
             </h4>
             <div className="bento-profile-list">
               {profiles.filter((p) => p.session_id !== sessionId).map((p) => (
@@ -213,28 +234,6 @@ export default function BentoSettingsCard() {
                   )}
                 </div>
               ))}
-
-              {creating ? (
-                <div className="bento-profile-edit">
-                  <input
-                    type="text"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder="Profile name"
-                    className="bento-settings-input"
-                    autoFocus
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleCreateProfile(); if (e.key === 'Escape') setCreating(false); }}
-                  />
-                  <button onClick={handleCreateProfile} className="bento-settings-save">
-                    Add
-                  </button>
-                </div>
-              ) : (
-                <button onClick={() => setCreating(true)} className="bento-profile-new">
-                  <Plus size={12} />
-                  New profile
-                </button>
-              )}
             </div>
           </section>
 

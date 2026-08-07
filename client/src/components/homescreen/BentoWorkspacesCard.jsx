@@ -144,6 +144,12 @@ export default function BentoWorkspacesCard({ workspaces, itemsByWorkspace, load
             Workspaces
           </div>
           <span className="bento-card-badge">{total}</span>
+          {total > 0 && (
+            <button onClick={() => setCreateOpen(true)} className="bento-ws-create bento-ws-create--header">
+              <Plus size={13} />
+              New workspace
+            </button>
+          )}
         </div>
 
         {loading && cards.length === 0 ? (
@@ -222,10 +228,6 @@ export default function BentoWorkspacesCard({ workspaces, itemsByWorkspace, load
                 </div>
               )}
             </div>
-            <button onClick={() => setCreateOpen(true)} className="bento-ws-create">
-              <Plus size={13} />
-              New workspace
-            </button>
           </>
         )}
       </div>

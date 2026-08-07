@@ -685,6 +685,7 @@
 .bento-settings-section-title {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 5px;
   margin: 0 0 3px;
   font-size: 0.875rem;
@@ -844,11 +845,41 @@
   align-self: flex-start;
 }
 
-.bento-profile-new:hover {
-  color: var(--color-text);
-}
+ .bento-profile-new:hover {
+   color: var(--color-text);
+ }
 
-.bento-provider-list {
+ .bento-profile-new--inline {
+   align-self: auto;
+   margin-left: auto;
+ }
+
+ .bento-profile-edit--inline {
+   display: inline-flex;
+   align-items: center;
+   gap: 4px;
+   flex: 0 0 auto;
+ }
+
+ .bento-ws-create--header {
+   margin-left: 6px;
+   padding: 1px 6px;
+   font-size: 0.75rem;
+   border-radius: 999px;
+   background: var(--color-hover);
+   border: 1px solid var(--color-border);
+   color: var(--color-text);
+   cursor: pointer;
+   transition: background 0.15s ease, border-color 0.15s ease;
+   white-space: nowrap;
+ }
+
+ .bento-ws-create--header:hover {
+   background: color-mix(in srgb, var(--color-accent) 12%, var(--color-hover));
+   border-color: var(--color-accent);
+ }
+
+ .bento-provider-list {
   display: flex;
   flex-direction: column;
   gap: 4px;
