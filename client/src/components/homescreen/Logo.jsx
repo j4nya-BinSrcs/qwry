@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { getAccentColor } from '../../stores/uiStore';
+import { getAccentColor, useUIStore } from '../../stores/uiStore';
 
 const SHAPES = ['circle', 'square', 'hexagon'];
 const SHAPE_DURATION = 3000;
@@ -32,6 +32,7 @@ function Shape({ type, size, color, className }) {
 export function LogoMark({ size = 48, animated = true, className = '' }) {
   const [shapeIndex, setShapeIndex] = useState(0);
   const [color, setColor] = useState(() => getAccentColor());
+  const theme = useUIStore((s) => s.theme);
   const cycleRef = useRef(null);
   const prefersReducedMotion = useRef(false);
 
@@ -45,7 +46,7 @@ export function LogoMark({ size = 48, animated = true, className = '' }) {
 
   useEffect(() => {
     setColor(getAccentColor());
-  }, []);
+  }, [theme]);
 
   useEffect(() => {
     if (!animated || prefersReducedMotion.current) return;

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Search, ChevronDown, Zap, FileText, Scale, Sparkles, HelpCircle, Loader2 } from 'lucide-react';
+import { Search, Zap, FileText, Scale, Sparkles, HelpCircle } from 'lucide-react';
 import { useUIStore } from '../../stores/uiStore';
 import { useSearchStore } from '../../stores/searchStore';
 import { useSessionStore } from '../../stores/sessionStore';
@@ -19,37 +19,59 @@ const QUICK_ACTIONS = [
   { label: 'New workspace', shortcut: '⌘N', action: 'new-workspace', icon: Zap },
 ];
 
-function RotatingPlaceholder({ paused, className }) {
-  const [index, setIndex] = useState(0);
-  const [text, setText] = useState('');
+function RotatingPlaceholder({ paused, hidden, className }) {
+  const [text, setText] = useState(PLACEHOLDERS[0].text);
   const [currentIcon, setCurrentIcon] = useState(PLACEHOLDERS[0].icon);
-  const [iconKey, setIconKey] = useState(0);
-  const timeoutRef = useRef(null);
+  const stateRef = useRef({ phrase: 0, char: PLACEHOLDERS[0].text.length, deleting: false });
 
   useEffect(() => {
     if (paused) return;
-    const rotate = () => {
-      const next = (index + 1) % PLACEHOLDERS.length;
-      setCurrentIcon(PLACEHOLDERS[next].icon);
-      setIconKey((k) => k + 1);
-      setTimeout(() => {
-        setText(PLACEHOLDERS[next].text);
-        setIndex(next);
-      }, 150);
+    let timer;
+    const tick = () => {
+      const st = stateRef.current;
+      const current = PLACEHOLDERS[st.phrase];
+      if (!st.deleting) {
+        const next = st.char + 1;
+        st.char = next;
+        setText(current.text.slice(0, next));
+        if (next >= current.text.length) {
+          st.deleting = true;
+          timer = setTimeout(tick, 1700);
+        } else {
+          timer = setTimeout(tick, 45);
+        }
+      } else {
+        const next = st.char - 1;
+        st.char = next;
+        setText(current.text.slice(0, next));
+        if (next <= 0) {
+          st.deleting = false;
+          st.phrase = (st.phrase + 1) % PLACEHOLDERS.length;
+          setCurrentIcon(PLACEHOLDERS[st.phrase].icon);
+          timer = setTimeout(tick, 350);
+        } else {
+          timer = setTimeout(tick, 22);
+        }
+      }
     };
-    timeoutRef.current = setInterval(rotate, 3000);
-    return () => clearInterval(timeoutRef.current);
-  }, [index, paused]);
-
-  useEffect(() => {
-    setText(PLACEHOLDERS[0].text);
-  }, []);
+    timer = setTimeout(tick, 400);
+    return () => clearTimeout(timer);
+  }, [paused]);
 
   const Icon = currentIcon;
   return (
-    <span className={className} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-      <Icon key={iconKey} size={16} className="text-dim placeholder-icon" style={{ transition: 'opacity 150ms ease, transform 150ms ease' }} />
-      <span style={{ transition: 'opacity 150ms ease' }}>{text}</span>
+    <span
+      className={className}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 8,
+        opacity: hidden ? 0 : 1,
+        transition: 'opacity 150ms ease',
+      }}
+    >
+      <Icon key={currentIcon} size={16} className="text-dim placeholder-icon" />
+      <span>{text}</span>
     </span>
   );
 }
@@ -216,7 +238,12 @@ export default function SearchBar({
   return (
     <div className={`search-bar relative ${className}`}>
       <div className="relative">
-        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-text pointer-events-none" aria-hidden="true" />
+        <Search
+          size={18}
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-text pointer-events-none transition-opacity duration-150"
+          style={{ opacity: isFocused ? 1 : 0 }}
+          aria-hidden="true"
+        />
         <input
           ref={inputRef}
           type="text"
@@ -226,31 +253,12 @@ export default function SearchBar({
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           placeholder=""
-          className="w-full h-12 pl-12 pr-14 rounded-xl bg-elevated/80 backdrop-blur-sm border border-border text-text text-base placeholder:text-dim outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all duration-fast"
+          className="w-full h-12 pl-12 pr-4 rounded-xl bg-elevated/80 backdrop-blur-sm border border-border text-text text-base placeholder:text-dim outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all duration-fast"
           aria-label="Search the web"
           aria-autocomplete="list"
           aria-controls="search-suggestions"
           aria-expanded={showDropdown && suggestions.length > 0}
         />
-        <button
-          onClick={() => {
-            setSubmitted(true);
-            const q = value.trim();
-            if (q) {
-              search(q);
-              setContextMode('search-assist');
-              onSubmit?.(q);
-            }
-          }}
-          className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg text-dim hover:text-text hover:bg-hover transition-colors"
-          aria-label="Search"
-        >
-          {isFocused && value ? (
-            <ChevronDown size={16} />
-          ) : (
-            <Search size={16} />
-          )}
-        </button>
       </div>
 
       {showDropdown && (
@@ -289,7 +297,11 @@ export default function SearchBar({
         </div>
       )}
 
-      <RotatingPlaceholder paused={isFocused || value.length > 0} className="absolute inset-0 flex items-center pl-12 pr-14 pointer-events-none" />
+      <RotatingPlaceholder
+        paused={isFocused || value.length > 0}
+        hidden={isFocused}
+        className="absolute inset-0 flex items-center pl-12 pr-4 text-base pointer-events-none"
+      />
     </div>
   );
 }
