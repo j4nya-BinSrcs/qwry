@@ -231,10 +231,10 @@ export default function BentoSettingsCard() {
               )}
             </h4>
             <div className="bento-profile-list">
-              {profiles.filter((p) => p.session_id !== sessionId).map((p) => (
+              {profiles.map((p) => (
                 <div
                   key={p.session_id}
-                  className="bento-profile-row"
+                  className={`bento-profile-row ${p.session_id === sessionId ? 'is-active' : ''}`}
                   onClick={() => handleSwitchProfile(p.session_id)}
                   role="button"
                   tabIndex={0}
@@ -246,7 +246,10 @@ export default function BentoSettingsCard() {
                   }}
                 >
                   <span className="truncate flex-1">{p.username || 'Anonymous'}</span>
-                  {profiles.length > 1 && (
+                  {p.session_id === sessionId && (
+                    <span className="bento-settings-link no-underline flex-shrink-0">active</span>
+                  )}
+                  {profiles.length > 1 && p.session_id !== sessionId && (
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDeleteProfile(p.session_id); }}
                       className="bento-settings-link text-dim hover:text-red-400"
