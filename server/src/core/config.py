@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     default_search_provider: str = "searxng"
     searxng_enabled: bool = True
     searxng_base_url: str = "http://127.0.0.1:8080/"
-    searxng_timeout_seconds: float = 5.0
+    searxng_timeout_seconds: float = 15.0
 
     engine_base_url: str = "http://127.0.0.1:8001/"
     engine_timeout_seconds: float = 5.0

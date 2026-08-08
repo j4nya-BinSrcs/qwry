@@ -52,7 +52,7 @@ class SearchOrchestrator:
             logger.warning("Unknown provider, falling back to searxng", extra={"provider": resolved})
             result = await self._searxng.search(q, page, page_size, categories=categories)
 
-        if self._cache and self._cache.available:
+        if self._cache and self._cache.available and result.results:
             await self._cache.set(
                 CacheService.NAMESPACE_SEARCH,
                 result.model_dump(),
@@ -78,15 +78,26 @@ class SearchOrchestrator:
             return_exceptions=True,
         )
 
-        seen = set()
+        seen: set[str] = set()
         merged: list[SearchResultItem] = []
 
-        for resp in (searxng_resp, engine_resp):
-            if isinstance(resp, SearchResponse):
-                for r in resp.results:
-                    if r.url not in seen:
-                        seen.add(r.url)
-                        merged.append(r)
+        left = searxng_resp.results if isinstance(searxng_resp, SearchResponse) else []
+        right = engine_resp.results if isinstance(engine_resp, SearchResponse) else []
+
+        i = j = 0
+        while len(merged) < page_size and (i < len(left) or j < len(right)):
+            if i < len(left):
+                r = left[i]
+                i += 1
+                if r.url not in seen:
+                    seen.add(r.url)
+                    merged.append(r)
+            if len(merged) < page_size and j < len(right):
+                r = right[j]
+                j += 1
+                if r.url not in seen:
+                    seen.add(r.url)
+                    merged.append(r)
 
         return SearchResponse(
             query=q,

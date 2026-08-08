@@ -25,6 +25,9 @@ services:
     restart: unless-stopped
     profiles: ["searxng"]
     network_mode: host
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     depends_on:
       valkey:
         condition: service_healthy

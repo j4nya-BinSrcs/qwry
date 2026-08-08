@@ -16,6 +16,11 @@ search:
     - html
     - json
 
+outgoing:
+  # Higher than the 3s default: mobile/hotspot links are high-latency and
+  # upstream engines were timing out at exactly 3.0s.
+  request_timeout: 5.0
+
 engines:
   # Default general engines (duckduckgo, google, brave, qwant, startpage) are
   # frequently rate-limited/CAPTCHA'd and return no page results. Enable

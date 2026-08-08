@@ -3,6 +3,7 @@ import { searchQuery, fetchSuggestions } from "../api/search";
 import { useUIStore } from "./uiStore";
 
 export const providers = [
+  { value: "hybrid", label: "Hybrid" },
   { value: "searxng", label: "SearXNG" },
   { value: "engine", label: "Engine" },
 ];
@@ -25,14 +26,17 @@ export const useSearchStore = create((set, get) => ({
   hasMoreImages: true,
   hasMoreVideos: true,
   hasMoreNews: true,
-  provider: "searxng",
+  provider: "hybrid",
   activeFilter: "all",
+  searchSeq: 0,
   setQuery: (query) => set({ query }),
   setProvider: (provider) => set({ provider }),
   setActiveFilter: (filter) => set({ activeFilter: filter }),
   search: async (q, page = 1, provider) => {
     useUIStore.getState().setContextMode("search-assist");
     const resolvedProvider = provider ?? get().provider;
+    const token = ++get().searchSeq;
+    const stillCurrent = () => get().searchSeq === token;
     set({
       loading: true, error: null, query: q, page, provider: resolvedProvider,
       results: [],
@@ -46,36 +50,46 @@ export const useSearchStore = create((set, get) => ({
       hasMoreVideos: true,
       hasMoreNews: true,
     });
+
+    const mainPromise = searchQuery(q, page, 52, resolvedProvider);
+    const auxPromise = Promise.all([
+      searchQuery(q, 1, 24, resolvedProvider, "images").catch(() => null),
+      searchQuery(q, 1, 24, resolvedProvider, "videos").catch(() => null),
+      searchQuery(q, 1, 24, resolvedProvider, "news").catch(() => null),
+      fetchSuggestions(q, resolvedProvider).catch(() => []),
+    ]);
+
     try {
-      const [mainData, imageData, videoData, newsData, suggestions] = await Promise.all([
-        searchQuery(q, page, 52, resolvedProvider),
-        searchQuery(q, 1, 24, resolvedProvider, "images").catch(() => null),
-        searchQuery(q, 1, 24, resolvedProvider, "videos").catch(() => null),
-        searchQuery(q, 1, 24, resolvedProvider, "news").catch(() => null),
-        fetchSuggestions(q, resolvedProvider).catch(() => []),
-      ]);
-      const images = imageData?.results?.filter((r) => r.img_src) || [];
-      const videos = videoData?.results || [];
-      const news = newsData?.results || [];
-      set({
-        results: mainData.results || [],
-        suggestions: suggestions || [],
-        infobox: mainData.infoboxes?.[0] || null,
-        imageResults: images,
-        videoResults: videos,
-        newsResults: news,
-        loading: false,
-        page: mainData.page || page,
-        totalResults: mainData.total_results ?? mainData.results?.length ?? 0,
-        imagePage: 1,
-        videoPage: 1,
-        newsPage: 1,
-        hasMoreImages: images.length >= 24,
-        hasMoreVideos: videos.length >= 24,
-        hasMoreNews: news.length >= 24,
-      });
+      const mainData = await mainPromise;
+      if (stillCurrent()) {
+        set({
+          results: mainData.results || [],
+          infobox: mainData.infoboxes?.[0] || null,
+          page: mainData.page || page,
+          totalResults: mainData.total_results ?? mainData.results?.length ?? 0,
+        });
+      }
+      const [imageData, videoData, newsData, suggestions] = await auxPromise;
+      if (stillCurrent()) {
+        const images = imageData?.results?.filter((r) => r.img_src) || [];
+        const videos = videoData?.results || [];
+        const news = newsData?.results || [];
+        set({
+          imageResults: images,
+          videoResults: videos,
+          newsResults: news,
+          suggestions: suggestions || [],
+          loading: false,
+          imagePage: 1,
+          videoPage: 1,
+          newsPage: 1,
+          hasMoreImages: images.length >= 24,
+          hasMoreVideos: videos.length >= 24,
+          hasMoreNews: news.length >= 24,
+        });
+      }
     } catch (err) {
-      set({ error: err.message, loading: false });
+      if (stillCurrent()) set({ error: err.message, loading: false });
     }
   },
   loadMorePages: async () => {
