@@ -4,6 +4,7 @@ import { useUIStore } from '../../stores/uiStore';
 import { useSearchStore } from '../../stores/searchStore';
 import { useSessionStore } from '../../stores/sessionStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import WorkspaceNameModal from './WorkspaceNameModal';
 
 const PLACEHOLDERS = [
   { text: 'Search the web…', icon: Search },
@@ -122,6 +123,7 @@ export default function SearchBar({
   const [showDropdown, setShowDropdown] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [submitted, setSubmitted] = useState(false);
+  const [createWsOpen, setCreateWsOpen] = useState(false);
   const inputRef = useRef(null);
   const dropdownRef = useRef(null);
   const debounceRef = useRef(null);
@@ -229,8 +231,7 @@ export default function SearchBar({
         setContextMode('workspace');
         break;
       case 'new-workspace':
-        const name = prompt('Workspace name:');
-        if (name) createWorkspace(sessionId, name);
+        setCreateWsOpen(true);
         break;
     }
   }, [sessionId, createWorkspace, setContextMode]);
@@ -301,6 +302,20 @@ export default function SearchBar({
         paused={isFocused || value.length > 0}
         hidden={isFocused}
         className="absolute inset-0 flex items-center pl-12 pr-4 text-base pointer-events-none"
+      />
+
+      <WorkspaceNameModal
+        open={createWsOpen}
+        title="New workspace"
+        subtitle="Give your new workspace a name to get started."
+        placeholder="Workspace name"
+        confirmLabel="Create"
+        initialName=""
+        onCancel={() => setCreateWsOpen(false)}
+        onConfirm={async (name) => {
+          await createWorkspace(sessionId, name);
+          setCreateWsOpen(false);
+        }}
       />
     </div>
   );

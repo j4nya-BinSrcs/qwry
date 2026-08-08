@@ -8,6 +8,7 @@ import { useSearchStore, providers } from '../../stores/searchStore';
 import { useSessionStore } from '../../stores/sessionStore';
 import { useUIStore } from '../../stores/uiStore';
 import BentoPixelBg from './BentoPixelBg';
+import ConfirmDialog from '../ConfirmDialog';
 
 const THEME_OPTIONS = [
   { id: 'latte', label: 'Latte', icon: Sun },
@@ -19,6 +20,16 @@ const THEME_OPTIONS = [
   { id: 'frosted-glass', label: 'Frosted', icon: Snowflake },
 ];
 
+function sortProfiles(list) {
+  return [...list].sort((a, b) => {
+    const an = (a.username || 'Anonymous').toLowerCase();
+    const bn = (b.username || 'Anonymous').toLowerCase();
+    const c = an.localeCompare(bn, undefined, { numeric: true, sensitivity: 'base' });
+    if (c !== 0) return c;
+    return a.session_id.localeCompare(b.session_id);
+  });
+}
+
 export default function BentoSettingsCard() {
   const [profile, setProfile] = useState(null);
   const [username, setUsername] = useState('');
@@ -27,6 +38,7 @@ export default function BentoSettingsCard() {
   const [profiles, setProfiles] = useState([]);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
+  const [deleteProfileTarget, setDeleteProfileTarget] = useState(null);
 
   const theme = useUIStore((s) => s.theme);
   const setTheme = useUIStore((s) => s.setTheme);
@@ -50,7 +62,7 @@ export default function BentoSettingsCard() {
   const loadProfiles = useCallback(async () => {
     try {
       const ps = await listProfiles();
-      setProfiles(ps);
+      setProfiles(sortProfiles(ps));
     } catch {}
   }, []);
 
@@ -96,8 +108,14 @@ export default function BentoSettingsCard() {
     loadProfiles();
   };
 
-  const handleDeleteProfile = async (targetSessionId) => {
+  const handleDeleteProfile = (targetSessionId) => {
     if (profiles.length <= 1) return;
+    setDeleteProfileTarget(targetSessionId);
+  };
+
+  const handleDeleteProfileConfirm = useCallback(async () => {
+    if (!deleteProfileTarget) return;
+    const targetSessionId = deleteProfileTarget;
     await deleteProfile(targetSessionId);
     if (targetSessionId === sessionId) {
       const remaining = profiles.filter((p) => p.session_id !== targetSessionId);
@@ -108,7 +126,12 @@ export default function BentoSettingsCard() {
       }
     }
     loadProfiles();
-  };
+    setDeleteProfileTarget(null);
+  }, [deleteProfileTarget, profiles, sessionId]);
+
+  const handleDeleteProfileCancel = useCallback(() => {
+    setDeleteProfileTarget(null);
+  }, []);
 
   return (
     <div className="bento-card-inner bento-settings-card">
@@ -260,6 +283,16 @@ export default function BentoSettingsCard() {
           </section>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!deleteProfileTarget}
+        title="Delete profile?"
+        message="This will permanently remove this session profile and all its local data."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={handleDeleteProfileConfirm}
+        onCancel={handleDeleteProfileCancel}
+      />
     </div>
   );
 }

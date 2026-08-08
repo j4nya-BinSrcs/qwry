@@ -41,7 +41,7 @@ export default function WorkspaceGrid({
       display: 'grid',
       gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
       gap: '24px',
-      gridAutoRows: 'minmax(180px, auto)',
+      gridAutoRows: 'minmax(140px, auto)',
     }}>
       {sortedWorkspaces.map((ws) => {
         const items = itemsByWorkspace[ws.id] || [];
@@ -67,7 +67,7 @@ function WorkspaceCreateCard({ onCreate }) {
   return (
     <button
       onClick={onCreate}
-      className="workspace-card relative rounded-xl bg-elevated/50 backdrop-blur-sm border-2 border-dashed border-border hover:border-accent/50 transition-all flex items-center justify-center min-h-[180px] group"
+      className="workspace-card relative rounded-xl bg-elevated/50 backdrop-blur-sm border-2 border-dashed border-border hover:border-accent/50 transition-all flex items-center justify-center min-h-[140px] group"
       style={{ gridColumn: 'span 1' }}
     >
       <div className="text-center px-6 opacity-60 group-hover:opacity-100 transition-opacity">

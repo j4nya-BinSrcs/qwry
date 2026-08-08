@@ -388,34 +388,34 @@ export default function DiscoveryPanel() {
   return (
     <div className="h-full flex flex-col">
       <div className="shrink-0 px-5 pt-5 pb-3">
-        <div className="flex items-center justify-between mb-2.5">
-          <div className="flex items-baseline gap-2">
-            <h2 className="text-base font-semibold text-text tracking-tight">Discovery</h2>
-          </div>
-          <button
-            onClick={() => toggleExpand("discovery")}
-            className="p-1.5 rounded-md text-dim hover:text-text hover:bg-hover transition-colors"
-            title={isExpanded ? "Collapse" : "Expand"}
-          >
-            {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-          </button>
-        </div>
-        <div className="flex gap-1 overflow-x-auto scrollbar-none">
-          {FILTERS.map((f) => (
+          <div className="flex items-center justify-between mb-2.5">
+            <div className="flex items-baseline gap-2">
+              <h2 className="text-base font-semibold text-text tracking-tight">Discovery</h2>
+            </div>
             <button
-              key={f.id}
-              onClick={() => setActiveFilter(f.id)}
-              className={`shrink-0 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-fast ${
-                activeFilter === f.id
-                  ? "bg-elevated text-text shadow-surface"
-                  : "text-muted hover:text-text hover:bg-hover"
-              }`}
+              onClick={() => toggleExpand("discovery")}
+              className="p-1.5 rounded-md text-dim hover:text-text hover:bg-hover transition-colors"
+              title={isExpanded ? "Collapse" : "Expand"}
             >
-              {f.label}
+              {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
             </button>
-          ))}
+          </div>
+          <div className="flex gap-1 overflow-x-auto scrollbar-none">
+            {FILTERS.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setActiveFilter(f.id)}
+                className={`shrink-0 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-fast ${
+                  activeFilter === f.id
+                    ? "bg-elevated text-text shadow-surface"
+                    : "text-muted hover:text-text hover:bg-hover"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-6" ref={measureRef}>
         {loading ? (

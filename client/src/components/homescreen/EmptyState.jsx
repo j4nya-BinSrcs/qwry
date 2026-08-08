@@ -3,6 +3,7 @@ import { Plus, Layers, Sparkles, ArrowRight } from 'lucide-react';
 import { useSessionStore } from '../../stores/sessionStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUIStore } from '../../stores/uiStore';
+import WorkspaceNameModal from './WorkspaceNameModal';
 
 const PARTICLE_COUNT = 30;
 
@@ -68,14 +69,15 @@ export default function EmptyState({ className = '' }) {
     return () => cancelAnimationFrame(animationRef.current);
   }, []);
 
-  const handleCreate = useCallback(async () => {
-    const name = prompt('Workspace name:');
-    if (name) {
-      const ws = await createWorkspace(sessionId, name);
-      if (ws) {
-        setContextMode('workspace');
-      }
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const handleCreate = useCallback(async (name) => {
+    if (!name) return;
+    const ws = await createWorkspace(sessionId, name);
+    if (ws) {
+      setContextMode('workspace');
     }
+    setModalOpen(false);
   }, [sessionId, createWorkspace, setContextMode]);
 
   const accentColor = 'var(--color-accent)';
@@ -118,7 +120,7 @@ export default function EmptyState({ className = '' }) {
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <button
-            onClick={handleCreate}
+            onClick={() => setModalOpen(true)}
             className="group flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-text text-surface font-medium text-sm hover:opacity-85 transition-opacity min-w-[180px]"
           >
             <Plus size={18} />
@@ -134,10 +136,21 @@ export default function EmptyState({ className = '' }) {
           </button>
         </div>
 
-        <p className="mt-6 text-xs text-dim">
-          Or press <kbd className="px-1.5 py-0.5 rounded bg-hover font-mono">⌘K</kbd> to open search from anywhere
-        </p>
+          <p className="mt-6 text-xs text-dim">
+            Or press <kbd className="px-1.5 py-0.5 rounded bg-hover font-mono">⌘K</kbd> to open search from anywhere
+          </p>
+        </div>
+
+        <WorkspaceNameModal
+          open={modalOpen}
+          title="New workspace"
+          subtitle="Give your new workspace a name to get started."
+          placeholder="Workspace name"
+          confirmLabel="Create"
+          initialName=""
+          onCancel={() => setModalOpen(false)}
+          onConfirm={handleCreate}
+        />
       </div>
-    </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Settings, Sun, Moon, Flame, User, Copy, Check, Plus, Trash2, ChevronDown, ChevronRight, MoonStar, Leaf, Flower, Snowflake } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Settings, Search, Sun, Moon, Flame, User, Copy, Check, Plus, Trash2, ChevronDown, ChevronRight, MoonStar, Leaf, Flower, Snowflake } from "lucide-react";
 import { getProfile, updateProfile, listProfiles, createProfile, deleteProfile } from "../api/profile";
 import { useSearchStore, providers } from "../stores/searchStore";
 import { useSessionStore } from "../stores/sessionStore";
@@ -14,6 +15,16 @@ const THEME_OPTIONS = [
   { id: "gruvbox", label: "Gruvbox Dark", icon: Flame },
   { id: "frosted-glass", label: "Frosted Glass", icon: Snowflake },
 ];
+
+function sortProfiles(list) {
+  return [...list].sort((a, b) => {
+    const an = (a.username || "Anonymous").toLowerCase();
+    const bn = (b.username || "Anonymous").toLowerCase();
+    const c = an.localeCompare(bn, undefined, { numeric: true, sensitivity: "base" });
+    if (c !== 0) return c;
+    return a.session_id.localeCompare(b.session_id);
+  });
+}
 
 export default function SettingsPopup({ open, onToggle }) {
   const [profile, setProfile] = useState(null);
@@ -47,7 +58,7 @@ export default function SettingsPopup({ open, onToggle }) {
   const loadProfiles = useCallback(async () => {
     try {
       const ps = await listProfiles();
-      setProfiles(ps);
+      setProfiles(sortProfiles(ps));
     } catch {}
   }, []);
 
@@ -118,10 +129,10 @@ export default function SettingsPopup({ open, onToggle }) {
       >
         <Settings size={16} />
       </button>
-      {open && (
+      {open && createPortal(
         <>
           <div className="fixed inset-0 z-40" onClick={onToggle} />
-          <div className="absolute top-full right-0 mt-1 w-72 rounded-xl border border-border bg-elevated shadow-pop overflow-hidden z-50 max-h-[80vh] overflow-y-auto qwry-dropdown animate-pop-in">
+          <div className="fixed top-16 right-4 z-50 w-72 rounded-xl border border-border bg-elevated shadow-pop overflow-hidden max-h-[80vh] overflow-y-auto qwry-dropdown animate-pop-in">
             <div className="px-3 py-2 text-xs text-muted font-medium border-b border-border qwry-popup-header">
               Settings
             </div>
@@ -284,7 +295,8 @@ export default function SettingsPopup({ open, onToggle }) {
               </div>
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );

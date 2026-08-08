@@ -224,7 +224,7 @@ export default function SummarizerView() {
     });
   }, []);
 
-  // Group summaries by workspace
+  // Group summaries by workspace — filter out summaries whose workspace was deleted
   const summariesByWorkspace = useMemo(() => {
     const grouped = { noWorkspace: [] };
     for (const s of summaries) {
@@ -232,17 +232,19 @@ export default function SummarizerView() {
       if (!wsId) {
         grouped.noWorkspace.push(s);
       } else {
+        const ws = workspaces.find((w) => w.id === wsId);
+        if (!ws) continue;
         if (!grouped[wsId]) grouped[wsId] = [];
         grouped[wsId].push(s);
       }
     }
     return grouped;
-  }, [summaries]);
+  }, [summaries, workspaces]);
 
   const getWorkspaceName = (wsId) => {
     if (!wsId) return null;
     const ws = workspaces.find((w) => w.id === wsId);
-    return ws?.name || "Unknown Workspace";
+    return ws?.name;
   };
 
   if (!summarizeUrl && storeSummaries.length === 0 && !loadingUrl) {
@@ -269,7 +271,18 @@ export default function SummarizerView() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pt-3 pb-6 space-y-4">
-        {/* Summaries with no workspace */}
+        {Object.entries(summariesByWorkspace).filter(([k]) => k !== "noWorkspace").map(([wsId, wsSummaries]) => (
+          <WorkspaceSummariesContainer
+            key={wsId}
+            summaries={wsSummaries}
+            workspace={{ id: wsId, name: getWorkspaceName(wsId) }}
+            expanded={expanded}
+            toggleSummary={toggleSummary}
+            removeSummary={removeSummary}
+            getHostname={getHostname}
+          />
+        ))}
+
         {summariesByWorkspace.noWorkspace.length > 0 && (
           <div className="space-y-3">
             {summariesByWorkspace.noWorkspace.map((s) => (
@@ -326,19 +339,6 @@ export default function SummarizerView() {
             ))}
           </div>
         )}
-
-        {/* Summaries grouped by workspace */}
-        {Object.entries(summariesByWorkspace).filter(([k]) => k !== "noWorkspace").map(([wsId, wsSummaries]) => (
-          <WorkspaceSummariesContainer
-            key={wsId}
-            summaries={wsSummaries}
-            workspace={{ id: wsId, name: getWorkspaceName(wsId) }}
-            expanded={expanded}
-            toggleSummary={toggleSummary}
-            removeSummary={removeSummary}
-            getHostname={getHostname}
-          />
-        ))}
       </div>
     </div>
   );

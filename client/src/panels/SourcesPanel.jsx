@@ -1,4 +1,4 @@
-import { ExternalLink, Plus, BookOpen, Sparkles, Search, MessageCircle, Globe, Link, Check } from "lucide-react";
+import { ExternalLink, Plus, BookOpen, Search, MessageCircle, Globe, Link, Check } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { useSearchStore } from "../stores/searchStore";
@@ -33,8 +33,6 @@ function DraggableResultCard({ result }) {
   const sessionId = useSessionStore((s) => s.sessionId);
   const activeId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const addItem = useWorkspaceStore((s) => s.addItem);
-  const openReader = useUIStore((s) => s.openReader);
-  const openSummarizer = useUIStore((s) => s.openSummarizer);
   const setContextMode = useUIStore((s) => s.setContextMode);
 
   const [copied, setCopied] = useState(false);
@@ -53,28 +51,25 @@ function DraggableResultCard({ result }) {
     [sessionId, activeId, result, addItem, imgSrc, setContextMode]
   );
 
-  const handleReader = useCallback(
-    (e) => {
-      e.stopPropagation();
-      openReader(result.url, result.title, imgSrc);
-    },
-    [result, openReader, imgSrc]
-  );
-
-  const handleSummarizer = useCallback(
-    (e) => {
-      e.stopPropagation();
-      openSummarizer(result.url, result.title);
-    },
-    [result, openSummarizer]
-  );
-
   const handleCopy = useCallback(
-    (e) => {
+    async (e) => {
       e.stopPropagation();
-      navigator.clipboard?.writeText(result.url);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(result.url);
+        } else {
+          const ta = document.createElement("textarea");
+          ta.value = result.url;
+          ta.style.position = "fixed";
+          ta.style.opacity = "0";
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          document.body.removeChild(ta);
+        }
+      } catch {}
     },
     [result.url]
   );
@@ -112,7 +107,7 @@ function DraggableResultCard({ result }) {
         </div>
 
         <div className="flex-1 min-w-0">
-          <h3 className="text-base font-semibold text-text leading-snug">{result.title}</h3>
+          <h3 className="text-lg font-semibold text-text leading-snug">{result.title}</h3>
 
           {/* Meta: publisher · category · engine */}
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5">
@@ -121,19 +116,20 @@ function DraggableResultCard({ result }) {
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1 text-xs font-medium text-accent hover:underline truncate max-w-44"
+              onPointerDown={(e) => e.stopPropagation()}
+              className="flex items-center gap-1 text-sm font-medium text-accent hover:underline truncate max-w-44"
               title="Open in new tab"
             >
               <ExternalLink size={12} className="shrink-0" />
               <span className="truncate">{domain}</span>
             </a>
             {result.category && result.category !== "general" && (
-              <span className="text-xs text-muted px-1.5 py-0.5 rounded-md bg-hover">
+              <span className="text-sm text-muted px-1.5 py-0.5 rounded-md bg-hover">
                 {result.category}
               </span>
             )}
             {engine && (
-              <span className="flex items-center gap-1 text-xs text-muted px-1.5 py-0.5 rounded-md bg-hover">
+              <span className="flex items-center gap-1 text-sm text-muted px-1.5 py-0.5 rounded-md bg-hover">
                 <Search size={12} />
                 {engine}
               </span>
@@ -141,7 +137,7 @@ function DraggableResultCard({ result }) {
           </div>
 
           {result.snippet && (
-            <p className="text-sm text-muted leading-relaxed mt-2 line-clamp-3">{result.snippet}</p>
+            <p className="text-base text-muted leading-relaxed mt-2 line-clamp-3">{result.snippet}</p>
           )}
 
           {/* Accordion actions — expand on hover */}
@@ -150,32 +146,18 @@ function DraggableResultCard({ result }) {
               <div className="pt-3 mt-3 border-t border-border/60 flex items-center gap-0.5 pb-1">
                 <button
                   onClick={handleAddToWorkspace}
+                  onPointerDown={(e) => e.stopPropagation()}
                   disabled={!activeId}
-                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-muted hover:text-text hover:bg-hover transition-colors disabled:opacity-30"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-sm text-muted hover:text-text hover:bg-hover transition-colors disabled:opacity-30"
                   title="Add to active workspace"
                 >
                   <Plus size={14} />
                   Workspace
                 </button>
                 <button
-                  onClick={handleReader}
-                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-muted hover:text-text hover:bg-hover transition-colors"
-                  title="Open Reader"
-                >
-                  <BookOpen size={14} />
-                  Read
-                </button>
-                <button
-                  onClick={handleSummarizer}
-                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-muted hover:text-text hover:bg-hover transition-colors"
-                  title="Summarize this page"
-                >
-                  <Sparkles size={14} />
-                  Summarize
-                </button>
-                <button
                   onClick={handleCopy}
-                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-muted hover:text-text hover:bg-hover transition-colors"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-sm text-muted hover:text-text hover:bg-hover transition-colors"
                   title="Copy link"
                 >
                   {copied ? <Check size={14} className="text-accent" /> : <Link size={14} />}

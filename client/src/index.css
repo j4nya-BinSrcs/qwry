@@ -501,6 +501,15 @@ body {
   cursor: not-allowed;
 }
 
+.qwry-popup-btn--destructive {
+  background: #f87171;
+  color: var(--color-surface);
+}
+
+.qwry-popup-btn--destructive:hover {
+  opacity: 0.9;
+}
+
 .qwry-popup-section-title {
   display: flex;
   align-items: center;

@@ -4,6 +4,7 @@ import { useSessionStore } from '../../stores/sessionStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import BentoPixelBg from './BentoPixelBg';
 import WorkspaceNameModal from './WorkspaceNameModal';
+import ConfirmDialog from '../ConfirmDialog';
 
 const GRADIENTS = [
   ['#0d5c63', '#083b40'],
@@ -13,8 +14,6 @@ const GRADIENTS = [
   ['#6b6486', '#464057'],
   ['#596e8a', '#37445c'],
 ];
-
-const THUMB_HEIGHTS = [48, 56, 64, 72, 80];
 
 function hashString(str) {
   let h = 0;
@@ -37,10 +36,9 @@ function WsThumb({ ws, domains, cat }) {
   const tiles = 8;
   const shown = domains.slice(0, tiles);
   const extra = Math.max(0, domains.length - tiles);
-  const height = THUMB_HEIGHTS[hashString(ws.id) % THUMB_HEIGHTS.length];
 
   return (
-    <div className={`bento-ws-thumb is-${cat}`} style={{ height }}>
+    <div className={`bento-ws-thumb is-${cat}`}>
       <div className="bento-ws-thumb-bg" style={gradientStyle(ws.id)} />
       {shown.length === 0 ? (
         <div className="bento-ws-thumb-empty">
@@ -66,6 +64,7 @@ export default function BentoWorkspacesCard({ workspaces, itemsByWorkspace, load
 
   const [createOpen, setCreateOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const cards = useMemo(() => {
     const sorted = [...(workspaces || [])].sort((a, b) => {
@@ -114,14 +113,23 @@ export default function BentoWorkspacesCard({ workspaces, itemsByWorkspace, load
     [renameTarget, sessionId, updateWorkspace]
   );
 
+  const handleDeleteConfirm = useCallback(async () => {
+    if (deleteTarget) {
+      await deleteWorkspace(sessionId, deleteTarget.id);
+      setDeleteTarget(null);
+    }
+  }, [sessionId, deleteWorkspace, deleteTarget]);
+
   const handleDelete = useCallback(
-    async (ws) => {
-      if (window.confirm(`Delete workspace "${ws.name}"?`)) {
-        await deleteWorkspace(sessionId, ws.id);
-      }
+    (ws) => {
+      setDeleteTarget(ws);
     },
-    [sessionId, deleteWorkspace]
+    []
   );
+
+  const handleDeleteCancel = useCallback(() => {
+    setDeleteTarget(null);
+  }, []);
 
   return (
     <div className="bento-card-inner bento-workspaces">
@@ -147,7 +155,7 @@ export default function BentoWorkspacesCard({ workspaces, itemsByWorkspace, load
         {loading && cards.length === 0 ? (
           <div className="bento-ws-masonry">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="bento-ws-skeleton" style={{ height: 66 }} />
+              <div key={i} className="bento-ws-skeleton" style={{ height: 120 }} />
             ))}
           </div>
         ) : cards.length === 0 ? (
@@ -219,6 +227,15 @@ export default function BentoWorkspacesCard({ workspaces, itemsByWorkspace, load
         initialName={renameTarget?.name || ''}
         onCancel={() => setRenameTarget(null)}
         onConfirm={handleRenameConfirm}
+      />
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete workspace?"
+        message={`This will permanently remove "${deleteTarget?.name || 'this workspace'}" and all its contents.`}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
       />
     </div>
   );

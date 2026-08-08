@@ -7,6 +7,8 @@ import { useUIStore } from '../../stores/uiStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useWorkspaceStationStore } from '../../stores/workspaceStationStore';
 import { useSessionStore } from '../../stores/sessionStore';
+import ConfirmDialog from '../ConfirmDialog';
+import WorkspaceNameModal from './WorkspaceNameModal';
 
 const GRADIENTS = [
   ['#0d5c63', '#083b40'],
@@ -133,10 +135,10 @@ function HeroMediaStrip({ items, workspaceId, className }) {
 
   if (images.length === 0) {
     return (
-      <div className={`relative h-24 w-full ${className}`}>
+      <div className={`relative h-16 w-full ${className}`}>
         <GradientBg seed={workspaceId} />
         <div className="absolute inset-0 flex items-center justify-center">
-          <Layers size={24} className="text-surface/60" />
+          <Layers size={20} className="text-surface/60" />
         </div>
       </div>
     );
@@ -146,7 +148,7 @@ function HeroMediaStrip({ items, workspaceId, className }) {
     const item = images[0];
     const src = item.media_url || item.thumbnail || item.img_src;
     return (
-      <div className={`relative h-24 w-full ${className}`}>
+      <div className={`relative h-16 w-full ${className}`}>
         <img
           src={`/api/image-proxy?url=${encodeURIComponent(src)}`}
           alt={item.title || ''}
@@ -159,7 +161,7 @@ function HeroMediaStrip({ items, workspaceId, className }) {
 
   if (images.length <= 4) {
     return (
-      <div className={`relative h-24 w-full grid grid-cols-2 gap-1 p-1 ${className}`}>
+      <div className={`relative h-16 w-full grid grid-cols-2 gap-1 p-1 ${className}`}>
         {images.map((item, i) => {
           const src = item.media_url || item.thumbnail || item.img_src;
           return (
@@ -178,7 +180,7 @@ function HeroMediaStrip({ items, workspaceId, className }) {
   }
 
   return (
-    <div className={`relative h-24 w-full ${className}`}>
+    <div className={`relative h-16 w-full ${className}`}>
       <img
         src={`/api/image-proxy?url=${encodeURIComponent(images[currentIndex].media_url || images[currentIndex].thumbnail || images[currentIndex].img_src)}`}
         alt={images[currentIndex].title || ''}
@@ -222,6 +224,8 @@ export default function WorkspaceCard({
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
   const menuAnchorRef = useRef(null);
   const cardRef = useRef(null);
 
@@ -277,23 +281,38 @@ export default function WorkspaceCard({
     onCanvas?.(workspace.id);
   }, [workspace.id, setActiveWorkspace, setContextMode, onCanvas]);
 
-  const handleDelete = useCallback(async (e) => {
+  const handleDelete = useCallback((e) => {
     e.stopPropagation();
-    if (window.confirm(`Delete workspace "${workspace.name}"?`)) {
-      await deleteWorkspace(sessionId, workspace.id);
-    }
-    onDelete?.(workspace.id);
+    setShowDeleteDialog(true);
     setShowMenu(false);
-  }, [sessionId, workspace, deleteWorkspace, onDelete]);
+  }, []);
 
   const handleRename = useCallback(() => {
-    const name = prompt('New workspace name:', workspace.name);
-    if (name && name !== workspace.name) {
-      updateWorkspace(sessionId, workspace.id, name, null);
-    }
-    onRename?.(workspace.id, name);
+    setShowRenameDialog(true);
     setShowMenu(false);
+  }, []);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    await deleteWorkspace(sessionId, workspace.id);
+    onDelete?.(workspace.id);
+    setShowDeleteDialog(false);
+  }, [sessionId, workspace, deleteWorkspace, onDelete]);
+
+  const handleRenameConfirm = useCallback((newName) => {
+    if (newName && newName !== workspace.name) {
+      updateWorkspace(sessionId, workspace.id, newName, null);
+    }
+    onRename?.(workspace.id, newName);
+    setShowRenameDialog(false);
   }, [sessionId, workspace, updateWorkspace, onRename]);
+
+  const handleCancelDelete = useCallback(() => {
+    setShowDeleteDialog(false);
+  }, []);
+
+  const handleCancelRename = useCallback(() => {
+    setShowRenameDialog(false);
+  }, []);
 
   const handleDuplicate = useCallback(async () => {
     const newWs = await useWorkspaceStore.getState().createWorkspace(sessionId, `${workspace.name} (copy)`, workspace.description);
@@ -393,6 +412,26 @@ export default function WorkspaceCard({
             <ContextMenu items={menuItems} onClose={() => setShowMenu(false)} anchorRef={menuAnchorRef} />
           )}
         </div>
+
+        <ConfirmDialog
+          open={showDeleteDialog}
+          title="Delete workspace?"
+          message={`This will permanently remove "${workspace.name}" and all its contents.`}
+          confirmLabel="Delete"
+          destructive
+          onConfirm={handleDeleteConfirm}
+          onCancel={handleCancelDelete}
+        />
+        <WorkspaceNameModal
+          open={showRenameDialog}
+          title="Rename workspace"
+          subtitle="Choose a new name for this workspace."
+          placeholder="New name"
+          confirmLabel="Rename"
+          initialName={workspace.name}
+          onCancel={handleCancelRename}
+          onConfirm={handleRenameConfirm}
+        />
       </div>
     </div>
   );

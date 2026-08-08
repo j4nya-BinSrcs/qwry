@@ -1,5 +1,5 @@
 import {
-  Activity, BarChart2, Book, Check, ChevronDown, ChevronUp, Edit3, ExternalLink, Layers,
+  Activity, BarChart2, Book, Check, ChevronDown, ChevronUp, Copy, Edit3, ExternalLink, Layers,
   Lightbulb, ListChecks, Pencil, Plus, Scale, Search, Sparkles,
   Target, TrendingUp, Trash2, X, MessageCircle, LayoutGrid, FileText,
 } from "lucide-react";
@@ -12,11 +12,29 @@ import { useUIStore } from "../stores/uiStore";
 import { SkeletonTallCard } from "../components/Skeleton";
 import ChatModal from "../components/ChatModal";
 import WorkspaceNameModal from "../components/homescreen/WorkspaceNameModal";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
 function getHostname(url) {
   try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
+}
+
+function copyText(text) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text);
+    } else {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+  } catch {}
 }
 
 function Favicon({ domain, size = 4 }) {
@@ -169,6 +187,10 @@ function SourceCard({ item, type, isPinned, onPin, onDelete, onReader, onSummary
               className="p-1.5 rounded-md text-dim hover:text-text hover:bg-elevated transition-colors"
               title="Open"
             ><ExternalLink size={14} /></button>
+            <button onClick={(e) => { e.stopPropagation(); item.url && copyText(item.url); }}
+              className="p-1.5 rounded-md text-dim hover:text-text hover:bg-elevated transition-colors"
+              title="Copy link"
+            ><Copy size={14} /></button>
           </div>
         )}
       </div>
@@ -279,6 +301,7 @@ function WorkspaceHeader({ workspace, sessionId, searchQuery, onSearchChange, mo
   const setActive = useWorkspaceStore((s) => s.setActiveWorkspace);
   const [showWsMenu, setShowWsMenu] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [deleteWsTarget, setDeleteWsTarget] = useState(null);
 
   const handleCreateConfirm = useCallback(async (name) => {
     if (name) {
@@ -321,19 +344,15 @@ function WorkspaceHeader({ workspace, sessionId, searchQuery, onSearchChange, mo
                 <Plus size={14} />
                 New Workspace
               </button>
-              <button onClick={async () => {
-                  if (confirm(`Delete workspace "${workspace?.name}"? This cannot be undone.`)) {
-                    await deleteWorkspace(sessionId, workspace?.id);
-                    const remaining = workspaces.filter((w) => w.id !== workspace?.id);
-                    if (remaining.length > 0) setActive(remaining[0].id);
-                    setShowWsMenu(false);
-                  }
-                }}
-                className="qwry-dropdown-item text-danger"
-              >
-                <Trash2 size={14} />
-                Delete Workspace
-              </button>
+               <button onClick={async () => {
+                   setDeleteWsTarget(workspace?.id);
+                   setShowWsMenu(false);
+                 }}
+                 className="qwry-dropdown-item text-danger"
+               >
+                 <Trash2 size={14} />
+                 Delete Workspace
+               </button>
             </div>
           )}
         </div>
@@ -375,6 +394,20 @@ function WorkspaceHeader({ workspace, sessionId, searchQuery, onSearchChange, mo
         confirmLabel="Create"
         onCancel={() => setCreateOpen(false)}
         onConfirm={handleCreateConfirm}
+      />
+      <ConfirmDialog
+        open={!!deleteWsTarget}
+        title="Delete workspace?"
+        message={`This will permanently remove "${workspace?.name || 'this workspace'}" and all its contents. This cannot be undone.`}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={async () => {
+          await deleteWorkspace(sessionId, deleteWsTarget);
+          const remaining = workspaces.filter((w) => w.id !== deleteWsTarget);
+          if (remaining.length > 0) setActive(remaining[0].id);
+          setDeleteWsTarget(null);
+        }}
+        onCancel={() => setDeleteWsTarget(null)}
       />
     </div>
   );
@@ -732,14 +765,14 @@ export default function StationView({ mode, setMode, chatOpen, setChatOpen }) {
     setCompareOpen(false);
   }, [station, sessionId, activeId]);
 
-  const handleDeleteSource = useCallback(async (s) => {
-    if (!s) return;
-    if (s._type === "page") {
-      await deleteItem(sessionId, s.id);
-    } else if (s._type === "image") {
-      await station.deleteImage(sessionId, activeId, s.id);
-    } else if (s._type === "video") {
-      await station.deleteVideo(sessionId, activeId, s.id);
+  const handleDeleteSource = useCallback(async (id, type) => {
+    if (!id) return;
+    if (type === "page") {
+      await deleteItem(sessionId, id);
+    } else if (type === "image") {
+      await station.deleteImage(sessionId, activeId, id);
+    } else if (type === "video") {
+      await station.deleteVideo(sessionId, activeId, id);
     }
     await loadItems(sessionId, activeId);
     await station.loadAll(sessionId, activeId);
@@ -758,7 +791,7 @@ export default function StationView({ mode, setMode, chatOpen, setChatOpen }) {
           <Layers size={20} className="text-dim" />
         </div>
         <p className="text-sm text-muted max-w-xs mb-4">Select or create a workspace to start your research journey</p>
-        <button onClick={() => { const name = prompt("Workspace name:"); if (name) createWorkspace(sessionId, name); }}
+        <button onClick={() => setCreateOpen(true)}
           className="text-xs px-4 py-2 rounded-md bg-text text-surface hover:opacity-80 transition-opacity"
         >Create Workspace</button>
       </div>

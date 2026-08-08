@@ -1,5 +1,5 @@
 import {
-  Book, Check, ExternalLink, FileText, Image, Layers, Loader2, Maximize2, MessageCircle,
+  Book, Check, Copy, ExternalLink, FileText, Image, Layers, Loader2, Maximize2, MessageCircle,
   Pencil, Plus, Scale, Search, Sparkles, Trash2, Video, X, ZoomIn, ZoomOut,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -14,6 +14,23 @@ import ChatModal from "../components/ChatModal";
 
 function getHostname(url) {
   try { return new URL(url).hostname; } catch { return ""; }
+}
+
+function copyText(text) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text);
+    } else {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+  } catch {}
 }
 
 function centerOf(node) {
@@ -44,11 +61,11 @@ const NODE_COLORS = {
 };
 
 const NODE_DIMS = {
-  source: { w: 240, h: 210 },
+  source: { w: 240, h: 320 },
   note: { w: 240, h: 190 },
   image: { w: 220, h: 200 },
   video: { w: 220, h: 190 },
-  comparison: { w: 260, h: 150 },
+  comparison: { w: 260, h: 200 },
   ai_response: { w: 240, h: 170 },
   task: { w: 220, h: 110 },
 };
@@ -148,17 +165,73 @@ function NodeCard({ node, obj, isSelected, connectionMode, onSelect, onDragStart
             </div>
           </div>
         </div>
+      ) : type === "source" ? (
+        <div className="h-full flex flex-col min-h-0">
+          <div className="relative shrink-0 bg-hover aspect-[4/3]">
+            {obj?.media_url ? (
+              <img src={obj.media_url} alt=""
+                className="w-full h-full object-cover transition-transform duration-slow ease-out group-hover:scale-[1.03]"
+                onError={(e) => { e.target.style.display = "none"; }}
+              />
+            ) : domain ? (
+              <div className="w-full h-full flex items-center justify-center bg-hover">
+                <img
+                  src={`https://www.google.com/s2/favicons?domain=${domain}&sz=256`}
+                  alt=""
+                  className="w-full h-full object-contain p-2"
+                  onError={(e) => { e.target.style.display = "none"; }}
+                />
+              </div>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Layers size={28} className="text-dim opacity-40" />
+              </div>
+            )}
+          </div>
+          <div className="flex-1 min-h-0 flex flex-col px-3 py-2">
+            <div className="flex items-center gap-2 mb-1">
+              {domain ? <Favicon domain={domain} /> : <Layers size={16} className="text-dim" />}
+              <span className="text-sm font-medium text-text truncate flex-1">{domain || "Source"}</span>
+              <div className="flex-1" />
+              {onConnect && (
+                <button onClick={(e) => { e.stopPropagation(); onConnect(node.id); }}
+                  className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-all"
+                  title="Connect"
+                ><Plus size={14} /></button>
+              )}
+              <button onClick={(e) => { e.stopPropagation(); onDelete(node.id); }}
+                className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-dim hover:text-red-500 hover:bg-hover transition-all"
+                title="Delete"
+              ><Trash2 size={14} /></button>
+            </div>
+            <p className="text-sm font-medium text-text leading-snug truncate mb-1">{obj?.title || obj?.label || node.label || "Untitled"}</p>
+            {obj?.snippet && (
+              <p className="text-xs text-dim mt-1 line-clamp-2 leading-relaxed">{obj.snippet}</p>
+            )}
+            <div className="flex items-center gap-1 mt-auto pt-2">
+              <button onClick={(e) => { e.stopPropagation(); obj?.url && onOpenReader(obj.url, obj.title); }}
+                className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Reader"
+              ><Book size={14} /></button>
+              <button onClick={(e) => { e.stopPropagation(); obj?.url && onOpenSummarizer(obj.url, obj.title); }}
+                className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Summarize"
+              ><Sparkles size={14} /></button>
+              <button onClick={(e) => { e.stopPropagation(); obj?.url && onOpenUrl(obj.url); }}
+                className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Open"
+              ><ExternalLink size={14} /></button>
+              <button onClick={(e) => { e.stopPropagation(); obj?.url && copyText(obj.url); }}
+                className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Copy link"
+              ><Copy size={14} /></button>
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="h-full flex flex-col px-3 py-2 min-h-0">
           <div className="flex items-center gap-2 mb-1">
-            {type === "source" && (domain ? <Favicon domain={domain} /> : <Layers size={16} style={{ color }} />)}
             {type === "note" && <FileText size={16} style={{ color }} />}
             {type === "comparison" && <Scale size={16} style={{ color }} />}
             {type === "ai_response" && <MessageCircle size={16} style={{ color }} />}
             {type === "task" && <Check size={16} style={{ color }} />}
-            {type === "source"
-              ? <span className="text-sm font-medium text-text truncate flex-1">{domain || "Source"}</span>
-              : <span className="text-xs uppercase tracking-wider text-dim">{TYPE_LABELS[type]}</span>}
+            <span className="text-xs uppercase tracking-wider text-dim">{TYPE_LABELS[type]}</span>
             <div className="flex-1" />
             {onConnect && (
               <button onClick={(e) => { e.stopPropagation(); onConnect(node.id); }}
@@ -172,28 +245,12 @@ function NodeCard({ node, obj, isSelected, connectionMode, onSelect, onDragStart
             ><Trash2 size={14} /></button>
           </div>
           <p className="text-sm font-medium text-text leading-snug truncate mb-1">{obj?.title || obj?.label || node.label || "Untitled"}</p>
-          {type === "source" && obj?.snippet && (
-            <p className="text-xs text-dim mt-1 line-clamp-3 leading-relaxed">{obj.snippet}</p>
-          )}
           {type === "note" && obj?.content && <p className="text-xs text-dim mt-1 line-clamp-5 leading-relaxed whitespace-pre-line">{obj.content}</p>}
           {type === "comparison" && obj?.data?.sources?.length === 2 && (
             <p className="text-xs text-dim mt-1 truncate">{(obj.data.sources[0].title || "A")} vs {(obj.data.sources[1].title || "B")}</p>
           )}
           {type === "ai_response" && obj?.response_text && <p className="text-xs text-dim mt-1 line-clamp-4 leading-relaxed">{obj.response_text}</p>}
           {type === "task" && obj?.name && <p className="text-xs text-dim mt-1 truncate">{obj.name}</p>}
-          {type === "source" && (
-            <div className="flex items-center gap-1 mt-auto pt-2">
-              <button onClick={(e) => { e.stopPropagation(); obj?.url && onOpenReader(obj.url, obj.title); }}
-                className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Reader"
-              ><Book size={14} /></button>
-              <button onClick={(e) => { e.stopPropagation(); obj?.url && onOpenSummarizer(obj.url, obj.title); }}
-                className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Summarize"
-              ><Sparkles size={14} /></button>
-              <button onClick={(e) => { e.stopPropagation(); obj?.url && onOpenUrl(obj.url); }}
-                className="p-1 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Open"
-              ><ExternalLink size={14} /></button>
-            </div>
-          )}
           {type === "note" && (
             <div className="flex items-center gap-1 mt-auto pt-2">
               <button onClick={(e) => { e.stopPropagation(); onEditNote(node); }}
@@ -372,9 +429,26 @@ function InspectorPanel({ node, obj, onDeleteNode, onDeleteObject, onOpenReader,
               </div>
             )}
             <div className="flex items-center gap-1 pt-1">
-              {obj?.url && <InspectorBtn primary onClick={() => onOpenReader(obj.url, obj.title)}><Book size={16} /> Reader</InspectorBtn>}
-              {obj?.url && <InspectorBtn onClick={() => onOpenSummarizer(obj.url, obj.title)}><Sparkles size={16} /> Summarize</InspectorBtn>}
-              {obj?.url && <InspectorBtn onClick={() => onOpenUrl(obj.url)}><ExternalLink size={16} /> Open</InspectorBtn>}
+              {obj?.url && (
+                <button onClick={() => onOpenReader(obj.url, obj.title)}
+                  className="p-1.5 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Read"
+                ><Book size={16} /></button>
+              )}
+              {obj?.url && (
+                <button onClick={() => onOpenSummarizer(obj.url, obj.title)}
+                  className="p-1.5 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Summarize"
+                ><Sparkles size={16} /></button>
+              )}
+              {obj?.url && (
+                <button onClick={() => onOpenUrl(obj.url)}
+                  className="p-1.5 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Open in browser"
+                ><ExternalLink size={16} /></button>
+              )}
+              {obj?.url && (
+                <button onClick={() => copyText(obj.url)}
+                  className="p-1.5 rounded-md text-dim hover:text-text hover:bg-hover transition-colors" title="Copy link"
+                ><Copy size={16} /></button>
+              )}
             </div>
           </div>
         );
@@ -425,10 +499,10 @@ function InspectorPanel({ node, obj, onDeleteNode, onDeleteObject, onOpenReader,
               <div className="grid grid-cols-2 gap-2">
                 {data.sources.map((s, i) => (
                   <div key={i} className="space-y-1 min-w-0">
-                    <p className="text-base font-medium text-text truncate">{s.title || "Untitled"}</p>
-                    <p className="text-base text-dim">{s.url ? getHostname(s.url) : s._type}</p>
-                    {s.snippet && <p className="text-base text-muted leading-relaxed line-clamp-3">{s.snippet}</p>}
-                    {s.summary && <p className="text-base text-text leading-relaxed line-clamp-3">{s.summary}</p>}
+                    <p className="text-xs font-medium text-text truncate">{s.title || "Untitled"}</p>
+                    <p className="text-xs text-dim">{s.url ? getHostname(s.url) : s._type}</p>
+                    {s.snippet && <p className="text-xs text-muted leading-relaxed line-clamp-3">{s.snippet}</p>}
+                    {s.summary && <p className="text-xs text-text leading-relaxed line-clamp-3">{s.summary}</p>}
                   </div>
                 ))}
               </div>
@@ -447,7 +521,7 @@ function InspectorPanel({ node, obj, onDeleteNode, onDeleteObject, onOpenReader,
   };
 
   return (
-    <div className="canvas-ui absolute top-2 right-2 z-20 w-64 max-h-[75%] overflow-y-auto rounded-lg border border-border bg-elevated/95 backdrop-blur-sm shadow-pop flex flex-col">
+    <div className="canvas-ui absolute top-2 right-2 z-20 w-64 max-h-[85vh] overflow-y-auto rounded-lg border border-border bg-elevated/95 backdrop-blur-sm shadow-pop flex flex-col">
       <div className="shrink-0 flex items-center justify-between px-3 py-2 border-b border-border sticky top-0 bg-elevated/95 backdrop-blur-sm">
         <div className="flex items-center gap-2">
           <span className="size-1.5 rounded-full" style={{ backgroundColor: color }} />

@@ -1,4 +1,4 @@
-import { Clock, ExternalLink, ImageIcon, Play, BookOpen, ChevronDown, ChevronRight, X, FolderOpen, FolderClosed } from "lucide-react";
+import { Clock, ExternalLink, ImageIcon, Play, BookOpen, ChevronDown, ChevronRight, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { readUrl, readHistory } from "../api/reader";
 import { useContentStore } from "../stores/contentStore";
@@ -260,7 +260,7 @@ export default function ReaderView() {
     try { return new URL(url).hostname; } catch { return url; }
   };
 
-  // Group reads by workspace
+  // Group reads by workspace — filter out reads whose workspace was deleted
   const readsByWorkspace = useMemo(() => {
     const grouped = { noWorkspace: [] };
     for (const r of reads) {
@@ -268,17 +268,19 @@ export default function ReaderView() {
       if (!wsId) {
         grouped.noWorkspace.push(r);
       } else {
+        const ws = workspaces.find((w) => w.id === wsId);
+        if (!ws) continue;
         if (!grouped[wsId]) grouped[wsId] = [];
         grouped[wsId].push(r);
       }
     }
     return grouped;
-  }, [reads]);
+  }, [reads, workspaces]);
 
   const getWorkspaceName = (wsId) => {
     if (!wsId) return null;
     const ws = workspaces.find((w) => w.id === wsId);
-    return ws?.name || "Unknown Workspace";
+    return ws?.name;
   };
 
   if (!readerUrl && reads.length === 0 && !loadingUrl) {
@@ -305,7 +307,18 @@ export default function ReaderView() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pt-3 pb-6 space-y-4">
-        {/* Reads with no workspace */}
+        {Object.entries(readsByWorkspace).filter(([k]) => k !== "noWorkspace").map(([wsId, wsReads]) => (
+          <WorkspaceReadsContainer
+            key={wsId}
+            reads={wsReads}
+            workspace={{ id: wsId, name: getWorkspaceName(wsId) }}
+            openId={openId}
+            toggleRead={toggleRead}
+            removeRead={removeRead}
+            getHostname={getHostname}
+          />
+        ))}
+
         {readsByWorkspace.noWorkspace.length > 0 && (
           <div className="space-y-3">
             {readsByWorkspace.noWorkspace.map((r) => {
@@ -426,19 +439,6 @@ export default function ReaderView() {
             })}
           </div>
         )}
-
-        {/* Reads grouped by workspace */}
-        {Object.entries(readsByWorkspace).filter(([k]) => k !== "noWorkspace").map(([wsId, wsReads]) => (
-          <WorkspaceReadsContainer
-            key={wsId}
-            reads={wsReads}
-            workspace={{ id: wsId, name: getWorkspaceName(wsId) }}
-            openId={openId}
-            toggleRead={toggleRead}
-            removeRead={removeRead}
-            getHostname={getHostname}
-          />
-        ))}
       </div>
     </div>
   );
